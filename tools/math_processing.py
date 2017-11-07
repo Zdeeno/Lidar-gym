@@ -8,3 +8,7 @@ def transform_points(points, transform_mat):
     transposed = np.concatenate((transposed, to_conc), 0)
     mult = np.dot(transform_mat, transposed)
     return np.transpose(mult[0:-1])
+
+
+def compute_reward(map1, map2):
+    pass
