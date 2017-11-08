@@ -11,4 +11,5 @@ def transform_points(points, transform_mat):
 
 
 def compute_reward(map1, map2):
+    #TODO implement logistic loss
     pass
