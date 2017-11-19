@@ -19,7 +19,8 @@ class Camera:
         self.angle_per_bucket = self.fov/density
 
     def calculate_directions(self, matrix, T):
-        assert type(matrix) is np.ndarray and matrix.shape[0] == self.density[0] and matrix.shape[1] == self.density[1], 'wrong ray input'
+        assert type(matrix) is np.ndarray and matrix.shape[0] == self.density[0]\
+               and matrix.shape[1] == self.density[1], 'wrong ray input'
         counter = 0
         vectors = np.empty(0)
         for x in range(self.density[0]):

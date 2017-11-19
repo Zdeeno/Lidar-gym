@@ -49,12 +49,13 @@ class LidarGym(gym.Env):
 
     def _step(self, action):
         if not self._done:
-            # Check if vectors have correct dims!, TODO: observation should return hit points (not distances)
-            observation = vm.trace_ray(self._curr_position,
-                                       np.transpose(self._camera.calculate_directions(action[0], self._curr_T)),
-                                       self._lidar_range, const_min_value, const_max_value, 0)
+            # Check if vectors have correct dims! TODO: finish observation_space
+            coords, _ = vm.trace_ray(self._curr_position,
+                                     np.transpose(self._camera.calculate_directions(action[0], self._curr_T)),
+                                     self._lidar_range, const_min_value, const_max_value, 0)
             reward = self._reward_counter.compute_reward(action[1])
             self._to_next()
+            observation = (self._curr_T, np.transpose(coords))
             return observation, reward, self._done, None
         else:
             return None, None, True, None
