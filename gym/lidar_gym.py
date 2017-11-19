@@ -13,17 +13,22 @@ const_max_value = 0
 class LidarGym(gym.Env):
 
     def __init__(self):
-        # To define in constructors:
+        # Constants to define in constructors:
         self._lidar_range = 60
         self._voxel_size = 0.5
         self._max_rays = 100
         self._density = (100, 100)
         self._fov = (90, 45)
+        self._input_map_size = (80, 80, 4)
+        self._input_map_shift_ratio = (0.5, 0.25, 0.5)
 
         self._camera = camera.Camera(self._fov, self._density, self._max_rays)
+        # Action space is box of size 80x80x4, where lidar is placed into point [40, 20, 2]
         self.action_space = spaces.Tuple((spaces.MultiBinary((self._density[1], self._density[0])),
-                                          # TODO spaces.MultiBinary() map action space?
-                                          ))
+                                          spaces.MultiBinary((self._input_map_size[0]/self._voxel_size,
+                                                              self._input_map_size[1]/self._voxel_size,
+                                                              self._input_map_size[2]/self._voxel_size))))
+
         self._initial_position = (0, 0, 0)
         self._map, self._T_matrixes = parsing.parse_map()
         self._map_length = len(self._T_matrixes)
@@ -31,6 +36,8 @@ class LidarGym(gym.Env):
         self._curr_position = None
         self._curr_T = None
         self._done = False
+        self._reward_counter = processing.RewardCounter(self._map, self._voxel_size, self._input_map_size,
+                                                        self._input_map_shift_ratio)
 
     def _reset(self):
         self._next_timestamp = 0
@@ -46,7 +53,7 @@ class LidarGym(gym.Env):
             observation = vm.trace_ray(self._curr_position,
                                        np.transpose(self._camera.calculate_directions(action[0], self._curr_T)),
                                        self._lidar_range, const_min_value, const_max_value, 0)
-            reward = processing.compute_reward(self._map, action[1])
+            reward = self._reward_counter.compute_reward(action[1])
             self._to_next()
             return observation, reward, self._done, None
         else:
