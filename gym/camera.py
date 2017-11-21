@@ -7,7 +7,7 @@ class Camera:
 
     def __init__(self, fov, density, max_rays):
         '''
-
+        Class representing solid state lidar sensor.
         :param fov: tuple, angles in degrees for (width, height)
         :param density: tuple, number of points over fov (width, height)
         :param max_rays: integer, maximum number of rays per timestamp
@@ -19,6 +19,13 @@ class Camera:
         self.angle_per_bucket = self.fov/density
 
     def calculate_directions(self, matrix, T):
+        '''
+        From given binary matrix and position (transform matrix T), calculates vectors of rays directions
+        :param matrix: binary matrix
+        :param T: transform matrix 4x4
+        :return: set of vectors
+        '''
+
         assert type(matrix) is np.ndarray and matrix.shape[0] == self.density[0]\
                and matrix.shape[1] == self.density[1], 'wrong ray input'
         counter = 0

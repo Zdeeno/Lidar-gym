@@ -29,6 +29,9 @@ class LidarGym(gym.Env):
                                                               self._input_map_size[1]/self._voxel_size,
                                                               self._input_map_size[2]/self._voxel_size))))
 
+        self.observation_space = spaces.Tuple((spaces.Box(-float('inf'), float('inf'), (4, 4)),
+                                               spaces.Box(-float('inf'), float('inf'), (self._max_rays, 3))))
+
         self._initial_position = (0, 0, 0)
         self._map, self._T_matrixes = parsing.parse_map()
         self._map_length = len(self._T_matrixes)
@@ -49,7 +52,7 @@ class LidarGym(gym.Env):
 
     def _step(self, action):
         if not self._done:
-            # Check if vectors have correct dims! TODO: finish observation_space
+            # Check if vectors have correct dims!
             coords, _ = vm.trace_ray(self._curr_position,
                                      np.transpose(self._camera.calculate_directions(action[0], self._curr_T)),
                                      self._lidar_range, const_min_value, const_max_value, 0)
