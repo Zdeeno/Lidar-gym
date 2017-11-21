@@ -8,12 +8,13 @@ def create_test_map():
     m.free_update = - 1.0
     m.hit_update = 1.0
 
+    half = m.voxel_size/2
     #floor [-5-5, 0-100, -2]
     z = -2
     ymin = 0
-    ymax = 101
+    ymax = 100
     xmin = -5
-    xmax = 6
+    xmax = 5
     for x in range(xmin, xmax):
         for y in range(ymin, ymax):
             m.set_voxels(np.asarray([[x], [y], [z]]), np.asarray([0]), np.asarray([1]))
@@ -21,9 +22,9 @@ def create_test_map():
     #right wall [5, 0-100, -2-2]
     x = 5
     ymin = 0
-    ymax = 101
+    ymax = 100
     zmin = -2
-    zmax = 3
+    zmax = 2
     for y in range(ymin, ymax):
         for z in (zmin, zmax):
             m.set_voxels(np.asarray([[x], [y], [z]]), np.asarray([0]), np.asarray([1]))
@@ -31,13 +32,11 @@ def create_test_map():
     #left wall [-5, 0-100, -2-2]
     x = 5
     ymin = 0
-    ymax = 101
+    ymax = 100
     zmin = -2
-    zmax = 3
+    zmax = 2
     for y in range(ymin, ymax):
         for z in (zmin, zmax):
             m.set_voxels(np.asarray([[x], [y], [z]]), np.asarray([0]), np.asarray([1]))
-
-    x, l, v = m.get_voxels
 
     return m
