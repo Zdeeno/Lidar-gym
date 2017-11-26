@@ -5,6 +5,7 @@ import tools.map_parser as parsing
 import tools.math_processing as processing
 import build.voxel_map as vm
 import numpy as np
+import testing.test_map as tm
 
 const_min_value = -100
 const_max_value = 0
@@ -15,9 +16,9 @@ class LidarGym(gym.Env):
     def __init__(self):
         # Constants to define in constructors:
         self._lidar_range = 60
-        self._voxel_size = 0.5
-        self._max_rays = 100
-        self._density = (100, 100)
+        self._voxel_size = 1
+        self._max_rays = 10
+        self._density = (10, 10)
         self._fov = (90, 45)
         self._input_map_size = (80, 80, 4)
         self._input_map_shift_ratio = (0.5, 0.25, 0.5)
@@ -32,8 +33,10 @@ class LidarGym(gym.Env):
         self.observation_space = spaces.Tuple((spaces.Box(-float('inf'), float('inf'), (4, 4)),
                                                spaces.Box(-float('inf'), float('inf'), (self._max_rays, 3))))
 
-        self._initial_position = (0, 0, 0)
-        self._map, self._T_matrixes = parsing.parse_map()
+        self._initial_position = np.zeros((1, 3))
+        # use test_map.py or map_parser.py
+        # self._map, self._T_matrixes = parsing.parse_map()
+        self._map, self._T_matrixes = tm.create_test_map()
         self._map_length = len(self._T_matrixes)
         self._next_timestamp = 0
         self._curr_position = None
@@ -53,9 +56,9 @@ class LidarGym(gym.Env):
     def _step(self, action):
         if not self._done:
             # Check if vectors have correct dims!
-            coords, _ = vm.trace_ray(self._curr_position,
-                                     np.transpose(self._camera.calculate_directions(action[0], self._curr_T)),
-                                     self._lidar_range, const_min_value, const_max_value, 0)
+            coords, _ = self._map.trace_rays(self._curr_position,
+                                             np.transpose(self._camera.calculate_directions(action[0], self._curr_T)),
+                                             self._lidar_range, const_min_value, const_max_value, 0)
             reward = self._reward_counter.compute_reward(action[1])
             self._to_next()
             observation = (self._curr_T, np.transpose(coords))

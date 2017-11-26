@@ -8,7 +8,6 @@ def create_test_map():
     m.free_update = - 1.0
     m.hit_update = 1.0
 
-    half = m.voxel_size/2
     #floor [-5-5, 0-100, -2]
     z = -2
     ymin = 0
@@ -39,4 +38,11 @@ def create_test_map():
         for z in (zmin, zmax):
             m.set_voxels(np.asarray([[x], [y], [z]]), np.asarray([0]), np.asarray([1]))
 
-    return m
+    stay = np.eye(4)
+    left = np.asarray([[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+    right = np.asarray([[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+    forward = np.eye(4)
+    forward[1, 3] = 10
+    transform_mat = [stay, left, right, forward]
+
+    return m, transform_mat
