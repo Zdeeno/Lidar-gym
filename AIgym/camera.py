@@ -15,7 +15,6 @@ class Camera:
         self._fov = np.asarray((math.radians(float(fov[0])), math.radians(float(fov[1]))))
         self._density = np.asarray(density, np.float)
         self._center_index = (self._density - 1)/2
-        print self._center_index
         self._max_rays = max_rays
         self._angle_per_bucket = self._fov/self._density
 
@@ -28,6 +27,7 @@ class Camera:
         """
         assert type(matrix) is np.ndarray and matrix.shape[0] == self._density[0]\
             and matrix.shape[1] == self._density[1], 'wrong ray input'
+        vectors = None
         init = True
         for x in range(int(self._density[0])):
             for y in range(int(self._density[1])):
@@ -40,8 +40,8 @@ class Camera:
                         init = False
                     else:
                         vectors = np.concatenate((vectors, np.asmatrix((x_dir, y_dir, z_dir))), 0)
+        if vectors is None:
+            # TODO cover this empty return wherever this function is called
+            return None
         assert mp.get_numpy_shape(vectors)[0] <= self._max_rays, 'Too many rays'
-        print 'calculated directions: '
-
-        print vectors
         return mp.transform_points(vectors, T)

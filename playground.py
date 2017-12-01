@@ -6,15 +6,16 @@ import numpy as np
 env = gym.LidarGym()
 done = False
 obv = env.reset()
-print(obv)
 myDirections = np.eye(10)
 myMap = np.zeros((80, 80, 4))
-counter = 0
+counter = 1
+
+print '------------------- Iteration number 0 -------------------------'
+print 'observation:\n', obv[0], '\n', obv[1]
 
 while not done:
+    print '------------------- Iteration number ', counter , '-------------------------'
     obv, reward, done, info = env.step((myDirections, myMap))
-    print 'Iteration number ', counter
-    print obv
-    print reward
-    print done
+    print 'observation:\n', obv[0], '\n', obv[1]
+    print 'reward:\n', reward, '\n'
     counter = counter + 1

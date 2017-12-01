@@ -49,19 +49,29 @@ class LidarGym(gym.Env):
         self._next_timestamp = 0
         self._done = False
         self._to_next()
+        obv = (self._curr_T, None)
+        return obv
 
     def _close(self):
         super(LidarGym, self)._close()
 
     def _step(self, action):
+        # TODO: Last step must be observation with empty T_matrix, but reward must be evaluated!!!
         if not self._done:
-            # Check if vectors have correct dims!
-            coords, _ = self._map.trace_rays(self._curr_position,
-                                             np.transpose(self._camera.calculate_directions(action[0], self._curr_T)),
+            print self._curr_position
+            # create data to trace rays
+            directions = self._camera.calculate_directions(action[0], self._curr_T)
+            init_points = np.asmatrix(self._curr_position)
+            init_points = np.repeat(init_points, len(directions), axis=0)
+            coords, v = self._map.trace_rays(np.transpose(init_points),
+                                             np.transpose(directions),
                                              self._lidar_range, const_min_value, const_max_value, 0)
-            reward = self._reward_counter.compute_reward(action[1])
+
+            bools = processing.values_to_bools(v)
+            indexes = np.where(bools)
+            reward = self._reward_counter.compute_reward(action[1], self._curr_T)
             self._to_next()
-            observation = (self._curr_T, np.transpose(coords))
+            observation = (self._curr_T, np.transpose(coords)[indexes])
             return observation, reward, self._done, None
         else:
             return None, None, True, None
@@ -70,9 +80,10 @@ class LidarGym(gym.Env):
         super(LidarGym, self)._render(mode, close)
 
     def _to_next(self):
-        self._curr_T = self._T_matrixes[self._next_timestamp]
-        self._curr_position = processing.transform_points(self._initial_position, self._curr_T)
-        if self._next_timestamp < (self._map_length - 1):
+        if not self._done:
+            if self._next_timestamp == (self._map_length - 1):
+                self._curr_T = None
+                self._done = True
+            self._curr_T = self._T_matrixes[self._next_timestamp]
+            self._curr_position = processing.transform_points(self._initial_position, self._curr_T)
             self._next_timestamp += 1
-        else:
-            self._done = True

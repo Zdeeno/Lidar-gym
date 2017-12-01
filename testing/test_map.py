@@ -40,7 +40,7 @@ def create_test_map():
 
     stay = np.eye(4)
     left = np.asarray([[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-    right = np.asarray([[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+    right = np.asarray([[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
     forward = np.eye(4)
     forward[1, 3] = 10
     transform_mat = [stay, left, right, forward]

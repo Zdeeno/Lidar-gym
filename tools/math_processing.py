@@ -3,6 +3,15 @@ import build.voxel_map as vm
 import math
 
 
+def values_to_bools(v):
+    for i in range(len(v)):
+        if np.isnan(v[i]):
+            v[i] = False
+        else:
+            v[i] = True
+    return np.asarray(v, dtype=np.bool)
+
+
 def get_numpy_shape(array):
     if array.ndim == 1:
         return [1, np.shape(array)[0]]
@@ -52,19 +61,33 @@ class RewardCounter:
         :param action_map: map is part of action space
         :return: set of 3D row vectors, for example: [x1 y1 z1; x2 y2 z2; ...]
         """
-        true_mat = np.empty(())
-        false_mat = np.empty(())
+        init_true = False
+        init_false = False
+        true_mat = None
+        false_mat = None
         for a in range(self._a_s_size[0]):
             for b in range(self._a_s_size[1]):
                 for c in range(self._a_s_size[2]):
                     if action_map[a][b][c]:
-                        to_conc = np.asarray((a, b, c)) * self._voxel_size
-                        to_conc = (to_conc - to_conc * self._shift_ratios) + self._voxel_size/2
-                        true_mat = np.concatenate((true_mat, to_conc), 0)
+                        if not init_true:
+                            to_conc = np.asarray((a, b, c)) * self._voxel_size
+                            to_conc = (to_conc - (to_conc * self._shift_ratios)) + self._voxel_size / 2
+                            true_mat = np.asmatrix(to_conc)
+                            init_true = True
+                        else:
+                            to_conc = np.asarray((a, b, c)) * self._voxel_size
+                            to_conc = (to_conc - (to_conc * self._shift_ratios)) + self._voxel_size / 2
+                            true_mat = np.concatenate((true_mat, np.asmatrix(to_conc)), 0)
                     else:
-                        to_conc = np.asarray((a, b, c)) * self._voxel_size
-                        to_conc = (to_conc - to_conc * self._shift_ratios) + self._voxel_size/2
-                        false_mat = np.concatenate((false_mat, to_conc), 0)
+                        if not init_false:
+                            to_conc = np.asarray((a, b, c)) * self._voxel_size
+                            to_conc = (to_conc - (to_conc * self._shift_ratios)) + self._voxel_size / 2
+                            false_mat = np.asmatrix(to_conc)
+                            init_false = True
+                        else:
+                            to_conc = np.asarray((a, b, c)) * self._voxel_size
+                            to_conc = (to_conc - (to_conc * self._shift_ratios)) + self._voxel_size / 2
+                            false_mat = np.concatenate((false_mat, np.asmatrix(to_conc)), 0)
         return true_mat, false_mat
 
     def compute_reward(self, action_map, T):
@@ -76,19 +99,25 @@ class RewardCounter:
         """
         true_mat, false_mat = self._create_queries(action_map)
         t_inv = np.linalg.inv(T)
-        true_mat = transform_points(true_mat, t_inv)
-        false_mat = transform_points(false_mat, t_inv)
         reward = 0
-        v_true = self._ground_truth.get_voxels(np.transpose(true_mat))
-        v_false = self._ground_truth.get_voxels(np.transpose(false_mat))
-        for value in v_true:
-            if value > 0:
-                reward += _reward_formula(1, 1)
-            else:
-                reward += _reward_formula(-1, 1)
-        for value in v_false:
-            if value > 0:
-                reward += _reward_formula(1, -1)
-            else:
-                reward += _reward_formula(-1, -1)
-        return reward
+
+        if true_mat is not None:
+            true_mat = transform_points(true_mat, t_inv)
+            l = np.zeros((len(true_mat),), dtype=np.float64)
+            v_true = self._ground_truth.get_voxels(np.transpose(true_mat), l)
+            for value in v_true:
+                if value > 0:
+                    reward += _reward_formula(1, 1)
+                else:
+                    reward += _reward_formula(-1, 1)
+
+        if false_mat is not None:
+            false_mat = transform_points(false_mat, t_inv)
+            l = np.zeros((len(false_mat),), dtype=np.float64)
+            v_false = self._ground_truth.get_voxels(np.transpose(false_mat), l)
+            for value in v_false:
+                if value > 0:
+                    reward += _reward_formula(1, -1)
+                else:
+                    reward += _reward_formula(-1, -1)
+            return reward
