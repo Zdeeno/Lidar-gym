@@ -6,8 +6,12 @@ import numpy as np
 env = gym.LidarGym()
 done = False
 obv = env.reset()
-myDirections = np.eye(10)
-myMap = np.zeros((80, 80, 4))
+#myDirections = np.eye(10)
+myDirections = np.zeros((10, 10))
+for i in range(10):
+    myDirections[i][4] = True
+print myDirections
+myMap = np.ones((160, 160, 8), dtype=bool)
 counter = 1
 
 print '------------------- Iteration number 0 -------------------------'

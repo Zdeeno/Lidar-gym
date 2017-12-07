@@ -20,18 +20,19 @@ class Camera:
 
     def calculate_directions(self, matrix, T):
         """
-        From given binary matrix and position (transform matrix T), calculates vectors of rays directions
+        From given binary matrix and position (transform matrix T), calculates directions
         :param matrix: binary matrix
         :param T: transform matrix 4x4
         :return: set of vectors
         """
+        # TODO: adjust assert to dimensions
         assert type(matrix) is np.ndarray and matrix.shape[0] == self._density[0]\
             and matrix.shape[1] == self._density[1], 'wrong ray input'
         vectors = None
         init = True
         for x in range(int(self._density[0])):
             for y in range(int(self._density[1])):
-                if matrix[x][y]:
+                if matrix[y][x]:
                     x_dir = math.tan((x - self._center_index[0])*self._angle_per_bucket[0])
                     y_dir = 1
                     z_dir = math.tan((-y + self._center_index[1])*self._angle_per_bucket[1])
@@ -44,4 +45,9 @@ class Camera:
             # TODO cover this empty return wherever this function is called
             return None
         assert mp.get_numpy_shape(vectors)[0] <= self._max_rays, 'Too many rays'
-        return mp.transform_points(vectors, T)
+        # remove translation parameters of transformation matrix
+        rot_T = T
+        rot_T[0][3] = 0
+        rot_T[1][3] = 0
+        rot_T[2][3] = 0
+        return mp.transform_points(vectors, rot_T)
