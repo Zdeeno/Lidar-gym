@@ -20,7 +20,7 @@ setup(
     author_email='rozsyzde@fel.cvut.cz',
     license='MIT',
     packages=['tools', 'lidar_gym', 'testing'],
-    package_dir={'tools': 'tools', 'lidar_gym': 'lidar_gym', 'testing': 'testing'},
+    package_dir={'tools': 'lidar_gym/tools', 'lidar_gym': 'lidar_gym', 'testing': 'lidar_gym/testing'},
 
     classifiers=[
         'Development Status :: 3 - Alpha',

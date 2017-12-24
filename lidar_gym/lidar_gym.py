@@ -1,10 +1,10 @@
 import gym
 import gym.spaces as spaces
 import numpy as np
+from lidar_gym.tools import math_processing as processing
 
-import testing.test_map as tm
-from tools import math_processing as processing
-from tools import camera
+import lidar_gym.testing.test_map as tm
+from lidar_gym.tools import camera
 
 const_min_value = -100
 const_max_value = 0
