@@ -1,4 +1,4 @@
-import build.voxel_map as vm
+import voxel_map as vm
 import numpy as np
 
 

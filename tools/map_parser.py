@@ -1,9 +1,9 @@
-"""Example of pykitti.raw usage."""
 import itertools
 import numpy as np
 import pykitti
 import voxel_map as vm
-import math_processing as mp
+from tools import math_processing as mp
+
 
 def parse_map():
     # Change this to the directory where you store KITTI data
@@ -32,10 +32,10 @@ def parse_map():
     anchor_initial = np.zeros((1, 4))
     np.set_printoptions(precision=4, suppress=True)
 
-    print '\nThis map has', size, 'timestamps.'
+    print('\nThis map has', size, 'timestamps.')
     # Grab some data
     for i in range(size):
-        print '\nProcessing point cloud from position: ', i
+        print('\nProcessing point cloud from position: ', i)
         transform_matrix = next(iter(itertools.islice(dataset.oxts, i, None))).T_w_imu
         T_matrixes.append(transform_matrix)
         anchor = mp.transform_points(anchor_initial, transform_matrix)
