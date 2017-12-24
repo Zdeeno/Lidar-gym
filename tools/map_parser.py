@@ -2,7 +2,7 @@
 import itertools
 import numpy as np
 import pykitti
-import build.voxel_map as vm
+import voxel_map as vm
 import math_processing as mp
 
 def parse_map():

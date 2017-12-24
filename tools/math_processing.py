@@ -1,5 +1,5 @@
 import numpy as np
-import build.voxel_map as vm
+import voxel_map as vm
 import math
 
 

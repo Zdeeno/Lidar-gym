@@ -1,11 +1,10 @@
 import gym
 import gym.spaces as spaces
-import camera
-import tools.map_parser as parsing
-import tools.math_processing as processing
-import build.voxel_map as vm
 import numpy as np
+
 import testing.test_map as tm
+from tools import math_processing as processing
+from tools import camera
 
 const_min_value = -100
 const_max_value = 0
