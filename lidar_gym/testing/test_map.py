@@ -31,7 +31,7 @@ def create_test_map():
     #left wall [-5, 0-100, -2-2]
     x = -5
     ymin = -10
-    ymax = 100
+    ymax = 110
     zmin = -2
     zmax = 2
     for y in np.arange(ymin, ymax, 0.5):

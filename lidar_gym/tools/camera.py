@@ -28,8 +28,8 @@ class Camera:
         :return: set of vectors
         """
         # TODO: adjust assert to dimensions
-        assert type(matrix) is np.ndarray and matrix.shape[0] == self._density[0]\
-            and matrix.shape[1] == self._density[1], 'wrong ray input'
+        assert type(matrix) is np.ndarray and matrix.shape[0] == self._density[1]\
+            and matrix.shape[1] == self._density[0], 'wrong ray input'
         vectors = None
         init = True
         for x in range(int(self._density[0])):
@@ -48,8 +48,8 @@ class Camera:
             return None
         assert mp.get_numpy_shape(vectors)[0] <= self._max_rays, 'Too many rays'
         # remove translation parameters of transformation matrix
-        rot_T = T
-        rot_T[0][3] = 0
-        rot_T[1][3] = 0
-        rot_T[2][3] = 0
-        return mp.transform_points(vectors, rot_T)
+        rot = T.copy()
+        rot[0][3] = 0
+        rot[1][3] = 0
+        rot[2][3] = 0
+        return mp.transform_points(vectors, rot)

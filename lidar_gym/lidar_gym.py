@@ -13,9 +13,9 @@ const_max_value = 0
 class LidarGym(gym.Env):
 
     def __init__(self):
-        # Constants to define in constructors:
+        # TODO Constants to define in constructors:
         self._lidar_range = 100
-        self._voxel_size = 1
+        self._voxel_size = 0.5
         self._max_rays = 10
         self._density = (10, 10)
         self._fov = (90, 45)
@@ -60,13 +60,13 @@ class LidarGym(gym.Env):
             directions = self._camera.calculate_directions(action[0], self._curr_T)
             init_points = np.asmatrix(self._curr_position)
             init_points = np.repeat(init_points, len(directions), axis=0)
-            print('tracing rays from:\n', self._curr_position, '\nwith directions:\n', directions)
+            #print('tracing rays from:\n', self._curr_position, '\nwith directions:\n', directions)
             coords, v = self._map.trace_rays(np.transpose(init_points),
                                              np.transpose(directions),
                                              self._lidar_range, const_min_value, const_max_value, 0)
             bools = processing.values_to_bools(v)
             indexes = np.where(bools)
-            print('traced indexes:\n', indexes)
+            #print('traced indexes:\n', indexes)
             reward = self._reward_counter.compute_reward(action[1], self._curr_T)
             self._to_next()
             observation = (self._curr_T, np.transpose(coords)[indexes])
