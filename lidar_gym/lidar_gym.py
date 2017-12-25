@@ -11,14 +11,23 @@ const_max_value = 0
 
 
 class LidarGym(gym.Env):
+    '''
+    Class representing solid state lidar sensor training environment.
+    Parameters:
+        lidar_range(double)
+        voxel_size(double)
+        max_rays(int)
+        density(tuple)
+        fov(tuple)
+    '''
 
-    def __init__(self):
+    def __init__(self, lidar_range, voxel_size, max_rays, density, fov):
         # TODO Constants to define in constructors:
-        self._lidar_range = 100
-        self._voxel_size = 0.5
-        self._max_rays = 10
-        self._density = (10, 10)
-        self._fov = (90, 45)
+        self._lidar_range = lidar_range
+        self._voxel_size = voxel_size
+        self._max_rays = max_rays
+        self._density = density
+        self._fov = fov
         self._input_map_size = (80, 80, 4)
         self._input_map_shift_ratio = (0.5, 0.25, 0.5)
 
