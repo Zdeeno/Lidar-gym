@@ -14,11 +14,11 @@ class LidarGym(gym.Env):
     '''
     Class representing solid state lidar sensor training environment.
     Parameters:
-        lidar_range(double)
-        voxel_size(double)
-        max_rays(int)
-        density(tuple)
-        fov(tuple)
+        :param lidar_range: double
+        :param voxel_size: double
+        :param fov: tuple, angles in degrees for (width, height)
+        :param density: tuple, number of points over fov (width, height)
+        :param max_rays: integer, maximum number of rays per timestamp
     '''
 
     def __init__(self, lidar_range, voxel_size, max_rays, density, fov):
@@ -28,11 +28,10 @@ class LidarGym(gym.Env):
         self._max_rays = max_rays
         self._density = density
         self._fov = fov
-        self._input_map_size = (80, 80, 4)
-        self._input_map_shift_ratio = (0.5, 0.25, 0.5)
+        self._input_map_size = (81, 81, 5)
+        self._input_map_shift_length = (40, 20, 2)
 
         self._camera = camera.Camera(self._fov, self._density, self._max_rays)
-        # Action space is box of size 80x80x4, where lidar is placed into point [40, 20, 2]
         self.action_space = spaces.Tuple((spaces.MultiBinary((self._density[1], self._density[0])),
                                           spaces.MultiBinary((self._input_map_size[0]/self._voxel_size,
                                                               self._input_map_size[1]/self._voxel_size,
@@ -51,7 +50,7 @@ class LidarGym(gym.Env):
         self._curr_T = None
         self._done = False
         self._reward_counter = processing.RewardCounter(self._map, self._voxel_size, self._input_map_size,
-                                                        self._input_map_shift_ratio)
+                                                        self._input_map_shift_length)
 
     def _reset(self):
         self._next_timestamp = 0

@@ -38,7 +38,7 @@ def parse_map():
     for i in range(size):
         print('\nProcessing point cloud from position: ', i)
         transform_matrix = next(iter(itertools.islice(dataset.oxts, i, None))).T_w_imu
-        T_matrixes.append(transform_matrix)
+        T_matrixes.append(np.asmatrix(transform_matrix))
         anchor = mp.transform_points(anchor_initial, transform_matrix)
         velo_points = next(iter(itertools.islice(dataset.velo, i, None)))
         pts = mp.transform_points(velo_points, transform_matrix)

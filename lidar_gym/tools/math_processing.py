@@ -47,14 +47,13 @@ def _reward_formula(y1, y2):
 
 class RewardCounter:
 
-    def __init__(self, ground_truth, voxel_size, action_space_size, shift_ratios):
+    def __init__(self, ground_truth, voxel_size, action_space_size, shift_length):
         assert type(ground_truth) == vm.VoxelMap
 
         self._ground_truth = ground_truth
         self._voxel_size = voxel_size
         self._a_s_size = np.asarray(action_space_size)/voxel_size
-        self._shift_rate = np.asmatrix([self._a_s_size[0]*shift_ratios[0], self._a_s_size[1]*shift_ratios[1],
-                                        self._a_s_size[2]*shift_ratios[2]])
+        self._shift_rate = np.asarray(shift_length)/voxel_size
 
     def _create_queries(self, action_map):
         """
@@ -63,7 +62,6 @@ class RewardCounter:
         :return: set of 3D row vectors, for example: [x1 y1 z1; x2 y2 z2; ...]
         """
         assert np.shape(action_map) == tuple(self._a_s_size), 'Input map has wrong size'
-        print('MAKING QUERIES')
 
         true_tmp = np.where(action_map > 0)
         true_mat = np.transpose(np.asmatrix(true_tmp)) - self._shift_rate
@@ -71,7 +69,6 @@ class RewardCounter:
         false_tmp = np.where(action_map == 0)
         false_mat = np.transpose(np.asmatrix(false_tmp)) - self._shift_rate
 
-        print('QUERIES DONE')
         return true_mat, false_mat
 
     def compute_reward(self, action_map, T):
@@ -82,17 +79,12 @@ class RewardCounter:
         :return: double reward (-inf, 0), higher is better
         """
         true_mat, false_mat = self._create_queries(action_map)
-        #print('Making inverse from:')
-        #print(T)
         t_inv = np.linalg.inv(T)
-        #print('to')
         reward = 0
-        #print(t_inv)
 
         if true_mat is not None:
             true_mat = transform_points(true_mat, t_inv)
             l = np.zeros((len(true_mat),), dtype=np.float64)
-            #print(true_mat)
             v_true = self._ground_truth.get_voxels(np.transpose(true_mat), l)
             for value in v_true:
                 if value > 0:

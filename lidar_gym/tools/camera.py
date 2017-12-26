@@ -27,7 +27,6 @@ class Camera:
         :param T: transform matrix 4x4
         :return: set of vectors
         """
-        # TODO: adjust assert to dimensions
         assert type(matrix) is np.ndarray and matrix.shape[0] == self._density[1]\
             and matrix.shape[1] == self._density[0], 'wrong ray input'
         vectors = None
