@@ -14,7 +14,7 @@ Dependencies can by installed by command:<br />`python setup.py install`
 
 ## Action space
 We define action space as a following tuple:<br />
-`action_space = (rays, map)`<br />
+`action_space = (rays, map)`
 where <br />`rays` is 2D binary (numpy) matrix representing directions of lidar beams. <br />
 `map` is 3D binary (numpy) matrix of map reconstructed by agent.
 Environment must receive only local cutout of global map. 
