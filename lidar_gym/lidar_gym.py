@@ -28,7 +28,8 @@ class LidarGym(gym.Env):
         self._max_rays = max_rays
         self._density = density
         self._fov = fov
-        self._input_map_size = (81, 81, 5)
+        # TODO check sizes!!!
+        self._input_map_size = (80, 80, 4)
         self._input_map_shift_length = (40, 20, 2)
 
         self._camera = camera.Camera(self._fov, self._density, self._max_rays)
