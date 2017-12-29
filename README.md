@@ -19,7 +19,7 @@ where <br />`rays` is 2D binary (numpy) matrix representing directions of lidar 
 `map` is 3D binary (numpy) matrix of map reconstructed by agent.
 Environment must receive only local cutout of global map. 
 Actually it needs only cuboid with local coordinates `[-40:40, -20:60, -2:2]`.
-Size of your input map should be `(81, 81, 5) ./ voxel_size`. 
+Size of your input map should be `((80, 80, 4) ./ voxel_size) + (1, 1, 1)`. 
 
 ## Observation space
 We define observation space as following tuple:<br />

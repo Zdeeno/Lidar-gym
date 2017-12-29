@@ -52,7 +52,7 @@ class RewardCounter:
 
         self._ground_truth = ground_truth
         self._voxel_size = voxel_size
-        self._a_s_size = np.asarray(action_space_size)/voxel_size + 1
+        self._a_s_size = (np.asarray(action_space_size)/voxel_size) + 1
         self._shift_rate = np.asarray(shift_length)/voxel_size
 
     def _create_queries(self, action_map):
