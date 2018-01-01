@@ -15,7 +15,7 @@ class Camera:
         :param max_rays: integer, maximum number of rays per timestamp
         """
         self._fov = np.asarray((math.radians(float(fov[0])), math.radians(float(fov[1]))))
-        self._density = np.asarray(density, np.float)
+        self._density = density
         self._center_index = (self._density - 1)/2
         self._max_rays = max_rays
         self._angle_per_bucket = self._fov/self._density

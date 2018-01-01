@@ -26,20 +26,23 @@ class LidarGym(gym.Env):
         self._lidar_range = lidar_range
         self._voxel_size = voxel_size
         self._max_rays = max_rays
-        self._density = density
-        self._fov = fov
+        self._density = np.asarray(density, dtype=np.float)
+        self._fov = np.asmatrix(fov)
         # TODO check sizes!!!
-        self._input_map_size = (80, 80, 4)
-        self._input_map_shift_length = (40, 20, 2)
+        self._map_shape = np.asmatrix((80, 80, 4))  # without zeros ... add 1
+        self._map_shift_length = np.asmatrix((40, 20, 2))
+        self._input_map_shape = (self._map_shape / voxel_size) + np.ones((1, 3))
 
         self._camera = camera.Camera(self._fov, self._density, self._max_rays)
         self.action_space = spaces.Tuple((spaces.MultiBinary((self._density[1], self._density[0])),
-                                          spaces.MultiBinary((self._input_map_size[0]/self._voxel_size,
-                                                              self._input_map_size[1]/self._voxel_size,
-                                                              self._input_map_size[2]/self._voxel_size))))
+                                          spaces.Box(low=-float('inf'),
+                                                     high=float('inf'),
+                                                     shape=self._input_map_shape)))
 
-        self.observation_space = spaces.Tuple((spaces.Box(-float('inf'), float('inf'), (4, 4)),
-                                               spaces.Box(-float('inf'), float('inf'), (self._max_rays, 3))))
+        max_obs_pts = (lidar_range/voxel_size)*max_rays
+        self.observation_space = spaces.Tuple((spaces.Box(low=-float('inf'), high=float('inf'), shape=(4, 4)),
+                                               spaces.Box(low=-float('inf'), high=float('inf'), shape=(max_obs_pts, 3)),
+                                               spaces.Box(low=-float('inf'), high=float('inf'), shape=(max_obs_pts, 1))))
 
         self._initial_position = np.zeros((1, 3))
         # use test_map.py or map_parser.py
@@ -50,8 +53,9 @@ class LidarGym(gym.Env):
         self._curr_position = None
         self._curr_T = None
         self._done = False
-        self._reward_counter = processing.RewardCounter(self._map, self._voxel_size, self._input_map_size,
-                                                        self._input_map_shift_length)
+
+        self._reward_counter = processing.RewardCounter(self._map, self._voxel_size, self._map_shape,
+                                                        self._map_shift_length)
 
     def _reset(self):
         self._next_timestamp = 0
@@ -65,7 +69,7 @@ class LidarGym(gym.Env):
 
     def _step(self, action):
         if not self._done:
-            # create data to trace rays
+            # create data to trace rays TODO: repair return due to new observation space
             directions = self._camera.calculate_directions(action[0], self._curr_T)
             init_points = np.asmatrix(self._curr_position)
             init_points = np.repeat(init_points, len(directions), axis=0)

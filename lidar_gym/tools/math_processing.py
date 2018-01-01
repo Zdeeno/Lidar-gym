@@ -45,6 +45,39 @@ def _reward_formula(y1, y2):
     return -weight*math.log(1 + math.exp(-y1*y2))
 
 
+class CuboidGetter:
+
+    def __init__(self, voxel_size, map_size, shift):
+        shift = shift/voxel_size
+        mins = np.zeros((1, 3)) - shift
+        maxs = map_size/voxel_size - shift
+        getter_size = map_size/voxel_size + (1, 1, 1)
+        num_pts = getter_size[0] * getter_size[1] * getter_size[2]
+        self._cuboid_points = np.zeros((num_pts, 3))
+        counter = 0
+        for x in np.arange(mins[0], maxs[0] + voxel_size, voxel_size):
+            for y in np.arange(mins[1], maxs[1] + voxel_size, voxel_size):
+                for z in np.arange(mins[2], maxs[2] + voxel_size, voxel_size):
+                    self._cuboid_points[counter] = np.asmatrix((x, y, z))
+                    counter = counter + 1
+        self.l = np.zeros((len(self._cuboid_points),), dtype=np.float64)
+
+    def get_map_cuboid(self, voxel_map, T=None):
+        '''
+        Obtain cuboid from Voxel_map class
+        :param map: Voxel_map instance
+        :param T: transformation matrix
+        :return: points (Nx3), values (1xN)
+        '''
+        if T is None:
+            values = voxel_map.get_voxels(np.transpose(self._cuboid_points), self.l)
+            return self._cuboid_points, values
+        else:
+            points = transform_points(self._cuboid_points, T)
+            values = voxel_map.get_voxels(np.transpose(points), self.l)
+            return points, values
+
+
 class RewardCounter:
 
     def __init__(self, ground_truth, voxel_size, action_space_size, shift_length):
@@ -54,22 +87,7 @@ class RewardCounter:
         self._voxel_size = voxel_size
         self._a_s_size = (np.asarray(action_space_size)/voxel_size) + 1
         self._shift_rate = np.asarray(shift_length)/voxel_size
-
-    def _create_queries(self, action_map):
-        """
-        Method creates already shifted queries to ground truth Voxel_map class.
-        :param action_map: map is part of action space
-        :return: set of 3D row vectors, for example: [x1 y1 z1; x2 y2 z2; ...]
-        """
-        assert np.shape(action_map) == tuple(self._a_s_size), 'Input map has wrong size'
-
-        true_tmp = np.where(action_map > 0)
-        true_mat = np.transpose(np.asmatrix(true_tmp)) - self._shift_rate
-
-        false_tmp = np.where(action_map == 0)
-        false_mat = np.transpose(np.asmatrix(false_tmp)) - self._shift_rate
-
-        return true_mat, false_mat
+        self._cuboid_getter = CuboidGetter(voxel_size, action_space_size, shift_length)
 
     def compute_reward(self, action_map, T):
         """
@@ -78,27 +96,12 @@ class RewardCounter:
         :param T: transform matrix 4x4
         :return: double reward (-inf, 0), higher is better
         """
-        true_mat, false_mat = self._create_queries(action_map)
-        t_inv = np.linalg.inv(T)
         reward = 0
-
-        if true_mat is not None:
-            true_mat = transform_points(true_mat, t_inv)
-            l = np.zeros((len(true_mat),), dtype=np.float64)
-            v_true = self._ground_truth.get_voxels(np.transpose(true_mat), l)
-            for value in v_true:
-                if value > 0:
-                    reward += _reward_formula(1, 1)
-                else:
-                    reward += _reward_formula(-1, 1)
-
-        if false_mat is not None:
-            false_mat = transform_points(false_mat, t_inv)
-            l = np.zeros((len(false_mat),), dtype=np.float64)
-            v_false = self._ground_truth.get_voxels(np.transpose(false_mat), l)
-            for value in v_false:
-                if value > 0:
-                    reward += _reward_formula(1, -1)
-                else:
-                    reward += _reward_formula(-1, -1)
-            return reward
+        points, values = self._cuboid_getter.get_map_cuboid(self._ground_truth, T)
+        for idx, point in enumerate(points):
+            if values[idx] > 0:
+                reward = reward + _reward_formula(action_map[point], 1)
+                continue
+            if values[idx] < 0:
+                reward = reward + _reward_formula(action_map[point], -1)
+        return reward
