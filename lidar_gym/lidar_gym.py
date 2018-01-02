@@ -99,20 +99,22 @@ class LidarGym(gym.Env):
             self._next_timestamp += 1
 
     def _create_observation(self, init_point, directions):
-        # TODO: dont forget missed rays
         init_points = np.repeat(init_point, len(directions), axis=0)
         coords, v = self._map.trace_rays(np.transpose(init_points),
                                          np.transpose(directions),
                                          self._lidar_range, const_min_value, const_max_value, 0)
         bools = processing.values_to_bools(v)
-        indexes = np.where(bools)
-        hit_voxels = np.asmatrix(coords[:, indexes])
+        indexes_empty = np.where(~bools)
+        free_pts = np.asmatrix(coords[:, indexes_empty])
 
         tmp_map = vm.VoxelMap()
         tmp_map.voxel_size = 0.5
         tmp_map.free_update = - 1.0
         tmp_map.hit_update = 1.0
-        init_points = np.repeat(init_point, np.shape(indexes)[1], axis=0)
-        tmp_map.update_lines(np.transpose(init_points), hit_voxels)
+        init_points = np.repeat(init_point, len(v), axis=0)
+        tmp_map.update_lines(np.transpose(init_points), coords)
+        # correct empty pts
+        tmp_map.set_voxels(free_pts, np.zeros((free_pts.shape[1],)), -np.ones((free_pts.shape[1],)))
+
         x, l, v = tmp_map.get_voxels()
         return x, v
