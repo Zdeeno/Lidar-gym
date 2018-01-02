@@ -19,8 +19,8 @@ setup(
     author='Zdenek Rozsypalek, CVUT',
     author_email='rozsyzde@fel.cvut.cz',
     license='MIT',
-    packages=['tools', 'lidar_gym', 'testing'],
-    package_dir={'tools': 'lidar_gym/tools', 'lidar_gym': 'lidar_gym', 'testing': 'lidar_gym/testing'},
+    packages=['tools', 'envs', 'testing'],
+    package_dir={'tools': 'lidar_gym/tools', 'envs': 'lidar_gym/envs', 'testing': 'lidar_gym/testing'},
 
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -35,7 +35,6 @@ setup(
 
         'License :: OSI Approved :: MIT License',
 
-        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',

@@ -28,14 +28,14 @@ class Camera:
         :return: set of vectors
         """
         assert type(matrix) is np.ndarray and matrix.shape[0] == self._density[1]\
-            and matrix.shape[1] == self._density[0], 'wrong ray input'
+            and matrix.shape[1] == self._density[0], 'wrong ray matrix as input'
         vectors = None
         init = True
         for x in range(int(self._density[0])):
             for y in range(int(self._density[1])):
                 if matrix[y][x]:
-                    x_dir = math.tan((x - self._center_index[0])*self._angle_per_bucket[0])
-                    y_dir = 1
+                    x_dir = 1
+                    y_dir = math.tan((x - self._center_index[0])*self._angle_per_bucket[0])
                     z_dir = math.tan((-y + self._center_index[1])*self._angle_per_bucket[1])
                     if init:
                         vectors = np.asmatrix((x_dir, y_dir, z_dir))
@@ -45,6 +45,7 @@ class Camera:
         if vectors is None:
             # TODO cover this empty return wherever this function is called
             return None
+
         assert mp.get_numpy_shape(vectors)[0] <= self._max_rays, 'Too many rays'
         # remove translation parameters of transformation matrix
         rot = T.copy()

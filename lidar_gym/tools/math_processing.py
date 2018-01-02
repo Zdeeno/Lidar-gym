@@ -39,7 +39,7 @@ def _reward_formula(y1, y2):
     """
     Computes logistic loss per one element.
     :param y1, y2: int +1 or -1
-    :return: double reward in interval (-inf, 0)
+    :return: reward: double in interval (-inf, 0)
     """
     weight = 1
     return -weight*math.log(1 + math.exp(-y1*y2))
@@ -84,7 +84,7 @@ class RewardCounter:
 
         self._ground_truth = ground_truth
         self._voxel_size = voxel_size
-        self._a_s_size = (np.asarray(action_space_size)/voxel_size) + 1
+        self._a_s_size = action_space_size/voxel_size + (1, 1, 1)
         self._shift_rate = np.asarray(shift_length)/voxel_size
         self._cuboid_getter = CuboidGetter(voxel_size, action_space_size, shift_length)
 
@@ -95,13 +95,15 @@ class RewardCounter:
         :param T: transform matrix 4x4
         :return: double reward (-inf, 0), higher is better
         """
+        assert np.array_equal(action_map.shape, self._a_s_size)
+
         reward = 0
         points, values = self._cuboid_getter.get_map_cuboid(self._ground_truth, T)
         points = (points/self._voxel_size) + self._shift_rate
         for idx, point in enumerate(np.round(points).astype(int)):
-            if values[idx] > 0:
-                reward = reward + _reward_formula(action_map[point[0], point[1], point[2]], 1)
-                continue
             if values[idx] < 0:
                 reward = reward + _reward_formula(action_map[point[0], point[1], point[2]], -1)
+                continue
+            if values[idx] > 0:
+                reward = reward + _reward_formula(action_map[point[0], point[1], point[2]], 1)
         return reward

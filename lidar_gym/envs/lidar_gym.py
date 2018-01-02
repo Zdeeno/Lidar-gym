@@ -13,7 +13,7 @@ const_max_value = 0
 
 class LidarGym(gym.Env):
     '''
-    Class representing solid state lidar sensor training environment.
+    Class representing solid-state lidar sensor training environment.
     Parameters:
         :param lidar_range: double
         :param voxel_size: double
@@ -31,21 +31,21 @@ class LidarGym(gym.Env):
         self._fov = np.asarray(fov)
         # TODO check sizes!!!
         self._map_shape = np.asarray((80, 80, 4))  # without zeros ... add 1
-        self._map_shift_length = np.asarray((40, 20, 2))
+        self._map_shift_length = np.asarray((20, 40, 2))
         self._input_map_shape = (self._map_shape / voxel_size) + np.ones((1, 3))
         self._camera = camera.Camera(self._fov, self._density, self._max_rays)
 
         max = sys.maxsize
         min = -sys.maxsize - 1
         max_obs_pts = int((lidar_range / voxel_size) * max_rays)
-        self.action_space = spaces.Tuple((spaces.MultiBinary((self._density[1], self._density[0])),
-                                          spaces.Box(low=min,
-                                                     high=max,
-                                                     shape=self._input_map_shape[0].astype(int))))
+        self.action_space = spaces.Dict({"rays": spaces.MultiBinary((self._density[1], self._density[0])),
+                                        "map": spaces.Box(low=min,
+                                                          high=max,
+                                                          shape=self._input_map_shape[0].astype(int))})
 
-        self.observation_space = spaces.Tuple((spaces.Box(low=min, high=max, shape=(4, 4)),
-                                               spaces.Box(low=min, high=max, shape=(max_obs_pts, 3)),
-                                               spaces.Box(low=min, high=max, shape=(max_obs_pts, 1))))
+        self.observation_space = spaces.Dict({"T": spaces.Box(low=min, high=max, shape=(4, 4)),
+                                              "points": spaces.Box(low=min, high=max, shape=(max_obs_pts, 3)),
+                                              "values": spaces.Box(low=min, high=max, shape=(max_obs_pts, 1))})
 
         self._initial_position = np.zeros((1, 3))
         # use test_map.py or map_parser.py
@@ -64,23 +64,28 @@ class LidarGym(gym.Env):
         self._next_timestamp = 0
         self._done = False
         self._to_next()
-        obv = (self._curr_T, None)
+        obv = {"T": self._curr_T, "points": None, "values": None}
         return obv
 
     def _close(self):
         super(LidarGym, self)._close()
 
     def _step(self, action):
+        assert type(action["rays"]) == np.ndarray and type(action["map"]) == np.ndarray, "wrong input types"
+
         if not self._done:
-            directions = self._camera.calculate_directions(action[0], self._curr_T)
-            init_point = np.asmatrix(self._curr_position)
-            x, v = self._create_observation(init_point, directions)
+            directions = self._camera.calculate_directions(action["rays"], self._curr_T)
+            if directions is not None:
+                init_point = np.asmatrix(self._curr_position)
+                x, v = self._create_observation(init_point, directions)
+                reward = self._reward_counter.compute_reward(action["map"], self._curr_T)
+                self._to_next()
+                observation = {"T": self._curr_T, "points": np.transpose(x), "values": v}
+            else:
+                reward = self._reward_counter.compute_reward(action["map"], self._curr_T)
+                self._to_next()
+                observation = {"T": self._curr_T, "points": None, "values": None}
 
-            #print('traced indexes:\n', indexes)
-            reward = self._reward_counter.compute_reward(action[1], self._curr_T)
-            self._to_next()
-
-            observation = (self._curr_T, np.transpose(x), v)
             return observation, reward, self._done, None
         else:
             return None, None, True, None
@@ -118,3 +123,9 @@ class LidarGym(gym.Env):
 
         x, l, v = tmp_map.get_voxels()
         return x, v
+
+
+class Lidarv0(LidarGym):
+    
+    def __init__(self):
+        super(Lidarv0, self).__init__(100, 0.5, 100, (9, 10), (120, 90))

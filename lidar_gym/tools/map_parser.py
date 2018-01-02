@@ -44,8 +44,7 @@ def parse_map():
         pts = mp.transform_points(velo_points, transform_matrix)
         anchors = np.tile(np.transpose(anchor), (1, len(pts)))
         m.update_lines(anchors, np.transpose(pts))
-        #print '\n------------- AT ANCHOR ', anchor, ' ------------\n'
-        #print pts
+
 
     # Display some of the data
     return m, T_matrixes
