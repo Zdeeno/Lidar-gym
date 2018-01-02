@@ -48,16 +48,15 @@ def _reward_formula(y1, y2):
 class CuboidGetter:
 
     def __init__(self, voxel_size, map_size, shift):
-        shift = shift/voxel_size
         mins = np.zeros((1, 3)) - shift
-        maxs = map_size/voxel_size - shift
+        maxs = map_size - shift
         getter_size = map_size/voxel_size + (1, 1, 1)
-        num_pts = getter_size[0] * getter_size[1] * getter_size[2]
+        num_pts = int(getter_size[0] * getter_size[1] * getter_size[2])
         self._cuboid_points = np.zeros((num_pts, 3))
         counter = 0
-        for x in np.arange(mins[0], maxs[0] + voxel_size, voxel_size):
-            for y in np.arange(mins[1], maxs[1] + voxel_size, voxel_size):
-                for z in np.arange(mins[2], maxs[2] + voxel_size, voxel_size):
+        for x in np.arange(mins[0, 0], maxs[0] + voxel_size, voxel_size):
+            for y in np.arange(mins[0, 1], maxs[1] + voxel_size, voxel_size):
+                for z in np.arange(mins[0, 2], maxs[2] + voxel_size, voxel_size):
                     self._cuboid_points[counter] = np.asmatrix((x, y, z))
                     counter = counter + 1
         self.l = np.zeros((len(self._cuboid_points),), dtype=np.float64)
@@ -75,7 +74,7 @@ class CuboidGetter:
         else:
             points = transform_points(self._cuboid_points, T)
             values = voxel_map.get_voxels(np.transpose(points), self.l)
-            return points, values
+            return self._cuboid_points, values
 
 
 class RewardCounter:
@@ -98,10 +97,11 @@ class RewardCounter:
         """
         reward = 0
         points, values = self._cuboid_getter.get_map_cuboid(self._ground_truth, T)
-        for idx, point in enumerate(points):
+        points = (points/self._voxel_size) + self._shift_rate
+        for idx, point in enumerate(np.round(points).astype(int)):
             if values[idx] > 0:
-                reward = reward + _reward_formula(action_map[point], 1)
+                reward = reward + _reward_formula(action_map[point[0], point[1], point[2]], 1)
                 continue
             if values[idx] < 0:
-                reward = reward + _reward_formula(action_map[point], -1)
+                reward = reward + _reward_formula(action_map[point[0], point[1], point[2]], -1)
         return reward

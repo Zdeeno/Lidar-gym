@@ -11,7 +11,7 @@ myDirections = np.zeros((10, 10))
 for i in range(10):
     myDirections[i][4] = True
 print(myDirections)
-myMap = np.ones((162, 162, 10), dtype=bool)
+myMap = np.ones((161, 161, 10), dtype=int)
 counter = 1
 print('------------------- Iteration number 0 -------------------------')
 print('observation:\n', obv[0], '\n', obv[1])
@@ -19,6 +19,6 @@ print('observation:\n', obv[0], '\n', obv[1])
 while not done:
     print('------------------- Iteration number ', counter , '-------------------------')
     obv, reward, done, info = env.step((myDirections, myMap))
-    print('observation:\n', obv[0], '\n', obv[1])
+    print('observation:\n', obv[0], '\n', obv[1], '\n', obv[2])
     print('reward:\n', reward, '\n')
     counter = counter + 1
