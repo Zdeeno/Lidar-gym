@@ -3,6 +3,7 @@
 Environment is written in python 3 using following libraries:
 
 ##### 1. Numpy
+https://github.com/numpy/numpy
 ##### 2. OpenAI gym
 https://github.com/openai/gym
 ##### 3. Pykitti
@@ -38,4 +39,4 @@ value > 0 - occupied voxel
 ```
 ## Notes
 Currently there is a lot of parameters available. That's documented in [lidar_gym](lidar_gym/envs/lidar_gym.py) file.
-Reward is in range `(-inf, 0)`. Package is still under development - gym registration will be added soon.
+Reward is in range `(-inf, 0)`. Package is still under development.
