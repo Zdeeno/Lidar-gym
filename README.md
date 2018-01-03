@@ -29,9 +29,9 @@ where <br />
 `T` is 2D (numpy.ndarray) transformation matrix to the next position of sensor.
 Its size is `(4, 4)`.<br />
 `points` is 2D (numpy.ndarray) matrix. It is made by points (in rows) found by lidar rays.
-Size of this matrix is `(N, 3)`, where N is number of found points.<br />
+Size of this matrix is `(N, 3)`, where N is number of found points. It is None when no points was hit.<br />
 `values` is 1D (numpy.ndarray) array. It consist of values corresponding to the
-occupancy of points with same index. Its size is `(1, N)`. For each value applies:
+occupancy of points with same index. Its size is `(1, N)` or None. For each value applies:
 ```
 value < 0 - empty voxel
 value == 0 - unknown occupancy

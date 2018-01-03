@@ -19,8 +19,7 @@ setup(
     author='Zdenek Rozsypalek, CVUT',
     author_email='rozsyzde@fel.cvut.cz',
     license='MIT',
-    packages=['tools', 'envs', 'testing'],
-    package_dir={'tools': 'lidar_gym/tools', 'envs': 'lidar_gym/envs', 'testing': 'lidar_gym/testing'},
+    packages=find_packages(),
 
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -40,6 +39,7 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
     keywords='gym lidar environment openai',
     install_requires=['numpy', 'pykitti', 'voxel_map', 'gym'],

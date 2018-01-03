@@ -35,10 +35,12 @@ def parse_map():
 
     print('\nThis map has', size, 'timestamps.')
     # Grab some data
-    for i in range(size):
-        print('\nProcessing point cloud from position: ', i)
+    # I have error in my dataset, 4 voxel records (bins) are missing -> size - 5
+    #for i in range(size-5):
+    for i in range(10):
+        print('\nProcessing point cloud from position number - ', i)
         transform_matrix = next(iter(itertools.islice(dataset.oxts, i, None))).T_w_imu
-        T_matrixes.append(np.asmatrix(transform_matrix))
+        T_matrixes.append(np.asarray(transform_matrix))
         anchor = mp.transform_points(anchor_initial, transform_matrix)
         velo_points = next(iter(itertools.islice(dataset.velo, i, None)))
         pts = mp.transform_points(velo_points, transform_matrix)

@@ -6,8 +6,9 @@ import voxel_map as vm
 import lidar_gym.testing.test_map as tm
 from lidar_gym.tools import camera
 import sys
+from lidar_gym.tools import map_parser
 
-const_min_value = -100
+const_min_value = -sys.maxsize
 const_max_value = 0
 
 
@@ -49,9 +50,9 @@ class LidarGym(gym.Env):
 
         self._initial_position = np.zeros((1, 3))
         # use test_map.py or map_parser.py
-        # self._map, self._T_matrixes = parsing.parse_map()
-        self._map, self._T_matrixes = tm.create_test_map()
-        self._map_length = len(self._T_matrixes)
+        self._map, self._T_matrices = map_parser.parse_map()
+        # self._map, self._T_matrices = tm.create_test_map()
+        self._map_length = len(self._T_matrices)
         self._next_timestamp = 0
         self._curr_position = None
         self._curr_T = None
@@ -99,7 +100,7 @@ class LidarGym(gym.Env):
                 self._curr_T = None
                 self._done = True
                 return
-            self._curr_T = self._T_matrixes[self._next_timestamp]
+            self._curr_T = self._T_matrices[self._next_timestamp]
             self._curr_position = processing.transform_points(self._initial_position, self._curr_T)
             self._next_timestamp += 1
 
@@ -108,9 +109,8 @@ class LidarGym(gym.Env):
         coords, v = self._map.trace_rays(np.transpose(init_points),
                                          np.transpose(directions),
                                          self._lidar_range, const_min_value, const_max_value, 0)
-        bools = processing.values_to_bools(v)
-        indexes_empty = np.where(~bools)
-        free_pts = np.asmatrix(coords[:, indexes_empty])
+        if len(coords) == 0:
+            return None, None
 
         tmp_map = vm.VoxelMap()
         tmp_map.voxel_size = 0.5
@@ -119,7 +119,12 @@ class LidarGym(gym.Env):
         init_points = np.repeat(init_point, len(v), axis=0)
         tmp_map.update_lines(np.transpose(init_points), coords)
         # correct empty pts
-        tmp_map.set_voxels(free_pts, np.zeros((free_pts.shape[1],)), -np.ones((free_pts.shape[1],)))
+
+        bools = processing.values_to_bools(v)
+        indexes_empty = np.where(~bools)
+        if len(indexes_empty) > 0:
+            free_pts = np.asmatrix(coords[:, indexes_empty])
+            tmp_map.set_voxels(free_pts, np.zeros((free_pts.shape[1],)), -np.ones((free_pts.shape[1],)))
 
         x, l, v = tmp_map.get_voxels()
         return x, v

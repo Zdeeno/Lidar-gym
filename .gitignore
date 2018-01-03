@@ -2,3 +2,5 @@
 /.idea
 *.pyc
 *.pyo
+/dist
+*.egg-info

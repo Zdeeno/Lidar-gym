@@ -43,7 +43,6 @@ class Camera:
                     else:
                         vectors = np.concatenate((vectors, np.asmatrix((x_dir, y_dir, z_dir))), 0)
         if vectors is None:
-            # TODO cover this empty return wherever this function is called
             return None
 
         assert mp.get_numpy_shape(vectors)[0] <= self._max_rays, 'Too many rays'

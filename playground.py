@@ -3,6 +3,8 @@ import numpy as np
 from lidar_gym.envs import lidar_gym as mygym
 
 # create environment
+# import lidar_gym
+# env = gym.make("sslidar-v0")
 env = mygym.LidarGym(100, 0.5, 100, (9, 10), (120, 90))
 done = False
 obv = env.reset()
@@ -19,7 +21,7 @@ print('Observation:\nNext position:\n', obv['T'], '\nPoints:\n', obv['points'], 
 while not done:
     print('------------------- Iteration number ', counter , '-------------------------')
     obv, reward, done, info = env.step({"rays": myDirections, "map": myMap})
-    print('Observation:\nNext position:\n', obv['T']) #, '\nPoints:\n', obv['points'], '\nValues\n', obv['values'])
+    print('Observation:\nNext position:\n', obv['T'], '\nPoints:\n', obv['points'], '\nValues\n', obv['values'])
     print('\nHited ', np.shape(np.where(obv['values'] == 1))[1], ' points!\n')
     print('reward:\n', reward, '\n')
     counter = counter + 1

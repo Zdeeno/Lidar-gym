@@ -12,7 +12,7 @@ date = '2011_09_26'
 drive = '0009'
 
 dataset = pykitti.raw(basedir, date, drive)
-i = 5
+i = 442
 velo_points = next(iter(itertools.islice(dataset.velo, i, None)))
 
 
