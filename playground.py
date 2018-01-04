@@ -2,18 +2,28 @@ import numpy as np
 
 from lidar_gym.envs import lidar_gym as mygym
 
-# create environment
+# create environment, consts
+voxel_size = 1
+max_rays = 100
+lidar_range = 70
+density = (9, 10)
+fov = (120, 90)
+
+# stupid input
+input_map_size = np.asarray((80, 80, 4)) / voxel_size + (1, 1, 1)
+myMap = np.asarray(-np.ones(input_map_size.astype(int), dtype=int))
+
+env = mygym.LidarGym(lidar_range, voxel_size, max_rays, density, fov)
+
 # import lidar_gym
 # env = gym.make("sslidar-v0")
-env = mygym.LidarGym(100, 0.5, 100, (9, 10), (120, 90))
+
 done = False
 obv = env.reset()
-#myDirections = np.eye(10)
 myDirections = np.zeros((10, 9))
 for i in range(10):
     myDirections[i][4] = True
 print('Testing following ray matrix:\n', myDirections)
-myMap = np.asarray(np.ones((161, 161, 9), dtype=int))
 counter = 1
 print('------------------- Iteration number 0 -------------------------')
 print('Observation:\nNext position:\n', obv['T'], '\nPoints:\n', obv['points'], '\nValues:\n', obv['values'])

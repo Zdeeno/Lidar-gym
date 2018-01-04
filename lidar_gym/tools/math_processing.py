@@ -54,12 +54,14 @@ class CuboidGetter:
         num_pts = int(getter_size[0] * getter_size[1] * getter_size[2])
         self._cuboid_points = np.zeros((num_pts, 3))
         counter = 0
+        print('\nCreating cuboid getters ...')
         for x in np.arange(mins[0, 0], maxs[0] + voxel_size, voxel_size):
             for y in np.arange(mins[0, 1], maxs[1] + voxel_size, voxel_size):
                 for z in np.arange(mins[0, 2], maxs[2] + voxel_size, voxel_size):
                     self._cuboid_points[counter] = np.asmatrix((x, y, z))
                     counter = counter + 1
         self.l = np.zeros((len(self._cuboid_points),), dtype=np.float64)
+        print('\nDone')
 
     def get_map_cuboid(self, voxel_map, T=None):
         '''

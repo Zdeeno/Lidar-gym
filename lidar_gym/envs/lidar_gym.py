@@ -50,7 +50,7 @@ class LidarGym(gym.Env):
 
         self._initial_position = np.zeros((1, 3))
         # use test_map.py or map_parser.py
-        self._map, self._T_matrices = map_parser.parse_map()
+        self._map, self._T_matrices = map_parser.parse_map(self._voxel_size)
         # self._map, self._T_matrices = tm.create_test_map()
         self._map_length = len(self._T_matrices)
         self._next_timestamp = 0
@@ -113,7 +113,7 @@ class LidarGym(gym.Env):
             return None, None
 
         tmp_map = vm.VoxelMap()
-        tmp_map.voxel_size = 0.5
+        tmp_map.voxel_size = self._voxel_size
         tmp_map.free_update = - 1.0
         tmp_map.hit_update = 1.0
         init_points = np.repeat(init_point, len(v), axis=0)

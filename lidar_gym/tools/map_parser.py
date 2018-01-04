@@ -6,7 +6,7 @@ import voxel_map as vm
 
 from lidar_gym.tools import math_processing as mp
 
-def parse_map():
+def parse_map(voxel_size):
     # Change this to the directory where you store KITTI data
     basedir = '/home/zdeeno/Downloads/dataset'
     # Specify the dataset to load
@@ -15,7 +15,7 @@ def parse_map():
 
     # VoxelMap initialization
     m = vm.VoxelMap()
-    m.voxel_size = 0.5
+    m.voxel_size = voxel_size
     m.free_update = - 1.0
     m.hit_update = 1.0
     m.occupancy_threshold = 0.0
