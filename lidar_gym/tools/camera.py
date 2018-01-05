@@ -31,21 +31,17 @@ class Camera:
             and matrix.shape[1] == self._density[0], 'wrong ray matrix as input'
         vectors = None
         init = True
-        for x in range(int(self._density[0])):
-            for y in range(int(self._density[1])):
-                if matrix[y][x]:
-                    x_dir = 1
-                    y_dir = math.tan((x - self._center_index[0])*self._angle_per_bucket[0])
-                    z_dir = math.tan((-y + self._center_index[1])*self._angle_per_bucket[1])
-                    if init:
-                        vectors = np.asmatrix((x_dir, y_dir, z_dir))
-                        init = False
-                    else:
-                        vectors = np.concatenate((vectors, np.asmatrix((x_dir, y_dir, z_dir))), 0)
-        if vectors is None:
-            return None
 
-        assert mp.get_numpy_shape(vectors)[0] <= self._max_rays, 'Too many rays'
+        points = np.where(matrix)
+        if len(points[0]) == 0:
+            return None
+        vectors = np.zeros((len(points[0]), 3))
+        vectors[:, 0] = 1
+        vectors[:, 1] = -np.tan((points[1][:] - self._center_index[0]) * self._angle_per_bucket[0])
+        vectors[:, 2] = np.tan((-points[0][:] + self._center_index[1]) * self._angle_per_bucket[1])
+        print(vectors)
+
+        assert len(points[0]) <= self._max_rays, 'Too many rays'
         # remove translation parameters of transformation matrix
         rot = T.copy()
         rot[0][3] = 0

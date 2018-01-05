@@ -32,6 +32,9 @@ def parse_map(voxel_size):
     T_matrixes = []
     anchor_initial = np.zeros((1, 4))
     np.set_printoptions(precision=4, suppress=True)
+    iterator_oxts = iter(itertools.islice(dataset.oxts, 0, None))
+    iterator_velo = iter(itertools.islice(dataset.velo, 0, None))
+    T_imu_to_velo = np.linalg.inv(dataset.calib.T_velo_imu)
 
     print('\nThis map has', size, 'timestamps.')
     # Grab some data
@@ -39,10 +42,10 @@ def parse_map(voxel_size):
     #for i in range(size-5):
     for i in range(10):
         print('\nProcessing point cloud from position number - ', i)
-        transform_matrix = next(iter(itertools.islice(dataset.oxts, i, None))).T_w_imu
+        transform_matrix = np.dot(next(iterator_oxts).T_w_imu, T_imu_to_velo)
         T_matrixes.append(np.asarray(transform_matrix))
         anchor = mp.transform_points(anchor_initial, transform_matrix)
-        velo_points = next(iter(itertools.islice(dataset.velo, i, None)))
+        velo_points = next(iterator_velo)
         pts = mp.transform_points(velo_points, transform_matrix)
         anchors = np.tile(np.transpose(anchor), (1, len(pts)))
         m.update_lines(anchors, np.transpose(pts))
