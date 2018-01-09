@@ -1,9 +1,9 @@
 import numpy as np
-
+import time
 from lidar_gym.envs import lidar_gym as mygym
 
 # create environment, consts
-voxel_size = 0.5
+voxel_size = 0.2
 max_rays = 100
 lidar_range = 70
 density = (10, 10)
@@ -15,7 +15,7 @@ T_forecast = 5
 
 # stupid input
 input_map_size = np.asarray((80, 80, 4)) / voxel_size
-myMap = np.asarray(np.ones(input_map_size.astype(int), dtype=int))
+myMap = np.asarray(np.zeros(input_map_size.astype(int), dtype=int))
 
 env = mygym.LidarGym(lidar_range, voxel_size, max_rays, density, fov, T_forecast, weight, map_shape)
 
@@ -38,4 +38,6 @@ while not done:
     print('Observation:\nNext positions:\n', obv['T'][0], '\nPoints:\n', obv['points'], '\nValues\n', obv['values'])
     print('\nHited ', np.shape(np.where(obv['values'] == 1))[1], ' points!\n')
     print('reward:\n', reward, '\n')
+    env.render()
+    time.sleep(10)
     counter = counter + 1

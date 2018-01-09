@@ -86,6 +86,8 @@ class RewardCounter:
         self._shift_T[2, 3] = -0.5 * map_shape[2]
 
         self._cuboid_getter = CuboidGetter(voxel_size, map_shape)
+        self._last_action = None
+        self._last_T = None
 
     def compute_reward(self, action_map, T):
         """
@@ -96,6 +98,8 @@ class RewardCounter:
         """
         assert np.array_equal(action_map.shape, self._a_s_size)
 
+        self._last_action = action_map
+        self._last_T = T
         # obtain ground truth local map values
         points, values_g_t = self._cuboid_getter.get_map_cuboid(self._ground_truth, T, self._shift_T)
         with warnings.catch_warnings():
@@ -116,3 +120,14 @@ class RewardCounter:
         # calculate reward
         reward = np.sum(-weights * (np.log(1 + np.exp(-values_a_m * values_g_t))))
         return reward
+
+    def get_render_data(self):
+        points, values_g_t = self._cuboid_getter.get_map_cuboid(self._ground_truth, self._last_T, self._shift_T)
+        getter = points / self._voxel_size
+        getter = getter.astype(int)
+        values_a_m = self._last_action[getter[:, 0], getter[:, 1], getter[:, 2]]
+        T = np.dot(self._last_T, self._shift_T)
+        to_render = transform_points(points, T)
+        values_g_t[np.isnan(values_g_t)] = 0
+        sensor_pos = transform_points(np.asmatrix((0, 0, 0)), self._last_T)
+        return np.copy(to_render[values_g_t > 0]), np.copy(to_render[values_a_m > 0]), sensor_pos

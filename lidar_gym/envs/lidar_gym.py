@@ -26,6 +26,10 @@ class LidarGym(gym.Env):
         :param map_shape: tuple, size of input map (x, y, z)
     """
 
+    metadata = {
+        "render.modes": ["human"],
+    }
+
     def __init__(self, lidar_range, voxel_size, max_rays, density, fov, T_forecast, weight, map_shape):
         # Parse arguments:
         self._lidar_range = lidar_range
@@ -95,7 +99,11 @@ class LidarGym(gym.Env):
             return None, None, True, None
 
     def _render(self, mode='human', close=False):
-        super(LidarGym, self)._render(mode, close)
+        from lidar_gym.testing import plot_map
+
+        if not self._done:
+            g_t, a_m, sensor = self._reward_counter.get_render_data()
+            plot_map.plot_action(g_t, None, None, self._voxel_size, sensor)
 
     def _to_next(self):
         if not self._done:

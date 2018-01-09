@@ -1,33 +1,35 @@
-import itertools
-import os
-import numpy as np
-import pykitti
 import mayavi.mlab
 
-# ONLY PYTHON 2 --- MAYAVI
-
-basedir = '/home/zdeeno/Downloads/dataset'
-# Specify the dataset to load
-date = '2011_09_26'
-drive = '0009'
-
-dataset = pykitti.raw(basedir, date, drive)
-i = 442
-velo_points = next(iter(itertools.islice(dataset.velo, i, None)))
+# Plot your map using Mayavi
 
 
-fig = mayavi.mlab.figure(bgcolor=(0, 0, 0), size=(640, 360))
-mayavi.mlab.points3d(
-    velo_points[:, 0],  # x
-    velo_points[:, 1],  # y
-    velo_points[:, 2],  # z
-    velo_points[:, 2],  # Height data used for shading
-    mode="point",  # How to render each point {'point', 'sphere' , 'cube' }
-    colormap='spectral',  # 'bone', 'copper',
-    # color=(0, 1, 0),     # Used a fixed (r,g,b) color instead of colormap
-    scale_factor=100,  # scale of the points
-    line_width=10,  # Scale of the line, if any
-    figure=fig,
-)
-# velo[:, 3], # reflectance values
-mayavi.mlab.show()
+def plot_action(ground_truth, action_map, rays, voxel_size, sensor):
+    # TODO: Change mlab.show to mlab.animate!
+
+    fig = mayavi.mlab.figure(bgcolor=(0, 0, 0), size=(1280, 720))
+    mayavi.mlab.points3d(
+        ground_truth[:, 0],  # x
+        ground_truth[:, 1],  # y
+        ground_truth[:, 2],  # z
+        # ground_truth[:, 2],  # Height data used for shading
+        mode="cube",  # How to render each point {'point', 'sphere' , 'cube' }
+        # colormap='spectral',  # 'bone', 'copper',
+        color=(0, 1, 0),     # Used a fixed (r,g,b) color instead of colormap
+        scale_factor=voxel_size,  # scale of the points
+        line_width=10,  # Scale of the line, if any
+        figure=fig,
+    )
+    mayavi.mlab.points3d(
+        sensor[:, 0],  # x
+        sensor[:, 1],  # y
+        sensor[:, 2],  # z
+        # ground_truth[:, 2],  # Height data used for shading
+        mode="sphere",  # How to render each point {'point', 'sphere' , 'cube' }
+        # colormap='spectral',  # 'bone', 'copper',
+        color=(1, 0, 0),     # Used a fixed (r,g,b) color instead of colormap
+        scale_factor=1,  # scale of the points
+        line_width=10,  # Scale of the line, if any
+        figure=fig,
+    )
+
+    mayavi.mlab.show(stop=True)
