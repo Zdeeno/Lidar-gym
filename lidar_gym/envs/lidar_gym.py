@@ -65,14 +65,16 @@ class LidarGym(gym.Env):
         self._curr_position = None
         self._curr_T = None
         self._done = False
+        self._render_init = False
+        self._rays_endings = None
 
         self._reward_counter = processing.RewardCounter(self._map, self._voxel_size, self._map_shape, self._weight)
 
     def _reset(self):
         self._next_timestamp = 0
         self._done = False
-        self._to_next()
-        obv = {"T": self._create_matrix_array(), "points": None, "values": None}
+        self.__to_next()
+        obv = {"T": self.__create_matrix_array(), "points": None, "values": None}
         return obv
 
     def _close(self):
@@ -85,27 +87,30 @@ class LidarGym(gym.Env):
             directions = self._camera.calculate_directions(action["rays"], self._curr_T)
             if directions is not None:
                 init_point = np.asmatrix(self._curr_position)
-                x, v = self._create_observation(init_point, directions)
+                x, v = self.__create_observation(init_point, directions)
                 reward = self._reward_counter.compute_reward(action["map"], self._curr_T)
-                self._to_next()
-                observation = {"T": self._create_matrix_array(), "points": np.transpose(x), "values": v}
+                self.__to_next()
+                observation = {"T": self.__create_matrix_array(), "points": np.transpose(x), "values": v}
             else:
                 reward = self._reward_counter.compute_reward(action["map"], self._curr_T)
-                self._to_next()
-                observation = {"T": self._create_matrix_array(), "points": None, "values": None}
+                self.__to_next()
+                observation = {"T": self.__create_matrix_array(), "points": None, "values": None}
 
             return observation, reward, self._done, None
         else:
             return None, None, True, None
 
     def _render(self, mode='human', close=False):
-        from lidar_gym.testing import plot_map
-
         if not self._done:
-            g_t, a_m, sensor = self._reward_counter.get_render_data()
-            plot_map.plot_action(g_t, None, None, self._voxel_size, sensor)
+            if not self._render_init:
+                from lidar_gym.testing import plot_map
+                self.plotter = plot_map.Potter()
+                self._render_init = True
 
-    def _to_next(self):
+            g_t, a_m, sensor = self._reward_counter.get_render_data()
+            self.plotter.plot_action(g_t, a_m, np.transpose(self._rays_endings), self._voxel_size, sensor)
+
+    def __to_next(self):
         if not self._done:
             if self._next_timestamp == self._map_length:
                 self._curr_T = None
@@ -116,12 +121,12 @@ class LidarGym(gym.Env):
             self._curr_position = processing.transform_points(self._initial_position, self._curr_T)
             self._next_timestamp += 1
 
-    def _create_observation(self, init_point, directions):
+    def __create_observation(self, init_point, directions):
         init_points = np.repeat(init_point, len(directions), axis=0)
-        coords, v = self._map.trace_rays(np.transpose(init_points),
+        self._rays_endings, v = self._map.trace_rays(np.transpose(init_points),
                                          np.transpose(directions),
                                          self._lidar_range, const_min_value, const_max_value, 0)
-        if len(coords) == 0:
+        if len(self._rays_endings) == 0:
             return None, None
 
         tmp_map = vm.VoxelMap()
@@ -129,19 +134,23 @@ class LidarGym(gym.Env):
         tmp_map.free_update = - 1.0
         tmp_map.hit_update = 1.0
         init_points = np.repeat(init_point, len(v), axis=0)
-        tmp_map.update_lines(np.transpose(init_points), coords)
+        tmp_map.update_lines(np.transpose(init_points), self._rays_endings)
         # correct empty pts
 
         bools = processing.values_to_bools(v)
         indexes_empty = np.where(~bools)
         if len(indexes_empty) > 0:
-            free_pts = np.asmatrix(coords[:, indexes_empty])
+            free_pts = np.asmatrix(self._rays_endings[:, indexes_empty])
             tmp_map.set_voxels(free_pts, np.zeros((free_pts.shape[1],)), -np.ones((free_pts.shape[1],)))
 
         x, l, v = tmp_map.get_voxels()
         return x, v
 
-    def _create_matrix_array(self):
+    def __create_matrix_array(self):
+        '''
+        create array of transformation matrix with current position
+        :return: numpy array Nx(4x4)
+        '''
         t = self._next_timestamp - 1
         if self._map_length >= (t + self._T_forecast):
             return self._T_matrices[t:(t + self._T_forecast)]

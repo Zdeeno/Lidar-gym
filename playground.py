@@ -12,10 +12,11 @@ map_shape = (80, 80, 4)
 weight = 1
 T_forecast = 5
 
-
 # stupid input
 input_map_size = np.asarray((80, 80, 4)) / voxel_size
 myMap = np.asarray(np.zeros(input_map_size.astype(int), dtype=int))
+borders = [int(len(myMap)*0.3), int(len(myMap)*0.7)]
+myMap[:, borders[0]:borders[1], 0] = 1
 
 env = mygym.LidarGym(lidar_range, voxel_size, max_rays, density, fov, T_forecast, weight, map_shape)
 
@@ -27,17 +28,22 @@ obv = env.reset()
 myDirections = np.zeros((10, 10))
 for i in range(10):
     myDirections[i][4] = True
+
 print('Testing following ray matrix:\n', myDirections)
+
 counter = 1
+
 print('------------------- Iteration number 0 -------------------------')
 print('Observation:\nNext positions:\n', obv['T'][0], '\nPoints:\n', obv['points'], '\nValues:\n', obv['values'])
 
 while not done:
-    print('------------------- Iteration number ', counter , '-------------------------')
+    print('------------------- Iteration number ', counter, '-------------------------')
+
     obv, reward, done, info = env.step({"rays": myDirections, "map": myMap})
+
     print('Observation:\nNext positions:\n', obv['T'][0], '\nPoints:\n', obv['points'], '\nValues\n', obv['values'])
     print('\nHited ', np.shape(np.where(obv['values'] == 1))[1], ' points!\n')
     print('reward:\n', reward, '\n')
+
     env.render()
-    time.sleep(10)
     counter = counter + 1
