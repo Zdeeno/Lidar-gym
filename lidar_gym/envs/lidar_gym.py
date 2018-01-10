@@ -3,12 +3,11 @@ import gym.spaces as spaces
 import numpy as np
 from lidar_gym.tools import math_processing as processing
 import voxel_map as vm
-import lidar_gym.testing.test_map as tm
 from lidar_gym.tools import camera
 import sys
 from lidar_gym.tools import map_parser
 
-const_min_value = -sys.maxsize
+const_min_value = -sys.maxsize - 1
 const_max_value = 0
 
 
@@ -32,47 +31,53 @@ class LidarGym(gym.Env):
 
     def __init__(self, lidar_range, voxel_size, max_rays, density, fov, T_forecast, weight, map_shape):
         # Parse arguments:
-        self._lidar_range = lidar_range
-        self._voxel_size = voxel_size
-        self._max_rays = max_rays
-        self._density = np.asarray(density, dtype=np.float)
-        self._fov = np.asarray(fov)
-        self._T_forecast = T_forecast
-        self._weight = weight
-        self._map_shape = np.asarray(map_shape)  # sth like (80, 80, 4)
+        self.__lidar_range = lidar_range
+        self.__voxel_size = voxel_size
+        self.__max_rays = max_rays
+        self.__density = np.asarray(density, dtype=np.float)
+        self.__fov = np.asarray(fov)
+        self.__T_forecast = T_forecast
+        self.__weight = weight
+        self.__map_shape = np.asarray(map_shape)  # sth like (80, 80, 4)
 
-        self._input_map_shape = (self._map_shape / voxel_size) + np.ones((1, 3))
-        self._camera = camera.Camera(self._fov, self._density, self._max_rays)
+        self.__input_map_shape = (self.__map_shape / voxel_size) + np.ones((1, 3))
 
+        # Observation and action space
         max_val = sys.float_info.max
         min_val = -sys.float_info.min
         max_obs_pts = int((lidar_range / voxel_size) * max_rays)
-        self.action_space = spaces.Dict({"rays": spaces.MultiBinary((self._density[1], self._density[0])),
+        self.action_space = spaces.Dict({"rays": spaces.MultiBinary((self.__density[1], self.__density[0])),
                                          "map": spaces.Box(low=min_val,
                                                            high=max_val,
-                                                           shape=self._input_map_shape[0].astype(int))})
+                                                           shape=self.__input_map_shape[0].astype(int))})
 
         self.observation_space = spaces.Dict({"Ts": spaces.Box(low=min_val, high=max_val, shape=(T_forecast, 4, 4)),
                                               "points": spaces.Box(low=min_val, high=max_val, shape=(max_obs_pts, 3)),
                                               "values": spaces.Box(low=min_val, high=max_val, shape=(max_obs_pts, 1))})
 
-        self._initial_position = np.zeros((1, 3))
-        # use test_map.py or map_parser.py
-        self._map, self._T_matrices = map_parser.parse_map(self._voxel_size)
-        # self._map, self._T_matrices = tm.create_test_map()
-        self._map_length = len(self._T_matrices)
-        self._next_timestamp = 0
-        self._curr_position = None
-        self._curr_T = None
-        self._done = False
-        self._render_init = False
-        self._rays_endings = None
+        # additional init ... mostly set to None before reset.
+        self.__initial_position = np.zeros((1, 3))
+        self.__next_timestamp = 0
+        self.__curr_position = None
+        self.__curr_T = None
+        self.__done = False
+        self.__render_init = False
+        self.__rays_endings = None
+        self.__map_length = None
+        self.__map = None
+        self.__T_matrices = None
+        self.__reward_counter = None
 
-        self._reward_counter = processing.RewardCounter(self._map, self._voxel_size, self._map_shape, self._weight)
+        # init classes
+        self.__camera = camera.Camera(self.__fov, self.__density, self.__max_rays)
+        self.__maps = map_parser.MapParser(self.__voxel_size)
 
     def _reset(self):
-        self._next_timestamp = 0
-        self._done = False
+        self.__next_timestamp = 0
+        self.__done = False
+        self.__map, self.__T_matrices = self.__maps.get_next_map()
+        self.__reward_counter = processing.RewardCounter(self.__map, self.__voxel_size, self.__map_shape, self.__weight)
+        self.__map_length = len(self.__T_matrices)
         self.__to_next()
         obv = {"T": self.__create_matrix_array(), "points": None, "values": None}
         return obv
@@ -83,82 +88,83 @@ class LidarGym(gym.Env):
     def _step(self, action):
         assert type(action["rays"]) == np.ndarray and type(action["map"]) == np.ndarray, "wrong input types"
 
-        if not self._done:
-            directions = self._camera.calculate_directions(action["rays"], self._curr_T)
+        if not self.__done:
+            directions = self.__camera.calculate_directions(action["rays"], self.__curr_T)
             if directions is not None:
-                init_point = np.asmatrix(self._curr_position)
+                init_point = np.asmatrix(self.__curr_position)
                 x, v = self.__create_observation(init_point, directions)
-                reward = self._reward_counter.compute_reward(action["map"], self._curr_T)
+                reward = self.__reward_counter.compute_reward(action["map"], self.__curr_T)
                 self.__to_next()
                 observation = {"T": self.__create_matrix_array(), "points": np.transpose(x), "values": v}
             else:
-                reward = self._reward_counter.compute_reward(action["map"], self._curr_T)
+                reward = self.__reward_counter.compute_reward(action["map"], self.__curr_T)
                 self.__to_next()
                 observation = {"T": self.__create_matrix_array(), "points": None, "values": None}
 
-            return observation, reward, self._done, None
+            return observation, reward, self.__done, None
         else:
             return None, None, True, None
 
     def _render(self, mode='human', close=False):
-        if not self._done:
-            if not self._render_init:
+        if not self.__done:
+            if not self.__render_init:
                 from lidar_gym.testing import plot_map
                 self.plotter = plot_map.Potter()
-                self._render_init = True
+                self.__render_init = True
 
-            g_t, a_m, sensor = self._reward_counter.get_render_data()
-            self.plotter.plot_action(g_t, a_m, np.transpose(self._rays_endings), self._voxel_size, sensor)
+            g_t, a_m, sensor = self.__reward_counter.get_render_data()
+            self.plotter.plot_action(g_t, a_m, np.transpose(self.__rays_endings), self.__voxel_size, sensor)
 
     def __to_next(self):
-        if not self._done:
-            if self._next_timestamp == self._map_length:
-                self._curr_T = None
-                self._done = True
-                self._next_timestamp += 1
+        if not self.__done:
+            if self.__next_timestamp == self.__map_length:
+                self.__curr_T = None
+                self.__done = True
+                self.__next_timestamp += 1
                 return
-            self._curr_T = self._T_matrices[self._next_timestamp]
-            self._curr_position = processing.transform_points(self._initial_position, self._curr_T)
-            self._next_timestamp += 1
+            self.__curr_T = self.__T_matrices[self.__next_timestamp]
+            self.__curr_position = processing.transform_points(self.__initial_position, self.__curr_T)
+            self.__next_timestamp += 1
 
     def __create_observation(self, init_point, directions):
-        init_points = np.repeat(init_point, len(directions), axis=0)
-        self._rays_endings, v = self._map.trace_rays(np.transpose(init_points),
-                                         np.transpose(directions),
-                                         self._lidar_range, const_min_value, const_max_value, 0)
-        if len(self._rays_endings) == 0:
+        if len(directions) == 0:
             return None, None
 
+        init_points = np.repeat(init_point, len(directions), axis=0)
+        self.__rays_endings, v = self.__map.trace_rays(np.transpose(init_points),
+                                                       np.transpose(directions),
+                                                       self.__lidar_range, const_min_value, const_max_value, 0)
+
         tmp_map = vm.VoxelMap()
-        tmp_map.voxel_size = self._voxel_size
+        tmp_map.voxel_size = self.__voxel_size
         tmp_map.free_update = - 1.0
         tmp_map.hit_update = 1.0
         init_points = np.repeat(init_point, len(v), axis=0)
-        tmp_map.update_lines(np.transpose(init_points), self._rays_endings)
+        tmp_map.update_lines(np.transpose(init_points), self.__rays_endings)
         # correct empty pts
 
         bools = processing.values_to_bools(v)
         indexes_empty = np.where(~bools)
-        if len(indexes_empty) > 0:
-            free_pts = np.asmatrix(self._rays_endings[:, indexes_empty])
+        if len(indexes_empty[0]) > 0:
+            free_pts = np.asmatrix(self.__rays_endings[:, indexes_empty])
             tmp_map.set_voxels(free_pts, np.zeros((free_pts.shape[1],)), -np.ones((free_pts.shape[1],)))
 
         x, l, v = tmp_map.get_voxels()
         return x, v
 
     def __create_matrix_array(self):
-        '''
+        """
         create array of transformation matrix with current position
         :return: numpy array Nx(4x4)
-        '''
-        t = self._next_timestamp - 1
-        if self._map_length >= (t + self._T_forecast):
-            return self._T_matrices[t:(t + self._T_forecast)]
+        """
+        t = self.__next_timestamp - 1
+        if self.__map_length >= (t + self.__T_forecast):
+            return self.__T_matrices[t:(t + self.__T_forecast)]
         else:
-            diff = (self._map_length - t)
+            diff = (self.__map_length - t)
             ret = np.zeros((diff, 4, 4))
             if diff > 0:
-                ret[0:diff] = self._T_matrices[t:t+diff]
+                ret[0:diff] = self.__T_matrices[t:t + diff]
             else:
                 ret = [None]
             return ret

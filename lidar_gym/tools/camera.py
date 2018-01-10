@@ -39,7 +39,6 @@ class Camera:
         vectors[:, 0] = 1
         vectors[:, 1] = -np.tan((points[1][:] - self._center_index[0]) * self._angle_per_bucket[0])
         vectors[:, 2] = np.tan((-points[0][:] + self._center_index[1]) * self._angle_per_bucket[1])
-        print(vectors)
 
         assert len(points[0]) <= self._max_rays, 'Too many rays'
         # remove translation parameters of transformation matrix

@@ -3,7 +3,7 @@ import time
 from lidar_gym.envs import lidar_gym as mygym
 
 # create environment, consts
-voxel_size = 0.2
+voxel_size = 0.5
 max_rays = 100
 lidar_range = 70
 density = (10, 10)
@@ -16,7 +16,7 @@ T_forecast = 5
 input_map_size = np.asarray((80, 80, 4)) / voxel_size
 myMap = np.asarray(np.zeros(input_map_size.astype(int), dtype=int))
 borders = [int(len(myMap)*0.3), int(len(myMap)*0.7)]
-myMap[:, borders[0]:borders[1], 0] = 1
+myMap[:, borders[0]:borders[1], 0] = 0
 
 env = mygym.LidarGym(lidar_range, voxel_size, max_rays, density, fov, T_forecast, weight, map_shape)
 
@@ -27,7 +27,7 @@ done = False
 obv = env.reset()
 myDirections = np.zeros((10, 10))
 for i in range(10):
-    myDirections[i][4] = True
+    myDirections[0][i] = True
 
 print('Testing following ray matrix:\n', myDirections)
 

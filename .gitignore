@@ -4,3 +4,4 @@
 *.pyo
 /dist
 *.egg-info
+/lidar_gym/dataset
