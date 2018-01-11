@@ -10,17 +10,25 @@ import random
 from lidar_gym.tools import math_processing as mp
 
 
+def set_seed(seed=None):
+    random.seed(seed)
+
+
+def get_seed():
+    return random.seed
+
+
 class MapParser:
 
     # TODO: add gym seed!
-    def __init__(self, voxel_size, seed=None):
+    def __init__(self, voxel_size):
         self._voxel_size = voxel_size
         self._basedir = pkg.resource_filename('lidar_gym', 'dataset')
         print(self._basedir)
         # set of drives is hardcoded due to drives in bash script 'download_dataset.sh'
         self._drives = ['0002', '0020', '0027']
-        random.seed(seed)
         self._date = '2011_09_26'
+        set_seed()
 
     def get_next_map(self):
         # VoxelMap initialization

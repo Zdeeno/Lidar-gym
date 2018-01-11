@@ -71,13 +71,11 @@ class CuboidGetter:
 
 class RewardCounter:
 
-    def __init__(self, ground_truth, voxel_size, map_shape, weight):
-        assert type(ground_truth) == vm.VoxelMap
-
-        self._ground_truth = ground_truth
+    def __init__(self, voxel_size, map_shape):
+        self._ground_truth = None
         self._voxel_size = voxel_size
         self._a_s_size = map_shape/voxel_size
-        self._weight = weight
+        self._weight = 1    # TODO: this should be changed
 
         # calculate shift matrix
         self._shift_T = np.eye(4, dtype=float)
@@ -88,6 +86,12 @@ class RewardCounter:
         self._cuboid_getter = CuboidGetter(voxel_size, map_shape)
         self._last_action = None
         self._last_T = None
+
+    def reset(self, ground_truth):
+        assert type(ground_truth) == vm.VoxelMap
+        self._last_action = None
+        self._last_T = None
+        self._ground_truth = ground_truth
 
     def compute_reward(self, action_map, T):
         """

@@ -21,7 +21,6 @@ class LidarGym(gym.Env):
         :param density: tuple, number of points over fov (width, height)
         :param max_rays: integer, maximum number of rays per timestamp
         :param T_forecast: integer, determines how many steps forward is environment returning position
-        :param weight: float, it is used to calculated reward (see class RewardCounter)
         :param map_shape: tuple, size of input map (x, y, z)
     """
 
@@ -29,17 +28,19 @@ class LidarGym(gym.Env):
         "render.modes": ["human"],
     }
 
-    def __init__(self, lidar_range, voxel_size, max_rays, density, fov, T_forecast, weight, map_shape):
+    def __init__(self, lidar_range, voxel_size, max_rays, density, fov, T_forecast, map_shape):
         # Parse arguments:
         self.__lidar_range = lidar_range
         self.__voxel_size = voxel_size
         self.__max_rays = max_rays
         self.__density = np.asarray(density, dtype=np.float)
         self.__fov = np.asarray(fov)
-        self.__T_forecast = T_forecast
-        self.__weight = weight
+        if T_forecast == 0:
+            self.__T_forecast = sys.maxsize
+        else:
+            self.__T_forecast = T_forecast
         self.__map_shape = np.asarray(map_shape)  # sth like (80, 80, 4)
-
+        self.__initial_position = np.zeros((1, 3))
         self.__input_map_shape = (self.__map_shape / voxel_size) + np.ones((1, 3))
 
         # Observation and action space
@@ -54,9 +55,15 @@ class LidarGym(gym.Env):
         self.observation_space = spaces.Dict({"Ts": spaces.Box(low=min_val, high=max_val, shape=(T_forecast, 4, 4)),
                                               "points": spaces.Box(low=min_val, high=max_val, shape=(max_obs_pts, 3)),
                                               "values": spaces.Box(low=min_val, high=max_val, shape=(max_obs_pts, 1))})
+        self.reward_range = (-float('Inf'), 0)
 
-        # additional init ... mostly set to None before reset.
-        self.__initial_position = np.zeros((1, 3))
+        # init classes
+        self.__camera = camera.Camera(self.__fov, self.__density, self.__max_rays)
+        self.__maps = map_parser.MapParser(self.__voxel_size)
+        self.__reward_counter = processing.RewardCounter(self.__voxel_size, self.__map_shape)
+
+    def _reset(self):
+        # reset values
         self.__next_timestamp = 0
         self.__curr_position = None
         self.__curr_T = None
@@ -66,17 +73,11 @@ class LidarGym(gym.Env):
         self.__map_length = None
         self.__map = None
         self.__T_matrices = None
-        self.__reward_counter = None
 
-        # init classes
-        self.__camera = camera.Camera(self.__fov, self.__density, self.__max_rays)
-        self.__maps = map_parser.MapParser(self.__voxel_size)
-
-    def _reset(self):
-        self.__next_timestamp = 0
-        self.__done = False
+        print('RESETING')
+        # parse new map
         self.__map, self.__T_matrices = self.__maps.get_next_map()
-        self.__reward_counter = processing.RewardCounter(self.__map, self.__voxel_size, self.__map_shape, self.__weight)
+        self.__reward_counter.reset(self.__map)
         self.__map_length = len(self.__T_matrices)
         self.__to_next()
         obv = {"T": self.__create_matrix_array(), "points": None, "values": None}
@@ -111,9 +112,12 @@ class LidarGym(gym.Env):
                 from lidar_gym.testing import plot_map
                 self.plotter = plot_map.Potter()
                 self.__render_init = True
+            if self.__next_timestamp > 1:
+                g_t, a_m, sensor = self.__reward_counter.get_render_data()
+                self.plotter.plot_action(g_t, a_m, np.transpose(self.__rays_endings), self.__voxel_size, sensor)
 
-            g_t, a_m, sensor = self.__reward_counter.get_render_data()
-            self.plotter.plot_action(g_t, a_m, np.transpose(self.__rays_endings), self.__voxel_size, sensor)
+    def _seed(self, seed=None):
+        map_parser.set_seed(seed)
 
     def __to_next(self):
         if not self.__done:
@@ -170,8 +174,8 @@ class LidarGym(gym.Env):
             return ret
 
 
-class Lidarv0(LidarGym):
+class Lidarv1(LidarGym):
 
     # trying to register environment described in paper
     def __init__(self):
-        super(Lidarv0, self).__init__(70, 0.2, 100, (10, 10), (120, 90), 5, 1, (64, 64, 6))
+        super(Lidarv1, self).__init__(48, 0.2, 200, (160, 120), (120, 90), 0, (64, 64, 6.4))

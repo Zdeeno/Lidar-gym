@@ -11,18 +11,19 @@ class Potter:
         # TODO: Change mlab.show to mlab.animate!
         self.fig = mlab.figure(size=(1280, 720))
         # plot ground truth
-        mlab.points3d(
-            ground_truth[:, 0],  # x
-            ground_truth[:, 1],  # y
-            ground_truth[:, 2],  # z
-            # ground_truth[:, 2],  # Height data used for shading
-            mode="cube",  # How to render each point {'point', 'sphere' , 'cube' }
-            # colormap='spectral',  # 'bone', 'copper',
-            color=(0, 1, 0),     # Used a fixed (r,g,b) color instead of colormap
-            scale_factor=voxel_size,  # scale of the points
-            line_width=10,  # Scale of the line, if any
-            figure=self.fig,
-        )
+        if ground_truth is not None:
+            mlab.points3d(
+                ground_truth[:, 0],  # x
+                ground_truth[:, 1],  # y
+                ground_truth[:, 2],  # z
+                # ground_truth[:, 2],  # Height data used for shading
+                mode="cube",  # How to render each point {'point', 'sphere' , 'cube' }
+                # colormap='spectral',  # 'bone', 'copper',
+                color=(0, 1, 0),     # Used a fixed (r,g,b) color instead of colormap
+                scale_factor=voxel_size,  # scale of the points
+                line_width=10,  # Scale of the line, if any
+                figure=self.fig,
+            )
         # plot sensor position
         mlab.points3d(
             sensor[0, 0],  # x

@@ -4,4 +4,8 @@
 *.pyo
 /dist
 *.egg-info
-/lidar_gym/dataset
+/lidar_gym/dataset/
+lidar_gym/__pycache__/
+lidar_gym/envs/__pycache__/
+lidar_gym/testing/__pycache__/
+lidar_gym/tools/__pycache__/
