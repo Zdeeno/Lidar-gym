@@ -1,10 +1,8 @@
 #!/bin/bash
 
-DIR=$(dirname "$0")
-cd $DIR
-cd lidar_gym
-mkdir dataset
-cd dataset
+cd /usr/local
+mkdir kitti_dataset
+cd kitti_dataset
 
 # download velodyne data
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0002/2011_09_26_drive_0002_sync.zip

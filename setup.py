@@ -4,9 +4,6 @@ from os import path
 from distutils.command.install import INSTALL_SCHEMES
 import os
 
-for scheme in INSTALL_SCHEMES.values():
-    scheme['data'] = scheme['purelib']
-
 here = path.abspath(path.dirname(__file__))
 
 
@@ -48,17 +45,4 @@ s = setup(
     keywords=['gym', 'lidar', 'environment', 'openai'],
     install_requires=['numpy', 'pykitti', 'voxel_map', 'gym'],
     extras_require={'rendering': ['mayavi', 'vtk', 'qt']},
-    include_package_data=True
 )
-
-
-# print('CREATING SIMLINKS')
-# setup_path = os.path.dirname(os.path.realpath(__file__))
-# linkto = os.path.join(setup_path, 'lidar_gym/dataset')
-# linkfrom = os.path.join(setup_path, 'build/lib/lidar_gym/dataset')
-# print(linkto)
-# print(linkfrom)
-# command = 'ln -s ' + linkto + ' ' + linkfrom
-# print(command)
-# os.system(command)
-

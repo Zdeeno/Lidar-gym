@@ -23,8 +23,9 @@ class MapParser:
     # TODO: add gym seed!
     def __init__(self, voxel_size):
         self._voxel_size = voxel_size
-        self._basedir = pkg.resource_filename('lidar_gym', 'dataset')
-        print(self._basedir)
+        self._basedir = '/usr/local/kitti_dataset'
+        assert os.path.isdir(self._basedir), 'Your kitti dataset must be located at usr/local/kitti_dataset,' \
+                                             ' see download_dataset.sh'
         # set of drives is hardcoded due to drives in bash script 'download_dataset.sh'
         self._drives = ['0002', '0020', '0027']
         self._date = '2011_09_26'
