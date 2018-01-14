@@ -20,7 +20,6 @@ def get_seed():
 
 class MapParser:
 
-    # TODO: add gym seed!
     def __init__(self, voxel_size):
         self._voxel_size = voxel_size
         self._basedir = '/usr/local/kitti_dataset'

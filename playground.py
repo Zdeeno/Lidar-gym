@@ -1,6 +1,4 @@
 import numpy as np
-import time
-from lidar_gym.envs import lidar_gym as mygym
 import gym
 
 # create environment, consts
@@ -21,6 +19,8 @@ env = gym.make("sslidar-v1")
 # env = gym.make("sslidar-v0")
 
 done = False
+
+random_action = env.action_space.sample()
 
 myDirections = np.zeros(density)
 for i in range(density[0]):
@@ -43,8 +43,8 @@ while True:
         print('------------------- Episode number', episode, '-------------------------')
         print('------------------- Iteration number ', counter, '-------------------------')
 
-        obv, reward, done, info = env.step({"rays": myDirections, "map": myMap})
-
+        # obv, reward, done, info = env.step({"rays": myDirections, "map": myMap})
+        obv, reward, done, info = env.step(random_action)
         print('Observation:\nNext positions:\n', obv['T'], '\nPoints:\n', obv['points'], '\nValues\n', obv['values'])
         print('\nHited ', np.shape(np.where(obv['values'] == 1))[1], ' points!\n')
         print('reward:\n', reward, '\n')

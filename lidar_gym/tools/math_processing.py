@@ -1,6 +1,7 @@
 import numpy as np
 import voxel_map as vm
 import warnings
+from itertools import product
 
 
 def values_to_bools(v):
@@ -39,21 +40,15 @@ class CuboidGetter:
 
     def __init__(self, voxel_size, map_size):
         mins = np.zeros((1, 3))
-        maxs = map_size
+        maxs = map_size/voxel_size
         getter_size = map_size/voxel_size
         num_pts = int(getter_size[0] * getter_size[1] * getter_size[2])
 
         self.l = np.zeros((num_pts,), dtype=np.float64)
-        self._cuboid_points = np.zeros((num_pts, 3))
-        counter = 0
-        # create cuboid of map size
-        print('\nCreating cuboid getters ...')
-        for x in np.arange(mins[0, 0], maxs[0], voxel_size):
-            for y in np.arange(mins[0, 1], maxs[1], voxel_size):
-                for z in np.arange(mins[0, 2], maxs[2], voxel_size):
-                    self._cuboid_points[counter] = np.asmatrix((x, y, z)) + voxel_size/2
-                    counter = counter + 1
-        print('\nDone')
+
+        tmp = zip(tuple(mins[0].astype(int)), tuple(maxs.astype(int)), (1, 1, 1))
+        self._cuboid_points = list(product(*(range(*x) for x in tmp)))
+        self._cuboid_points = np.asarray(self._cuboid_points)*voxel_size + voxel_size/2
 
     def get_map_cuboid(self, voxel_map, T_pos, T_shift):
         """
@@ -71,17 +66,13 @@ class CuboidGetter:
 
 class RewardCounter:
 
-    def __init__(self, voxel_size, map_shape):
+    def __init__(self, voxel_size, map_shape, T_shift):
         self._ground_truth = None
         self._voxel_size = voxel_size
         self._a_s_size = map_shape/voxel_size
-        self._weight = 1    # TODO: this should be changed
 
         # calculate shift matrix
-        self._shift_T = np.eye(4, dtype=float)
-        self._shift_T[0, 3] = -0.25 * map_shape[0]
-        self._shift_T[1, 3] = -0.5 * map_shape[1]
-        self._shift_T[2, 3] = -0.5 * map_shape[2]
+        self._shift_T = T_shift
 
         self._cuboid_getter = CuboidGetter(voxel_size, map_shape)
         self._last_action = None
@@ -109,7 +100,7 @@ class RewardCounter:
         with warnings.catch_warnings():
             # suppress warning for NaN / NaN
             warnings.simplefilter("ignore")
-            values_g_t = values_g_t // np.abs(values_g_t)
+            values_g_t = np.asarray(values_g_t // np.abs(values_g_t))
         values_g_t[np.isnan(values_g_t)] = 0
 
         # obtain action space local map values
@@ -118,8 +109,11 @@ class RewardCounter:
         values_a_m = action_map[points[:, 0], points[:, 1], points[:, 2]]
 
         # obtain weights
+        weights_positive = 0.5/np.sum(values_g_t > 0)
+        weights_negative = 0.5/np.sum(values_g_t < 0)
         weights = np.zeros(len(values_g_t))
-        weights[np.abs(values_g_t) > 0] = self._weight
+        weights[values_g_t > 0] = weights_positive
+        weights[values_g_t < 0] = weights_negative
 
         # calculate reward
         reward = np.sum(-weights * (np.log(1 + np.exp(-values_a_m * values_g_t))))
