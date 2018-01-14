@@ -1,6 +1,7 @@
 # Lidar gym
 ## Dependencies
 Environment is written in python 3 using following libraries:
+#### Required
 
 ##### 1. Numpy
 https://github.com/numpy/numpy
@@ -11,7 +12,10 @@ https://github.com/utiasSTARS/pykitti
 ##### 4. Voxel map
 https://bitbucket.org/tpetricek/voxel_map
 
-Dependencies can by installed by command:<br />`python setup.py install`
+#### Optional
+##### 1. Mayavi
+https://github.com/enthought/mayavi (used for visualisation)
+
 
 ## Action space
 We define action space as a following dictionary:<br />
@@ -31,12 +35,35 @@ Its size is `(N, 4, 4)`.<br />
 `points` is 2D (numpy.ndarray) matrix. It is made by points (in rows) found by lidar rays.
 Size of this matrix is `(N, 3)`, where N is number of found points. It is None when no points was hit.<br />
 `values` is 1D (numpy.ndarray) array. It consist of values corresponding to the
-occupancy of points with same index. Its size is `(1, N)` or None. For each value applies:
+occupancy of points with same index. Its shape is `(1, N)` or None. For each value applies:
 ```
 value < 0 - empty voxel
 value == 0 - unknown occupancy
 value > 0 - occupied voxel
 ```
+
+## Rendering
+Environment offers visualisation for debugging. Use method `render()`. It is available 
+only in mode "human".
+
+![Imgur](https://i.imgur.com/5B3L3Ck.png)
+
+```
+red - sensor position and rays
+green - ground thruth map
+blue - reconstructed map
+```
+
 ## Notes
-Currently there is a lot of parameters available. That's documented in [lidar_gym](lidar_gym/envs/lidar_gym.py) file.
-Reward is in range `(-inf, 0)`. Package is still under development.
+There is a lot of parameters available. That's documented in [lidar_gym](lidar_gym/envs/lidar_gym.py) file.
+Reward is in range `(-inf, 0)`. See [example file](playground.py) with initialisation and random action. Currently there
+is only one environment:
+#####lidar-v1
+```
+fov = (120, 90)
+ray density = (160, 120)
+voxel size = 0.2
+action map size in voxels = (320, 320, 32)
+maximum number of rays = 200
+lidar range = 48
+```
