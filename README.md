@@ -1,4 +1,5 @@
 # Lidar gym
+OpenAI gym training environment for agents controlling solid-state lidars.
 ## Dependencies
 Environment is written in python 3 using following libraries:
 #### Required
