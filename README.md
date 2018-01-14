@@ -58,7 +58,7 @@ blue - reconstructed map
 There is a lot of parameters available. That's documented in [lidar_gym](lidar_gym/envs/lidar_gym.py) file.
 Reward is in range `(-inf, 0)`. See [example file](playground.py) with initialisation and random action. Currently there
 is only one environment:
-#####lidar-v1
+##### lidar-v1
 ```
 fov = (120, 90)
 ray density = (160, 120)
