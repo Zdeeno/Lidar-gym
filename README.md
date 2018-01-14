@@ -1,5 +1,5 @@
 # Lidar gym
-OpenAI gym training environment for agents controlling solid-state lidars.
+OpenAI gym training environment for agents controlling solid-state lidars based on Kitti dataset.
 ## Dependencies
 Environment is written in python 3 using following libraries:
 #### Required
@@ -17,6 +17,12 @@ https://bitbucket.org/tpetricek/voxel_map
 ##### 1. Mayavi
 https://github.com/enthought/mayavi (used for visualisation)
 
+## Installation 
+Package can be easily installed in terminal by command:
+`python setup.py install`<br />
+Before running your code, you must download the Kitti dataset.
+There is script [download_dataset.sh](download_dataset.sh) which will download the dataset. 
+Do **not** change the destination folder of the dataset.
 
 ## Action space
 We define action space as a following dictionary:<br />
