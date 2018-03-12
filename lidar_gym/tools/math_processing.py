@@ -39,6 +39,7 @@ def transform_points(points, transform_mat):
 class CuboidGetter:
 
     def __init__(self, voxel_size, map_size):
+        map_size = np.asarray(map_size)
         mins = np.zeros((1, 3))
         maxs = map_size/voxel_size
         getter_size = map_size/voxel_size
@@ -66,7 +67,7 @@ class CuboidGetter:
 
 class RewardCounter:
 
-    def __init__(self, voxel_size, map_shape, T_shift):
+    def __init__(self, voxel_size, map_shape, T_shift, cuboid_getter):
         self._ground_truth = None
         self._voxel_size = voxel_size
         self._a_s_size = map_shape/voxel_size
@@ -74,7 +75,7 @@ class RewardCounter:
         # calculate shift matrix
         self._shift_T = T_shift
 
-        self._cuboid_getter = CuboidGetter(voxel_size, map_shape)
+        self._cuboid_getter = cuboid_getter
         self._last_action = None
         self._last_T = None
 

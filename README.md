@@ -30,8 +30,8 @@ We define action space as a following dictionary:<br />
 where <br />`rays` is 2D binary (numpy.ndarray) matrix representing directions of lidar beams. <br />
 `map` is 3D (numpy.ndarray) matrix of map reconstructed by agent.
 Environment must receive only local cutout of global map. 
-Actually it needs only cuboid with local coordinates `[-16:48, -32:32, -3.2:3.2]` in meters.
-Size of your input map should be `(320, 320, 32)`. 
+Actually it needs only cuboid of local coordinates `[-16:48, -32:32, -3.2:3.2]` with respect to sensor position in meters.
+Shape of your input map should be `(320, 320, 32)`. 
 
 ## Observation space
 We define observation space as following dictionary:<br />
@@ -63,7 +63,7 @@ blue - reconstructed map
 
 ## Notes
 There is a lot of parameters available. That's documented in [lidar_gym](lidar_gym/envs/lidar_gym.py) file.
-Reward is in range `(-inf, 0)`. See [example file](playground.py) with initialisation and random action. Currently there
+Reward is in range `(-inf, 0)`. See [example file](example.py) with initialisation and random action. Currently there
 is only one environment:
 ##### lidar-v1
 ```

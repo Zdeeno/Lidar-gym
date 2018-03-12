@@ -36,32 +36,21 @@ class LidarGym(gym.Env):
         self.__max_rays = max_rays
         self.__density = np.asarray(density, dtype=np.float)
         self.__fov = np.asarray(fov)
-        if T_forecast == 0:
-            self.__T_forecast = sys.maxsize
-        else:
-            self.__T_forecast = T_forecast
         self.__map_shape = np.asarray(map_voxel_shape) * voxel_size  # sth like (80, 80, 4)
         self.__initial_position = np.zeros((1, 3))
         self.__input_map_shape = np.asarray(map_voxel_shape)
 
-        # Observation and action space
-        max_val = sys.float_info.max
-        min_val = -sys.float_info.min
-        max_obs_pts = int((lidar_range / voxel_size) * max_rays)
-        self.action_space = spaces.Dict({"rays": LidarMultiBinary((int(self.__density[1]), int(self.__density[0])), max_rays),
-                                         "map": LidarBox(low=min_val,
-                                                         high=max_val,
-                                                         shape=self.__input_map_shape.astype(int))})
-
-        self.observation_space = spaces.Dict({"T": spaces.Box(low=min_val, high=max_val, shape=(T_forecast, 4, 4)),
-                                              "points": spaces.Box(low=min_val, high=max_val, shape=(max_obs_pts, 3)),
-                                              "values": spaces.Box(low=min_val, high=max_val, shape=(max_obs_pts, 1))})
-        self.reward_range = (-float('Inf'), 0)
+        if T_forecast == 0:
+            self.__T_forecast = sys.maxsize
+        else:
+            self.__T_forecast = T_forecast
 
         # init classes
         self.__camera = camera.Camera(self.__fov, self.__density, self.__max_rays)
         self.__maps = map_parser.MapParser(self.__voxel_size)
-        self.__reward_counter = processing.RewardCounter(self.__voxel_size, self.__map_shape, T_cuboid)
+        self.__cuboid_getter = processing.CuboidGetter(voxel_size, self.__map_shape)
+        self.__reward_counter = processing.RewardCounter(self.__voxel_size, self.__map_shape, T_cuboid,
+                                                         self.__cuboid_getter)
 
     def _reset(self):
         # reset values
@@ -85,7 +74,7 @@ class LidarGym(gym.Env):
         return obv
 
     def _close(self):
-        super(LidarGym, self)._close()
+        super(LidarGym, self).close()
 
     def _step(self, action):
         assert type(action["rays"]) == np.ndarray and type(action["map"]) == np.ndarray, "wrong input types"
@@ -175,12 +164,114 @@ class LidarGym(gym.Env):
             return ret
 
 
+class LidarMultiBinary(spaces.MultiBinary):
+    """
+    Random ray generator.
+    """
+    def __init__(self, n, maxrays):
+        self.maxrays = maxrays
+        self.n = n
+        super(LidarMultiBinary, self).__init__(n)
+
+    def sample(self):
+        x = np.random.random_integers(0, high=self.n[0] - 1, size=self.maxrays)
+        y = np.random.random_integers(0, high=self.n[1] - 1, size=self.maxrays)
+        ret = np.zeros(shape=self.n, dtype=bool)
+        ret[x, y] = True
+        return ret
+
+
+class LidarBox(spaces.Box):
+    """
+    Random map reconstruction generator.
+    """
+    def __init__(self, low, high, shape=None):
+        super(LidarBox, self).__init__(low, high, shape)
+
+    def sample(self):
+        return np.random.uniform(low=-10, high=0.01, size=self.low.shape)
+
+
+class Lidarv0(LidarGym):
+    """
+    Simplified environment for basic training.
+    """
+    def __init__(self):
+
+        map_voxel_shape = (320, 320, 32)
+        forecast = 0
+        fov = (120, 90)
+        density = (160, 120)
+        max_rays = 200
+        voxel_size = 0.2
+        lidar_range = 48
+
+        self.__shift_T = np.eye(4, dtype=float)
+        self.__shift_T[0, 3] = -0.25 * map_voxel_shape[0] * voxel_size
+        self.__shift_T[1, 3] = -0.5 * map_voxel_shape[1] * voxel_size
+        self.__shift_T[2, 3] = -0.5 * map_voxel_shape[2] * voxel_size
+
+        super(Lidarv0, self).__init__(lidar_range, voxel_size, max_rays, density, fov,
+                                      forecast, map_voxel_shape, self.__shift_T)
+
+        self.action_space = spaces.Dict(spaces.Box(low=-1000, high=1000, shape=(320, 320, 32)))
+        self.observation_space = spaces.Dict(spaces.Box(low=-1000, high=1000, shape=(320, 320, 32)))
+        self.reward_range = (-float('Inf'), 0)
+
+        self.__action_generator = LidarMultiBinary(density, max_rays)
+
+        # lidarv0 specific:
+        self.__obs_voxel_map = None
+
+    def _close(self):
+        super(Lidarv0).close()
+
+    def _reset(self):
+        self.__obs_voxel_map = vm.VoxelMap()
+        self.__obs_voxel_map.voxel_size = self.__voxel_size
+        self.__obs_voxel_map.free_update = - 1.0
+        self.__obs_voxel_map.hit_update = 1.0
+        self.__obs_voxel_map.occupancy_threshold = 0.0
+        obs = super(Lidarv0, self).reset()
+        self.curr_T = obs['T'][0]
+        return np.zeros(shape=(320, 320, 32))
+
+    def _step(self, action):
+        rand_action = self.__action_generator.sample()
+        rays = rand_action['rays']
+        obs, rew, done, info = super(Lidarv0, self).step({'rays': rays, 'map': action})
+        obs = self._preprocess_obs(obs)
+        return obs, rew, done, info
+
+    def _seed(self, seed=None):
+        super(Lidarv0, self).seed(seed)
+
+    def _render(self, mode='human', close=False):
+        super(Lidarv0, self).render(mode)
+
+    def _preprocess_obs(self, obs):
+        new_points = np.transpose(obs['points'])
+        new_vals = obs['values']
+        last_vals = self.__obs_voxel_map.get_voxels(new_points)
+        new_vals = last_vals + new_vals
+        self.__obs_voxel_map.set_voxels(new_points, new_vals)
+
+        # get CNN input
+        points, values = self.__cuboid_getter.get_map_cuboid(self.__obs_voxel_map, self.curr_T, self.__shift_T)
+        points = points/self.__voxel_size
+        points = np.asarray(points, dtype=int)
+        ret = np.zeros(shape=self.__map_shape)
+        ret[points[0], points[1], points[2]] = values
+        self.curr_T = obs['T'][0]
+        return ret
+
+
 class Lidarv1(LidarGym):
 
-    # trying to register environment described in paper
+    # environment described in paper
     def __init__(self):
-        map_voxel_shape = (320, 320, 32)
 
+        map_voxel_shape = (320, 320, 32)
         forecast = 0
         fov = (120, 90)
         density = (160, 120)
@@ -193,30 +284,34 @@ class Lidarv1(LidarGym):
         shift_T[1, 3] = -0.5 * map_voxel_shape[1] * voxel_size
         shift_T[2, 3] = -0.5 * map_voxel_shape[2] * voxel_size
 
+        # Define state spaces and reward bounds
+        max_val = sys.float_info.max
+        min_val = -sys.float_info.min
+        max_obs_pts = int((lidar_range / voxel_size) * max_rays)
+        self.action_space = spaces.Dict({"rays": LidarMultiBinary((int(self.__density[1]), int(self.__density[0])), max_rays),
+                                         "map": LidarBox(low=min_val,
+                                                         high=max_val,
+                                                         shape=self.__input_map_shape.astype(int))})
+
+        self.observation_space = spaces.Dict({"T": spaces.Box(low=min_val, high=max_val, shape=(100, 4, 4)),
+                                              "points": spaces.Box(low=min_val, high=max_val, shape=(max_obs_pts, 3)),
+                                              "values": spaces.Box(low=min_val, high=max_val, shape=(max_obs_pts, 1))})
+        self.reward_range = (-float('Inf'), 0)
+
         super(Lidarv1, self).__init__(lidar_range, voxel_size, max_rays, density, fov,
                                       forecast, map_voxel_shape, shift_T)
 
+    def reset(self):
+        return super(Lidarv1, self).reset()
 
-class LidarMultiBinary(spaces.MultiBinary):
-    """
-    Added restriction to the number of rays
-    """
-    def __init__(self, n, max):
-        self.maxrays = max
-        super(LidarMultiBinary, self).__init__(n)
-        size = n[0]*n[1]
-        self.__p = 100/size
+    def close(self):
+        super(Lidarv1, self).close()
 
-    def sample(self):
-        return np.random.choice((False, True), size=self.n, p=(1 - self.__p, self.__p))
+    def seed(self, seed=None):
+        return super(Lidarv1, self).seed(seed)
 
+    def step(self, action):
+        return super(Lidarv1, self).step(action)
 
-class LidarBox(spaces.Box):
-    """
-    Action map generation is less wild
-    """
-    def __init__(self, low, high, shape=None):
-        super(LidarBox, self).__init__(low, high, shape)
-
-    def sample(self):
-        return np.random.uniform(low=-10, high=0.01, size=self.low.shape)
+    def render(self, mode='human'):
+        super(Lidarv1, self).render(mode)
