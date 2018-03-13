@@ -117,8 +117,6 @@ class RewardCounter:
         weights[values_g_t < 0] = weights_negative
 
         # calculate reward
-        print(len(values_a_m))
-        print(len(values_g_t))
         reward = np.sum(-weights * (np.log(1 + np.exp(-values_a_m * values_g_t))))
         return reward
 

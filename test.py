@@ -4,7 +4,7 @@ import lidar_gym.envs
 env = lidar_gym.envs.Lidarv0()
 
 done = False
-random_action = env.action_space.sample()
+#random_action = env.action_space.sample()
 episode = 1
 env.seed(2)
 
@@ -23,8 +23,8 @@ while True:
         print('------------------- Iteration number ', counter, '-------------------------')
 
         # obv, reward, done, info = env.step({"rays": myDirections, "map": myMap})
-        obv, reward, done, info = env.step(random_action)
-        print('Observation:\n', obv)
+        obv, reward, done, info = env.step(obv)
+        print('Observation:\n', len(obv[obv != 0]))
         print('\nreward:\n', reward, '\n')
 
         env.render()

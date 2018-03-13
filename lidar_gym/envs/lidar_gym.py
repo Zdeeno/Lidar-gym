@@ -57,6 +57,7 @@ class LidarGym(gym.Env):
         self._next_timestamp = 0
         self._curr_position = None
         self._curr_T = None
+        self._last_T = None
         self._done = False
         self._render_init = False
         self._rays_endings = None
@@ -69,6 +70,7 @@ class LidarGym(gym.Env):
         self._map, self._T_matrices = self._maps.get_next_map()
         self._reward_counter.reset(self._map)
         self._map_length = len(self._T_matrices)
+        self._curr_T = self._T_matrices[0]
         self._to_next()
         obv = {"T": self._create_matrix_array(), "points": None, "values": None}
         return obv
@@ -84,11 +86,11 @@ class LidarGym(gym.Env):
             if directions is not None:
                 init_point = np.asmatrix(self._curr_position)
                 x, v = self._create_observation(init_point, directions)
-                reward = self._reward_counter.compute_reward(action["map"], self._curr_T)
+                reward = self._reward_counter.compute_reward(action["map"], self._last_T)
                 self._to_next()
                 observation = {"T": self._create_matrix_array(), "points": np.transpose(x), "values": v}
             else:
-                reward = self._reward_counter.compute_reward(action["map"], self._curr_T)
+                reward = self._reward_counter.compute_reward(action["map"], self._last_T)
                 self._to_next()
                 observation = {"T": self._create_matrix_array(), "points": None, "values": None}
 
@@ -112,10 +114,12 @@ class LidarGym(gym.Env):
     def _to_next(self):
         if not self._done:
             if self._next_timestamp == self._map_length:
+                self._last_T = self._curr_T
                 self._curr_T = None
                 self._done = True
                 self._next_timestamp += 1
                 return
+            self._last_T = self._curr_T
             self._curr_T = self._T_matrices[self._next_timestamp]
             self._curr_position = processing.transform_points(self._initial_position, self._curr_T)
             self._next_timestamp += 1
@@ -253,6 +257,7 @@ class Lidarv0(LidarGym):
         l = np.zeros((new_points.shape[1],), dtype=np.float64)
         new_vals = obs['values']
         last_vals = self._obs_voxel_map.get_voxels(new_points, l)
+        last_vals[np.isnan(last_vals)] = 0
         new_vals = last_vals + new_vals
         self._obs_voxel_map.set_voxels(new_points, l, new_vals)
 
