@@ -31,46 +31,46 @@ class LidarGym(gym.Env):
 
     def __init__(self, lidar_range, voxel_size, max_rays, density, fov, T_forecast, map_voxel_shape, T_cuboid):
         # Parse arguments:
-        self.__lidar_range = lidar_range
-        self.__voxel_size = voxel_size
-        self.__max_rays = max_rays
-        self.__density = np.asarray(density, dtype=np.float)
-        self.__fov = np.asarray(fov)
-        self.__map_shape = np.asarray(map_voxel_shape) * voxel_size  # sth like (80, 80, 4)
-        self.__initial_position = np.zeros((1, 3))
-        self.__input_map_shape = np.asarray(map_voxel_shape)
+        self._lidar_range = lidar_range
+        self._voxel_size = voxel_size
+        self._max_rays = max_rays
+        self._density = np.asarray(density, dtype=np.float)
+        self._fov = np.asarray(fov)
+        self._map_shape = np.asarray(map_voxel_shape) * voxel_size  # sth like (80, 80, 4)
+        self._initial_position = np.zeros((1, 3))
+        self._input_map_shape = np.asarray(map_voxel_shape)
 
         if T_forecast == 0:
-            self.__T_forecast = sys.maxsize
+            self._T_forecast = sys.maxsize
         else:
-            self.__T_forecast = T_forecast
+            self._T_forecast = T_forecast
 
         # init classes
-        self.__camera = camera.Camera(self.__fov, self.__density, self.__max_rays)
-        self.__maps = map_parser.MapParser(self.__voxel_size)
-        self.__cuboid_getter = processing.CuboidGetter(voxel_size, self.__map_shape)
-        self.__reward_counter = processing.RewardCounter(self.__voxel_size, self.__map_shape, T_cuboid,
-                                                         self.__cuboid_getter)
+        self._camera = camera.Camera(self._fov, self._density, self._max_rays)
+        self._maps = map_parser.MapParser(self._voxel_size)
+        self._cuboid_getter = processing.CuboidGetter(voxel_size, self._map_shape)
+        self._reward_counter = processing.RewardCounter(self._voxel_size, self._map_shape, T_cuboid,
+                                                        self._cuboid_getter)
 
     def _reset(self):
         # reset values
-        self.__next_timestamp = 0
-        self.__curr_position = None
-        self.__curr_T = None
-        self.__done = False
-        self.__render_init = False
-        self.__rays_endings = None
-        self.__map_length = None
-        self.__map = None
-        self.__T_matrices = None
+        self._next_timestamp = 0
+        self._curr_position = None
+        self._curr_T = None
+        self._done = False
+        self._render_init = False
+        self._rays_endings = None
+        self._map_length = None
+        self._map = None
+        self._T_matrices = None
 
         print('RESETING')
         # parse new map
-        self.__map, self.__T_matrices = self.__maps.get_next_map()
-        self.__reward_counter.reset(self.__map)
-        self.__map_length = len(self.__T_matrices)
-        self.__to_next()
-        obv = {"T": self.__create_matrix_array(), "points": None, "values": None}
+        self._map, self._T_matrices = self._maps.get_next_map()
+        self._reward_counter.reset(self._map)
+        self._map_length = len(self._T_matrices)
+        self._to_next()
+        obv = {"T": self._create_matrix_array(), "points": None, "values": None}
         return obv
 
     def _close(self):
@@ -79,86 +79,86 @@ class LidarGym(gym.Env):
     def _step(self, action):
         assert type(action["rays"]) == np.ndarray and type(action["map"]) == np.ndarray, "wrong input types"
 
-        if not self.__done:
-            directions = self.__camera.calculate_directions(action["rays"], self.__curr_T)
+        if not self._done:
+            directions = self._camera.calculate_directions(action["rays"], self._curr_T)
             if directions is not None:
-                init_point = np.asmatrix(self.__curr_position)
-                x, v = self.__create_observation(init_point, directions)
-                reward = self.__reward_counter.compute_reward(action["map"], self.__curr_T)
-                self.__to_next()
-                observation = {"T": self.__create_matrix_array(), "points": np.transpose(x), "values": v}
+                init_point = np.asmatrix(self._curr_position)
+                x, v = self._create_observation(init_point, directions)
+                reward = self._reward_counter.compute_reward(action["map"], self._curr_T)
+                self._to_next()
+                observation = {"T": self._create_matrix_array(), "points": np.transpose(x), "values": v}
             else:
-                reward = self.__reward_counter.compute_reward(action["map"], self.__curr_T)
-                self.__to_next()
-                observation = {"T": self.__create_matrix_array(), "points": None, "values": None}
+                reward = self._reward_counter.compute_reward(action["map"], self._curr_T)
+                self._to_next()
+                observation = {"T": self._create_matrix_array(), "points": None, "values": None}
 
-            return observation, reward, self.__done, None
+            return observation, reward, self._done, None
         else:
             return None, None, True, None
 
     def _render(self, mode='human', close=False):
-        if not self.__done:
-            if not self.__render_init:
+        if not self._done:
+            if not self._render_init:
                 from lidar_gym.testing import plot_map
                 self.plotter = plot_map.Potter()
-                self.__render_init = True
-            if self.__next_timestamp > 1:
-                g_t, a_m, sensor = self.__reward_counter.get_render_data()
-                self.plotter.plot_action(g_t, a_m, np.transpose(self.__rays_endings), self.__voxel_size, sensor)
+                self._render_init = True
+            if self._next_timestamp > 1:
+                g_t, a_m, sensor = self._reward_counter.get_render_data()
+                self.plotter.plot_action(g_t, a_m, np.transpose(self._rays_endings), self._voxel_size, sensor)
 
     def _seed(self, seed=None):
         map_parser.set_seed(seed)
 
-    def __to_next(self):
-        if not self.__done:
-            if self.__next_timestamp == self.__map_length:
-                self.__curr_T = None
-                self.__done = True
-                self.__next_timestamp += 1
+    def _to_next(self):
+        if not self._done:
+            if self._next_timestamp == self._map_length:
+                self._curr_T = None
+                self._done = True
+                self._next_timestamp += 1
                 return
-            self.__curr_T = self.__T_matrices[self.__next_timestamp]
-            self.__curr_position = processing.transform_points(self.__initial_position, self.__curr_T)
-            self.__next_timestamp += 1
+            self._curr_T = self._T_matrices[self._next_timestamp]
+            self._curr_position = processing.transform_points(self._initial_position, self._curr_T)
+            self._next_timestamp += 1
 
-    def __create_observation(self, init_point, directions):
+    def _create_observation(self, init_point, directions):
         if len(directions) == 0:
             return None, None
 
         init_points = np.repeat(init_point, len(directions), axis=0)
-        self.__rays_endings, v = self.__map.trace_rays(np.transpose(init_points),
-                                                       np.transpose(directions),
-                                                       self.__lidar_range, const_min_value, const_max_value, 0)
+        self._rays_endings, v = self._map.trace_rays(np.transpose(init_points),
+                                                      np.transpose(directions),
+                                                      self._lidar_range, const_min_value, const_max_value, 0)
 
         tmp_map = vm.VoxelMap()
-        tmp_map.voxel_size = self.__voxel_size
+        tmp_map.voxel_size = self._voxel_size
         tmp_map.free_update = - 1.0
         tmp_map.hit_update = 1.0
         init_points = np.repeat(init_point, len(v), axis=0)
-        tmp_map.update_lines(np.transpose(init_points), self.__rays_endings)
+        tmp_map.update_lines(np.transpose(init_points), self._rays_endings)
         # correct empty pts
 
         bools = processing.values_to_bools(v)
         indexes_empty = np.where(~bools)
         if len(indexes_empty[0]) > 0:
-            free_pts = np.asmatrix(self.__rays_endings[:, indexes_empty])
+            free_pts = np.asmatrix(self._rays_endings[:, indexes_empty])
             tmp_map.set_voxels(free_pts, np.zeros((free_pts.shape[1],)), -np.ones((free_pts.shape[1],)))
 
         x, l, v = tmp_map.get_voxels()
         return x, v
 
-    def __create_matrix_array(self):
+    def _create_matrix_array(self):
         """
         create array of transformation matrix with current position
         :return: numpy array Nx(4x4)
         """
-        t = self.__next_timestamp - 1
-        if self.__map_length >= (t + self.__T_forecast):
-            return self.__T_matrices[t:(t + self.__T_forecast)]
+        t = self._next_timestamp - 1
+        if self._map_length >= (t + self._T_forecast):
+            return self._T_matrices[t:(t + self._T_forecast)]
         else:
-            diff = (self.__map_length - t)
+            diff = (self._map_length - t)
             ret = np.zeros((diff, 4, 4))
             if diff > 0:
-                ret[0:diff] = self.__T_matrices[t:t + diff]
+                ret[0:diff] = self._T_matrices[t:t + diff]
             else:
                 ret = [None]
             return ret
@@ -206,61 +206,63 @@ class Lidarv0(LidarGym):
         voxel_size = 0.2
         lidar_range = 48
 
-        self.__shift_T = np.eye(4, dtype=float)
-        self.__shift_T[0, 3] = -0.25 * map_voxel_shape[0] * voxel_size
-        self.__shift_T[1, 3] = -0.5 * map_voxel_shape[1] * voxel_size
-        self.__shift_T[2, 3] = -0.5 * map_voxel_shape[2] * voxel_size
+        self._shift_T = np.eye(4, dtype=float)
+        self._shift_T[0, 3] = -0.25 * map_voxel_shape[0] * voxel_size
+        self._shift_T[1, 3] = -0.5 * map_voxel_shape[1] * voxel_size
+        self._shift_T[2, 3] = -0.5 * map_voxel_shape[2] * voxel_size
 
         super(Lidarv0, self).__init__(lidar_range, voxel_size, max_rays, density, fov,
-                                      forecast, map_voxel_shape, self.__shift_T)
+                                      forecast, map_voxel_shape, self._shift_T)
 
-        self.action_space = spaces.Dict(spaces.Box(low=-1000, high=1000, shape=(320, 320, 32)))
-        self.observation_space = spaces.Dict(spaces.Box(low=-1000, high=1000, shape=(320, 320, 32)))
+        self.action_space = spaces.Box(low=-100, high=100, shape=(320, 320, 32))
+        self.observation_space = spaces.Box(low=-100, high=100, shape=(320, 320, 32))
         self.reward_range = (-float('Inf'), 0)
 
-        self.__action_generator = LidarMultiBinary(density, max_rays)
+        self._action_generator = LidarMultiBinary((density[1], density[0]), max_rays)
 
         # lidarv0 specific:
-        self.__obs_voxel_map = None
+        self._obs_voxel_map = None
 
-    def _close(self):
-        super(Lidarv0).close()
+    def close(self):
+        super(Lidarv0)._close()
 
-    def _reset(self):
-        self.__obs_voxel_map = vm.VoxelMap()
-        self.__obs_voxel_map.voxel_size = self.__voxel_size
-        self.__obs_voxel_map.free_update = - 1.0
-        self.__obs_voxel_map.hit_update = 1.0
-        self.__obs_voxel_map.occupancy_threshold = 0.0
-        obs = super(Lidarv0, self).reset()
+    def reset(self):
+        self._obs_voxel_map = vm.VoxelMap()
+        self._obs_voxel_map.voxel_size = self._voxel_size
+        self._obs_voxel_map.free_update = - 1.0
+        self._obs_voxel_map.hit_update = 1.0
+        self._obs_voxel_map.occupancy_threshold = 0.0
+        obs = super(Lidarv0, self)._reset()
         self.curr_T = obs['T'][0]
         return np.zeros(shape=(320, 320, 32))
 
-    def _step(self, action):
-        rand_action = self.__action_generator.sample()
-        rays = rand_action['rays']
-        obs, rew, done, info = super(Lidarv0, self).step({'rays': rays, 'map': action})
+    def step(self, action):
+        rand_rays = self._action_generator.sample()
+        obs, rew, done, info = super(Lidarv0, self)._step({'rays': rand_rays, 'map': action})
         obs = self._preprocess_obs(obs)
         return obs, rew, done, info
 
-    def _seed(self, seed=None):
-        super(Lidarv0, self).seed(seed)
+    def seed(self, seed=None):
+        super(Lidarv0, self)._seed(seed)
 
-    def _render(self, mode='human', close=False):
-        super(Lidarv0, self).render(mode)
+    def render(self, mode='human', close=False):
+        super(Lidarv0, self)._render(mode)
 
     def _preprocess_obs(self, obs):
         new_points = np.transpose(obs['points'])
+        l = np.zeros((new_points.shape[1],), dtype=np.float64)
         new_vals = obs['values']
-        last_vals = self.__obs_voxel_map.get_voxels(new_points)
+        last_vals = self._obs_voxel_map.get_voxels(new_points, l)
         new_vals = last_vals + new_vals
-        self.__obs_voxel_map.set_voxels(new_points, new_vals)
+        self._obs_voxel_map.set_voxels(new_points, l, new_vals)
 
         # get CNN input
-        points, values = self.__cuboid_getter.get_map_cuboid(self.__obs_voxel_map, self.curr_T, self.__shift_T)
-        points = points/self.__voxel_size
+        points, values = self._cuboid_getter.get_map_cuboid(self._obs_voxel_map, self.curr_T, self._shift_T)
+        points = np.asmatrix(points/self._voxel_size)
+        points = np.transpose(points)
         points = np.asarray(points, dtype=int)
-        ret = np.zeros(shape=self.__map_shape)
+        ret = np.zeros(shape=self._input_map_shape, dtype=float)
+        values[np.isnan(values)] = 0
         ret[points[0], points[1], points[2]] = values
         self.curr_T = obs['T'][0]
         return ret
@@ -288,10 +290,10 @@ class Lidarv1(LidarGym):
         max_val = sys.float_info.max
         min_val = -sys.float_info.min
         max_obs_pts = int((lidar_range / voxel_size) * max_rays)
-        self.action_space = spaces.Dict({"rays": LidarMultiBinary((int(self.__density[1]), int(self.__density[0])), max_rays),
+        self.action_space = spaces.Dict({"rays": LidarMultiBinary((int(density[1]), int(density[0])), max_rays),
                                          "map": LidarBox(low=min_val,
                                                          high=max_val,
-                                                         shape=self.__input_map_shape.astype(int))})
+                                                         shape=map_voxel_shape)})
 
         self.observation_space = spaces.Dict({"T": spaces.Box(low=min_val, high=max_val, shape=(100, 4, 4)),
                                               "points": spaces.Box(low=min_val, high=max_val, shape=(max_obs_pts, 3)),
@@ -302,16 +304,16 @@ class Lidarv1(LidarGym):
                                       forecast, map_voxel_shape, shift_T)
 
     def reset(self):
-        return super(Lidarv1, self).reset()
+        return super(Lidarv1, self)._reset()
 
     def close(self):
-        super(Lidarv1, self).close()
+        super(Lidarv1, self)._close()
 
     def seed(self, seed=None):
-        return super(Lidarv1, self).seed(seed)
+        return super(Lidarv1, self)._seed(seed)
 
     def step(self, action):
-        return super(Lidarv1, self).step(action)
+        return super(Lidarv1, self)._step(action)
 
     def render(self, mode='human'):
-        super(Lidarv1, self).render(mode)
+        super(Lidarv1, self)._render(mode)

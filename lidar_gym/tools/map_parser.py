@@ -52,7 +52,8 @@ class MapParser:
 
         print('\nParsing drive ', self._drives[index], ' with length of ', size, ' timestamps.\n')
         # Grab some data
-        for i in range(size):
+        #for i in range(size):
+        for i in range(5):
             print('Processing point cloud from position number - ', i)
             transform_matrix = np.dot(next(iterator_oxts).T_w_imu, T_imu_to_velo)
             T_matrixes.append(np.asarray(transform_matrix))

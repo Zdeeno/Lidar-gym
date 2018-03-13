@@ -1,13 +1,12 @@
 import numpy as np
-import gym
 import lidar_gym.envs
 
-env = lidar_gym.envs.Lidarv1()
+env = lidar_gym.envs.Lidarv0()
 
 done = False
 random_action = env.action_space.sample()
 episode = 1
-env.seed(7)
+env.seed(2)
 
 print(env.action_space)
 
@@ -17,7 +16,7 @@ while True:
     obv = env.reset()
     print('------------------- Episode number', episode, '-------------------------')
     print('------------------- Iteration number 0 -------------------------')
-    print('Observation:\nNext positions:\n', obv['T'], '\nPoints:\n', obv['points'], '\nValues:\n', obv['values'])
+    print('Observation:\n', obv)
 
     while not done:
         print('------------------- Episode number', episode, '-------------------------')
@@ -25,11 +24,10 @@ while True:
 
         # obv, reward, done, info = env.step({"rays": myDirections, "map": myMap})
         obv, reward, done, info = env.step(random_action)
-        print('Observation:\nNext positions:\n', obv['T'], '\nPoints:\n', obv['points'], '\nValues\n', obv['values'])
-        print('\nHited ', np.shape(np.where(obv['values'] == 1))[1], ' points!\n')
-        print('reward:\n', reward, '\n')
+        print('Observation:\n', obv)
+        print('\nreward:\n', reward, '\n')
 
-        # env.render()
+        env.render()
         counter += 1
 
     episode += 1
