@@ -2,7 +2,7 @@
 OpenAI gym training environment for agents controlling solid-state lidars based on Kitti dataset.
 ## Dependencies
 Environment is written in python 3 using following libraries:
-#### Required
+### Required:
 
 ##### 1. Numpy
 https://github.com/numpy/numpy
@@ -13,8 +13,8 @@ https://github.com/utiasSTARS/pykitti
 ##### 4. Voxel map
 https://bitbucket.org/tpetricek/voxel_map
 
-#### Optional
-##### 1. Mayavi
+### Optional:
+##### 1. Mayavi with VTK
 https://github.com/enthought/mayavi (used for visualisation)
 
 ## Installation 

@@ -227,10 +227,10 @@ class Lidarv0(LidarGym):
         # lidarv0 specific:
         self._obs_voxel_map = None
 
-    def close(self):
+    def _close(self):
         super(Lidarv0)._close()
 
-    def reset(self):
+    def _reset(self):
         self._obs_voxel_map = vm.VoxelMap()
         self._obs_voxel_map.voxel_size = self._voxel_size
         self._obs_voxel_map.free_update = - 1.0
@@ -240,16 +240,16 @@ class Lidarv0(LidarGym):
         self.curr_T = obs['T'][0]
         return np.zeros(shape=(320, 320, 32))
 
-    def step(self, action):
+    def _step(self, action):
         rand_rays = self._action_generator.sample()
         obs, rew, done, info = super(Lidarv0, self)._step({'rays': rand_rays, 'map': action})
         obs = self._preprocess_obs(obs)
         return obs, rew, done, info
 
-    def seed(self, seed=None):
+    def _seed(self, seed=None):
         super(Lidarv0, self)._seed(seed)
 
-    def render(self, mode='human', close=False):
+    def _render(self, mode='human', close=False):
         super(Lidarv0, self)._render(mode)
 
     def _preprocess_obs(self, obs):
@@ -308,17 +308,17 @@ class Lidarv1(LidarGym):
         super(Lidarv1, self).__init__(lidar_range, voxel_size, max_rays, density, fov,
                                       forecast, map_voxel_shape, shift_T)
 
-    def reset(self):
+    def _reset(self):
         return super(Lidarv1, self)._reset()
 
-    def close(self):
+    def _close(self):
         super(Lidarv1, self)._close()
 
-    def seed(self, seed=None):
+    def _seed(self, seed=None):
         return super(Lidarv1, self)._seed(seed)
 
-    def step(self, action):
+    def _step(self, action):
         return super(Lidarv1, self)._step(action)
 
-    def render(self, mode='human'):
+    def _render(self, mode='human'):
         super(Lidarv1, self)._render(mode)

@@ -1,14 +1,15 @@
 import numpy as np
-import lidar_gym.envs
+import gym
+import lidar_gym
 
-env = lidar_gym.envs.Lidarv0()
-
+env = gym.make('lidar-v0')
 done = False
-#random_action = env.action_space.sample()
+
 episode = 1
 env.seed(2)
+space = env.action_space
 
-print(env.action_space)
+print(env.observation_space)
 
 while True:
 
