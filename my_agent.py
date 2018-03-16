@@ -19,7 +19,6 @@ class MyNetwork(networks.Network):
 
         cnn_input = x['state']
         cnn_input = tf.expand_dims(cnn_input, -1)
-        print(cnn_input)
 
         # CNN
         net = tflearn.conv_3d(cnn_input, 2, 2, strides=1, activation='relu')
@@ -30,40 +29,22 @@ class MyNetwork(networks.Network):
         net = tflearn.conv_3d(net, 16, 4, strides=1, activation='relu')
         net = tflearn.conv_3d(net, 32, 8, strides=1, activation='relu')
         net = tflearn.conv_3d(net, 1, 8, strides=1)
-        net = tflearn.layers.conv.conv_3d_transpose(net, 1, 8, [320, 320, 32])
+        net = tflearn.layers.conv.conv_3d_transpose(net, 1, 8, [320, 320, 32], strides=[1, 4, 4, 4, 1])
 
         net = tf.squeeze(net, [4])
-        return net
+        net = tf.reshape(net, [tf.shape(net)[0], 3276800])
+
+        if return_internals:
+            return net, list()
+        else:
+            return net
 
 
 agent = PPOAgent(
     states_spec=env.states,
     actions_spec=env.actions,
     network_spec=MyNetwork,
-    batch_size=1,
-    # BatchAgent
-    keep_last_timestep=True,
-    # PPOAgent
-    step_optimizer=dict(
-        type='adam',
-        learning_rate=1e-3
-    ),
-    optimization_steps=1,
-    # Model
-    scope='ppo',
-    discount=0.99,
-    # DistributionModel
-    distributions_spec=None,
-    entropy_regularization=0.01,
-    # PGModel
-    baseline_mode=None,
-    baseline=None,
-    baseline_optimizer=None,
-    gae_lambda=None,
-    # PGLRModel
-    likelihood_ratio_clipping=0.2,
-    summary_spec=None,
-    distributed_spec=None
+    batch_size=1
 )
 
 # Create the runner
@@ -78,7 +59,7 @@ def episode_finished(r):
 
 
 # Start learning
-runner.run(episodes=3000, max_episode_timesteps=200, episode_finished=episode_finished)
+runner.run(episodes=3000, max_episode_timesteps=500, episode_finished=episode_finished)
 
 
 # Print statistics

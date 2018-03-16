@@ -238,7 +238,9 @@ class Lidarv0(LidarGym):
         self._obs_voxel_map.occupancy_threshold = 0.0
         obs = super(Lidarv0, self)._reset()
         self.curr_T = obs['T'][0]
-        return np.zeros(shape=(320, 320, 32))
+        first_action = np.zeros(shape=(320, 320, 32))
+        obs, _, _, _ = self._step(first_action)
+        return obs
 
     def _step(self, action):
         rand_rays = self._action_generator.sample()
@@ -320,5 +322,5 @@ class Lidarv1(LidarGym):
     def _step(self, action):
         return super(Lidarv1, self)._step(action)
 
-    def _render(self, mode='human'):
+    def _render(self, mode='human', close=False):
         super(Lidarv1, self)._render(mode)
