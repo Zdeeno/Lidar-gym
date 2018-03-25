@@ -198,7 +198,7 @@ class LidarBox(spaces.Box):
 
 class Lidarv0(LidarGym):
     """
-    Simplified environment for basic training.
+    Inherited environment prepared for use, simplified for basic training.
     """
     def __init__(self):
 
@@ -276,8 +276,9 @@ class Lidarv0(LidarGym):
 
 
 class Lidarv1(LidarGym):
-
-    # environment described in paper
+    """
+    Inherited environment prepared for use, based on work in paper: https://arxiv.org/abs/1708.02074.
+    """
     def __init__(self):
 
         map_voxel_shape = (320, 320, 32)

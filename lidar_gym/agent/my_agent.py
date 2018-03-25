@@ -21,18 +21,16 @@ class MyNetwork(networks.Network):
         cnn_input = tf.expand_dims(cnn_input, -1)
 
         # CNN
-        net = tflearn.conv_3d(cnn_input, 2, 2, strides=1, activation='relu')
-        net = tflearn.conv_3d(net, 4, 4, strides=1, activation='relu')
+        net = tflearn.conv_3d(cnn_input, 2, 2, strides=1, activation='relu', regularizer='L2')
+        net = tflearn.conv_3d(net, 4, 4, strides=1, activation='relu', regularizer='L2')
         net = tflearn.max_pool_3d(net, 2, strides=2)
-        net = tflearn.conv_3d(net, 8, 4, strides=1, activation='relu')
+        net = tflearn.conv_3d(net, 8, 4, strides=1, activation='relu', regularizer='L2')
         net = tflearn.max_pool_3d(net, 2, strides=2)
-        net = tflearn.conv_3d(net, 16, 4, strides=1, activation='relu')
-        net = tflearn.conv_3d(net, 32, 8, strides=1, activation='relu')
-        net = tflearn.conv_3d(net, 1, 8, strides=1)
-        net = tflearn.layers.conv.conv_3d_transpose(net, 1, 8, [320, 320, 32], strides=[1, 4, 4, 4, 1])
-
-        net = tf.squeeze(net, [4])
-        net = tf.reshape(net, [tf.shape(net)[0], 3276800])
+        net = tflearn.conv_3d(net, 16, 4, strides=1, activation='relu', regularizer='L2')
+        net = tflearn.conv_3d(net, 1, 8, strides=1, activation='relu', regularizer='L2')
+        # net = tflearn.layers.conv.conv_3d_transpose(net, 1, 8, [320, 320, 32], strides=[1, 4, 4, 4, 1])
+        # net = tf.squeeze(net, [4])
+        # net = tf.reshape(net, [tf.shape(net)[0], 3276800])
 
         if return_internals:
             return net, list()
