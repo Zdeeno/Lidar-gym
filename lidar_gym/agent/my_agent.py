@@ -38,11 +38,18 @@ class MyNetwork(networks.Network):
             return net
 
 
+# specify agent
+update_mode = dict(unit='episodes', batch_size=1)
+memory = dict(type='latest', include_next_states=False, capacity=1)
+
+
 agent = PPOAgent(
-    states_spec=env.states,
-    actions_spec=env.actions,
-    network_spec=MyNetwork,
-    batch_size=1
+    states=env.states,
+    actions=env.actions,
+    network=MyNetwork,
+    batching_capacity=1,
+    update_mode=update_mode,
+    memory=memory
 )
 
 # Create the runner
