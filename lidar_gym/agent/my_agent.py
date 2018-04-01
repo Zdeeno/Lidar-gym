@@ -39,10 +39,9 @@ class MyNetwork(networks.Network):
 
 
 agent = PPOAgent(
-    states_spec=env.states,
-    actions_spec=env.actions,
-    network_spec=MyNetwork,
-    batch_size=1
+    states=env.states,
+    actions=env.actions,
+    network=MyNetwork
 )
 
 # Create the runner
