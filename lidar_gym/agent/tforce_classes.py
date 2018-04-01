@@ -17,7 +17,7 @@ class MyBeta(dists.Distribution):
     Beta distribution, for bounded continuous actions.
     """
 
-    def __init__(self, shape, min_value, max_value, alpha=0.0, beta=0.0, scope='beta', summary_labels=()):
+    def __init__(self, shape, min_value, max_value, alpha=0.0, beta=0.0, scope='mybeta', summary_labels=()):
         """
         Beta distribution.
         Args:
@@ -34,7 +34,7 @@ class MyBeta(dists.Distribution):
         action_size = util.prod(self.shape)
 
         self.alpha = Conv3dTranspose(size=1, stride=4, window=8, activation='none', bias=alpha, scope='alpha')
-        self.beta = Conv3dTranspose(size=1, stride=4, window=8, activation='none', bias=alpha, scope='beta')
+        self.beta = Conv3dTranspose(size=1, stride=4, window=8, activation='none', bias=beta, scope='beta')
 
         super(MyBeta, self).__init__(shape=shape, scope=scope, summary_labels=summary_labels)
 
@@ -173,7 +173,7 @@ class Conv3d(net.Layer):
         self.nonlinearity = net.Nonlinearity(summary_labels=summary_labels, **util.prepare_kwargs(activation))
         super(Conv3d, self).__init__(scope=scope, summary_labels=summary_labels)
 
-    def tf_apply(self, x, update):
+    def tf_apply(self, x, update=False):
         if util.rank(x) != 5:
             raise TensorForceError('Invalid input rank for conv2d layer: {}, must be 5'.format(util.rank(x)))
 
@@ -275,7 +275,7 @@ class Pool3d(net.Layer):
         self.padding = padding
         super(Pool3d, self).__init__(scope=scope, summary_labels=summary_labels)
 
-    def tf_apply(self, x, update):
+    def tf_apply(self, x, update=False):
         if self.pooling_type == 'average':
             x = tf.nn.avg_pool3d(value=x, ksize=self.window, strides=self.stride, padding=self.padding)
 
@@ -333,7 +333,7 @@ class Conv3dTranspose(net.Layer):
         self.nonlinearity = net.Nonlinearity(summary_labels=summary_labels, **util.prepare_kwargs(activation))
         super(Conv3dTranspose, self).__init__(scope=scope, summary_labels=summary_labels)
 
-    def tf_apply(self, x, update):
+    def tf_apply(self, x, update=False):
         if util.rank(x) != 5:
             raise TensorForceError('Invalid input rank for conv2d layer: {}, must be 5'.format(util.rank(x)))
 

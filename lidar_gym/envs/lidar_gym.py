@@ -271,8 +271,18 @@ class Lidarv0(LidarGym):
         ret = np.zeros(shape=self._input_map_shape, dtype=float)
         values[np.isnan(values)] = 0
         ret[points[0], points[1], points[2]] = values
+
+        # get ground truth
+        points, values = self._cuboid_getter.get_map_cuboid(self._map, self.curr_T, self._shift_T)
+        points = np.asmatrix(points / self._voxel_size)
+        points = np.transpose(points)
+        points = np.asarray(points, dtype=int)
+        gt = np.zeros(shape=self._input_map_shape, dtype=float)
+        values[np.isnan(values)] = 0
+        gt[points[0], points[1], points[2]] = values
+
         self.curr_T = obs['T'][0]
-        return ret
+        return {'X': ret, 'Y': gt}
 
 
 class Lidarv1(LidarGym):

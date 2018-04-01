@@ -7,6 +7,7 @@ from tensorforce.contrib.openai_gym import OpenAIGym
 import lidar_gym
 import tflearn
 import tensorflow as tf
+import lidar_gym.agent.tforce_classes as tfc
 
 # Create an OpenAIgym environment
 env = OpenAIGym('lidar-v0', visualize=False)
@@ -39,10 +40,10 @@ class MyNetwork(networks.Network):
 
 
 agent = PPOAgent(
-    states_spec=env.states,
-    actions_spec=env.actions,
-    network_spec=MyNetwork,
-    batch_size=1
+    states=env.states,
+    actions=env.actions,
+    network=MyNetwork,
+    batching_capacity=1,
 )
 
 # Create the runner
