@@ -4,6 +4,7 @@ import gym
 import lidar_gym
 import tensorflow as tf
 import tflearn
+import lidar_gym
 
 
 # Constants
@@ -27,7 +28,7 @@ net = tf.squeeze(net, [4])
 net = tflearn.regression(net, optimizer='adam', loss='mean_square', learning_rate=0.001)
 
 # Create model
-model = tflearn.DNN(net, tensorboard_verbose=0)
+model = tflearn.DNN(net, tensorboard_verbose=3)
 env = gym.make('lidar-v0')
 done = False
 random_action = env.action_space.sample()
@@ -55,19 +56,15 @@ while True:
 
     counter = 1
     obv = env.reset()
-    print('------------------- Episode number', episode, '-------------------------')
-    print('------------------- Iteration number 0 -------------------------')
+    print('------------------- Drive number', episode, '-------------------------')
     append_to_buffer(obv)
 
-
     while not done:
-        print('------------------- Episode number', episode, '-------------------------')
-        print('------------------- Iteration number ', counter, '-------------------------')
-
         obv, reward, done, info = env.step(random_action)
         append_to_buffer(obv)
-        if buffer_size == 4:
-            model.fit(buffer_X, buffer_Y, n_epoch=1, shuffle=True, show_metric=True, batch_size=4, run_id='lidar_cnn')
+        if buffer_size == BATCH_SIZE:
+            model.fit(buffer_X, buffer_Y, n_epoch=1, shuffle=True, show_metric=True, batch_size=BATCH_SIZE,
+                      run_id='lidar_cnn')
             buffer_X, buffer_Y, buffer_size = init_buffer()
         counter += 1
 

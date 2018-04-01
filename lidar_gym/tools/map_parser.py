@@ -26,8 +26,14 @@ class MapParser:
         assert os.path.isdir(self._basedir), 'Your kitti dataset must be located at usr/local/kitti_dataset,' \
                                              ' see download_dataset.sh'
         # set of drives is hardcoded due to drives in bash script 'download_dataset.sh'
-        self._drives = ['0002', '0020', '0027']
+        self._drives = []
         self._date = '2011_09_26'
+        # city
+        self._drives.append(['0002', '0005', '0009', '0011'])
+        # residential
+        self._drives.append(['0019', '0020', '0022', '0039', '0061'])
+        # road
+        self._drives.append(['0027', '0015', '0070', '0016', '0047'])
         set_seed()
 
     def get_next_map(self):
@@ -50,11 +56,12 @@ class MapParser:
         iterator_velo = iter(itertools.islice(dataset.velo, 0, None))
         T_imu_to_velo = np.linalg.inv(dataset.calib.T_velo_imu)
 
-        print('\nParsing drive ', self._drives[index], ' with length of ', size, ' timestamps.\n')
+        print('\nParsing drive', self._drives[index], 'with length of', size, 'timestamps.\n')
         # Grab some data
-        #for i in range(size):
-        for i in range(5):
-            print('Processing point cloud from position number - ', i)
+        for i in range(size):
+        # for i in range(8):
+            if (i % 10) == 0:
+                print('.', end='', flush=True)
             transform_matrix = np.dot(next(iterator_oxts).T_w_imu, T_imu_to_velo)
             T_matrixes.append(np.asarray(transform_matrix))
             anchor = mp.transform_points(anchor_initial, transform_matrix)

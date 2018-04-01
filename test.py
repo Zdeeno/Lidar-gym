@@ -17,7 +17,7 @@ while True:
     obv = env.reset()
     print('------------------- Episode number', episode, '-------------------------')
     print('------------------- Iteration number 0 -------------------------')
-    print('Observation:\n', obv)
+    print('Observation:\n', len(obv[obv != 0]))
 
     while not done:
         print('------------------- Episode number', episode, '-------------------------')
@@ -27,8 +27,9 @@ while True:
         obv, reward, done, info = env.step(obv)
         print('Observation:\n', len(obv[obv != 0]))
         print('\nreward:\n', reward, '\n')
+        print('Done:\n', done)
 
-        env.render()
+        # env.render()
         counter += 1
 
     episode += 1

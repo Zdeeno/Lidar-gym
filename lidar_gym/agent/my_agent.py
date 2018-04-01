@@ -33,16 +33,25 @@ class MyNetwork(networks.Network):
         # net = tf.reshape(net, [tf.shape(net)[0], 3276800])
 
         if return_internals:
-            return net, list()
+            return net, dict()
         else:
             return net
+
+
+# specify agent
+update_mode = dict(unit='episodes', batch_size=1)
+memory = dict(type='latest', include_next_states=False, capacity=1)
 
 
 agent = PPOAgent(
     states=env.states,
     actions=env.actions,
-    network=MyNetwork
+    network=MyNetwork,
+    batching_capacity=1,
+    update_mode=update_mode,
+    memory=memory
 )
+
 
 # Create the runner
 runner = Runner(agent=agent, environment=env)
