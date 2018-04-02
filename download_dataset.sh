@@ -4,11 +4,11 @@ cd /usr/local
 mkdir kitti_dataset
 cd kitti_dataset
 
-# download velodyne data
+# download velodyne data ... commented download links has wrong pairing of point-clouds and car positions
 # city
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0002/2011_09_26_drive_0002_sync.zip
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0005/2011_09_26_drive_0005_sync.zip
-wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0009/2011_09_26_drive_0009_sync.zip
+# wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0009/2011_09_26_drive_0009_sync.zip
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0011/2011_09_26_drive_0011_sync.zip
 # residential
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0019/2011_09_26_drive_0019_sync.zip

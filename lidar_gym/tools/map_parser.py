@@ -29,11 +29,11 @@ class MapParser:
         self._drives = []
         self._date = '2011_09_26'
         # city
-        self._drives.append(['0002', '0005', '0009', '0011'])
+        self._drives.extend(['0002', '0005', '0011'])
         # residential
-        self._drives.append(['0019', '0020', '0022', '0039', '0061'])
+        self._drives.extend(['0019', '0020', '0022', '0039', '0061'])
         # road
-        self._drives.append(['0027', '0015', '0070', '0016', '0047'])
+        self._drives.extend(['0027', '0015', '0070', '0016', '0047'])
         set_seed()
 
     def get_next_map(self):

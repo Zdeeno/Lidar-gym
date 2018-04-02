@@ -12,6 +12,19 @@ MAP_SIZE = (320, 320, 32)
 BATCH_SIZE = 4
 
 
+def logistic_loss(y_pred, y_true):
+    # own objective function
+    bigger = tf.cast(tf.greater(y_true, 0.0), tf.float32)
+    smaller = tf.cast(tf.greater(0.0, y_true), tf.float32)
+
+    weights_positive = 0.5 / tf.reduce_sum(bigger)
+    weights_negative = 0.5 / tf.reduce_sum(smaller)
+
+    weights = bigger*weights_positive + smaller*weights_negative
+
+    return tf.reduce_sum(weights * (tf.log(1 + tf.exp(-y_pred * y_true))))
+
+
 # Convolutional network building
 cnn_input = tflearn.input_data(shape=[None, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]])
 cnn_input = tf.expand_dims(cnn_input, -1)
@@ -25,7 +38,7 @@ net = tflearn.conv_3d(net, 1, 8, strides=1, activation='relu', regularizer='L2')
 net = tflearn.layers.conv.conv_3d_transpose(net, 1, 8, [MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]],
                                             strides=[1, 4, 4, 4, 1], regularizer='L2')
 net = tf.squeeze(net, [4])
-net = tflearn.regression(net, optimizer='adam', loss='mean_square', learning_rate=0.001)
+net = tflearn.regression(net, optimizer='adam', loss=logistic_loss, learning_rate=0.001)
 
 # Create model
 model = tflearn.DNN(net, tensorboard_verbose=3)
@@ -56,7 +69,7 @@ while True:
 
     counter = 1
     obv = env.reset()
-    print('------------------- Drive number', episode, '-------------------------')
+    print('\n------------------- Drive number', episode, '-------------------------')
     append_to_buffer(obv)
 
     while not done:

@@ -6,6 +6,7 @@ import voxel_map as vm
 from lidar_gym.tools import camera
 import sys
 from lidar_gym.tools import map_parser
+import warnings
 
 const_min_value = -sys.maxsize - 1
 const_max_value = 0
@@ -272,12 +273,16 @@ class Lidarv0(LidarGym):
         values[np.isnan(values)] = 0
         ret[points[0], points[1], points[2]] = values
 
-        # get ground truth
+        # get normalized ground truth
         points, values = self._cuboid_getter.get_map_cuboid(self._map, self.curr_T, self._shift_T)
         points = np.asmatrix(points / self._voxel_size)
         points = np.transpose(points)
         points = np.asarray(points, dtype=int)
         gt = np.zeros(shape=self._input_map_shape, dtype=float)
+        with warnings.catch_warnings():
+            # suppress warning for NaN / NaN
+            warnings.simplefilter("ignore")
+            values = np.asarray(values // np.abs(values))
         values[np.isnan(values)] = 0
         gt[points[0], points[1], points[2]] = values
 
