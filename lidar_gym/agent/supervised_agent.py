@@ -9,7 +9,7 @@ import lidar_gym
 
 # Constants
 MAP_SIZE = (320, 320, 32)
-BATCH_SIZE = 4
+BATCH_SIZE = 1
 
 # Variables
 # buffer
@@ -53,11 +53,13 @@ def build_network():
     net = tflearn.conv_3d(net, 8, 4, strides=1, activation='relu', regularizer='L2')
     net = tflearn.max_pool_3d(net, 2, strides=2)
     net = tflearn.conv_3d(net, 16, 4, strides=1, activation='relu', regularizer='L2')
-    net = tflearn.conv_3d(net, 1, 8, strides=1, activation='relu', regularizer='L2')
+    net = tflearn.conv_3d(net, 32, 4, strides=1, activation='relu', regularizer='L2')
+    net = tflearn.conv_3d(net, 1, 8, strides=1, activation='linear', regularizer='L2')
     net = tflearn.layers.conv.conv_3d_transpose(net, 1, 8, [MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]],
-                                                strides=[1, 4, 4, 4, 1], regularizer='L2')
+                                                strides=[1, 4, 4, 4, 1], regularizer='L2', activation='linear')
     net = tf.squeeze(net, [4])
-    net = tflearn.regression(net, optimizer='adam', loss=logistic_loss, learning_rate=0.001)
+    optimizer = tflearn.Momentum(learning_rate=0.001, lr_decay=(1/8), decay_step=10, momentum=0.99)
+    net = tflearn.regression(net, optimizer=optimizer, loss=logistic_loss, learning_rate=0.001)
     return net
 
 
