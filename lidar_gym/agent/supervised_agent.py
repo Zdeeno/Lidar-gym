@@ -64,7 +64,7 @@ def build_network():
 
 
 # Create model on GPU
-model = tflearn.DNN(build_network(), tensorboard_verbose=0)
+model = tflearn.DNN(build_network(), tensorboard_verbose=0, tensorboard_dir="~/Projekt/tflearn_logs/")
 # model.load('trained_models/my_model.tflearn')
 
 env = gym.make('lidar-v0')
