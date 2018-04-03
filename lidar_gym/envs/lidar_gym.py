@@ -1,12 +1,14 @@
+import sys
+import warnings
+
 import gym
 import gym.spaces as spaces
 import numpy as np
-from lidar_gym.tools import math_processing as processing
 import voxel_map as vm
+
 from lidar_gym.tools import camera
-import sys
 from lidar_gym.tools import map_parser
-import warnings
+from lidar_gym.tools import math_processing as processing
 
 const_min_value = -sys.maxsize - 1
 const_max_value = 0
@@ -102,7 +104,7 @@ class LidarGym(gym.Env):
     def _render(self, mode='human', close=False):
         if not self._done:
             if not self._render_init:
-                from lidar_gym.tools import plot_map
+                from lidar_gym.visualiser import plot_map
                 self.plotter = plot_map.Plotter()
                 self._render_init = True
             if self._next_timestamp > 1:
