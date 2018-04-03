@@ -77,18 +77,19 @@ while True:
     init_buffer()
     obv = env.reset()
     print('\n------------------- Drive number', episode, '-------------------------')
-    append_to_buffer(obv)
     if (episode % 5) == 0 and episode != 0:
         model.save('trained_models/my_model.tflearn')
 
     while not done:
-        obv, reward, done, info = env.step(random_action)
         append_to_buffer(obv)
 
         if buffer_size == BATCH_SIZE:
             model.fit(buffer_X, buffer_Y, n_epoch=1, shuffle=True, show_metric=True, batch_size=BATCH_SIZE,
                       run_id='lidar_cnn')
             init_buffer()
+
+        env.render()
+        obv, reward, done, info = env.step(obv['X'])
 
     episode += 1
     done = False

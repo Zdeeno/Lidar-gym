@@ -2,7 +2,7 @@ from mayavi import mlab
 import numpy as np
 
 
-class Potter:
+class Plotter:
     # Plot your map using Mayavi
     def __init__(self):
         self.fig = None

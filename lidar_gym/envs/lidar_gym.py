@@ -103,7 +103,7 @@ class LidarGym(gym.Env):
         if not self._done:
             if not self._render_init:
                 from lidar_gym.testing import plot_map
-                self.plotter = plot_map.Potter()
+                self.plotter = plot_map.Plotter()
                 self._render_init = True
             if self._next_timestamp > 1:
                 g_t, a_m, sensor = self._reward_counter.get_render_data()
