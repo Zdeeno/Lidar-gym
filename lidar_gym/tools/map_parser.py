@@ -8,6 +8,7 @@ import os
 import random
 
 from lidar_gym.tools import math_processing as mp
+from os.path import expanduser
 
 
 def set_seed(seed=None):
@@ -22,18 +23,19 @@ class MapParser:
 
     def __init__(self, voxel_size):
         self._voxel_size = voxel_size
-        self._basedir = '/usr/local/kitti_dataset'
-        assert os.path.isdir(self._basedir), 'Your kitti dataset must be located at usr/local/kitti_dataset,' \
-                                             ' see download_dataset.sh'
+        home = expanduser("~")
+        self._basedir = os.path.join(home, 'kitti_dataset')
+        assert os.path.isdir(self._basedir), 'Your kitti dataset must be located in your home directory,' \
+                                             '(viz os.path.expanduser) ... see also download_dataset.sh'
         # set of drives is hardcoded due to drives in bash script 'download_dataset.sh'
         self._drives = []
         self._date = '2011_09_26'
         # city
-        self._drives.extend(['0002', '0005', '0011'])
+        self._drives.extend(['0002', '0005', '0011', '0018'])
         # residential
         self._drives.extend(['0019', '0020', '0022', '0039', '0061'])
         # road
-        self._drives.extend(['0027', '0015', '0070', '0016', '0047'])
+        self._drives.extend(['0027', '0015', '0070', '0029', '0032'])
         set_seed()
 
     def get_next_map(self):
@@ -59,7 +61,7 @@ class MapParser:
         print('\nParsing drive', self._drives[index], 'with length of', size, 'timestamps.\n')
         # Grab some data
         for i in range(size):
-        # for i in range(8):
+        # for i in range(100):
             if (i % 10) == 0:
                 print('.', end='', flush=True)
             transform_matrix = np.dot(next(iterator_oxts).T_w_imu, T_imu_to_velo)
@@ -71,3 +73,38 @@ class MapParser:
             m.update_lines(anchors, np.transpose(pts))
 
         return m, T_matrixes
+
+
+class DatasetTester:
+    """Class to check whether is dataset correct"""
+    def __init__(self):
+        self._basedir = '/usr/local/kitti_dataset'
+        assert os.path.isdir(self._basedir), 'Your kitti dataset must be located at usr/local/kitti_dataset,' \
+                                             ' see download_dataset.sh'
+        # set of drives is hardcoded due to drives in bash script 'download_dataset.sh'
+        self._drives = []
+        self._date = '2011_09_26'
+        # city
+        self._drives.extend(['0002', '0005', '0011', '0018'])
+        # residential
+        self._drives.extend(['0019', '0020', '0022', '0039', '0061'])
+        # road
+        self._drives.extend(['0027', '0015', '0070', '0029', '0032'])
+
+        for drive in self._drives:
+            dataset = pykitti.raw(self._basedir, self._date, drive)
+            size = len(dataset)
+            iterator_oxts = iter(itertools.islice(dataset.oxts, 0, None))
+            iterator_velo = iter(itertools.islice(dataset.velo, 0, None))
+            T_imu_to_velo = np.linalg.inv(dataset.calib.T_velo_imu)
+            print('\nParsing drive', drive, 'with length of', size, 'timestamps.\n')
+            for i in range(size):
+                # for i in range(100):
+                if (i % 10) == 0:
+                    print('.', end='', flush=True)
+                transform_matrix = np.dot(next(iterator_oxts).T_w_imu, T_imu_to_velo)
+                velo_points = next(iterator_velo)
+
+
+if __name__ == "__main__":
+    test = DatasetTester()
