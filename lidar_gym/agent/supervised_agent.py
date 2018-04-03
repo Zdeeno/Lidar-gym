@@ -5,7 +5,8 @@ import lidar_gym
 import tensorflow as tf
 import tflearn
 import lidar_gym
-
+from os.path import expanduser
+import os
 
 # Constants
 MAP_SIZE = (320, 320, 32)
@@ -64,7 +65,9 @@ def build_network():
 
 
 # Create model on GPU
-model = tflearn.DNN(build_network(), tensorboard_verbose=0)
+dir = expanduser("~")
+dir = os.path.join(dir, 'tflearn_logs/')
+model = tflearn.DNN(build_network(), tensorboard_verbose=0, tensorboard_dir=dir)
 # model.load('trained_models/my_model.tflearn')
 
 env = gym.make('lidar-v0')
@@ -85,10 +88,9 @@ while True:
 
         if buffer_size == BATCH_SIZE:
             model.fit(buffer_X, buffer_Y, n_epoch=1, shuffle=True, show_metric=True, batch_size=BATCH_SIZE,
-                      run_id='lidar_cnn')
+                          run_id='lidar_cnn')
             init_buffer()
 
-        env.render()
         obv, reward, done, info = env.step(obv['X'])
 
     episode += 1
