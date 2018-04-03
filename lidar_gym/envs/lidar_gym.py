@@ -102,7 +102,7 @@ class LidarGym(gym.Env):
     def _render(self, mode='human', close=False):
         if not self._done:
             if not self._render_init:
-                from lidar_gym.testing import plot_map
+                from lidar_gym.tools import plot_map
                 self.plotter = plot_map.Plotter()
                 self._render_init = True
             if self._next_timestamp > 1:

@@ -78,9 +78,10 @@ class MapParser:
 class DatasetTester:
     """Class to check whether is dataset correct"""
     def __init__(self):
-        self._basedir = '/usr/local/kitti_dataset'
-        assert os.path.isdir(self._basedir), 'Your kitti dataset must be located at usr/local/kitti_dataset,' \
-                                             ' see download_dataset.sh'
+        home = expanduser("~")
+        self._basedir = os.path.join(home, 'kitti_dataset')
+        assert os.path.isdir(self._basedir), 'Your kitti dataset must be located in your home directory,' \
+                                             '(viz os.path.expanduser) ... see also download_dataset.sh'
         # set of drives is hardcoded due to drives in bash script 'download_dataset.sh'
         self._drives = []
         self._date = '2011_09_26'
