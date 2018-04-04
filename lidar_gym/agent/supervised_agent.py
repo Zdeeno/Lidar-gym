@@ -10,7 +10,7 @@ import os
 
 # Constants
 MAP_SIZE = (320, 320, 32)
-BATCH_SIZE = 1
+BATCH_SIZE = 4
 
 # Variables
 # buffer
@@ -27,7 +27,7 @@ def logistic_loss(y_pred, y_true):
 
     weights = bigger*weights_positive + smaller*weights_negative
 
-    return tf.reduce_sum(weights * (tf.log(1 + tf.exp(-y_pred * y_true))))
+    return tf.reduce_sum((tf.log(1 + tf.exp(-y_pred * y_true))))
 
 
 def init_buffer():
@@ -59,8 +59,9 @@ def build_network():
     net = tflearn.layers.conv.conv_3d_transpose(net, 1, 8, [MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]],
                                                 strides=[1, 4, 4, 4, 1], regularizer='L2', activation='linear')
     net = tf.squeeze(net, [4])
-    optimizer = tflearn.Momentum(learning_rate=0.001, lr_decay=(1/8), decay_step=10, momentum=0.99)
-    net = tflearn.regression(net, optimizer=optimizer, loss=logistic_loss, learning_rate=0.001)
+    # optimizer = tflearn.Momentum(learning_rate=0.01, lr_decay=(1/8), decay_step=10, momentum=0.99)
+    optimizer = tflearn.Adam(learning_rate=0.0025)
+    net = tflearn.regression(net, optimizer=optimizer, loss=logistic_loss)
     return net
 
 
