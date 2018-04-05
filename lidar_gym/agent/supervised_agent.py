@@ -27,7 +27,7 @@ def logistic_loss(y_pred, y_true):
 
     weights = bigger*weights_positive + smaller*weights_negative
 
-    return tf.reduce_sum((tf.log(1 + tf.exp(-y_pred * y_true))))
+    return tf.reduce_sum(weights * (tf.log(1 + tf.exp(-y_pred * y_true))))
 
 
 def init_buffer():
@@ -60,7 +60,7 @@ def build_network():
                                                 strides=[1, 4, 4, 4, 1], regularizer='L2', activation='linear')
     net = tf.squeeze(net, [4])
     # optimizer = tflearn.Momentum(learning_rate=0.01, lr_decay=(1/8), decay_step=10, momentum=0.99)
-    optimizer = tflearn.Adam(learning_rate=0.0025)
+    optimizer = tflearn.Adam(learning_rate=0.0005)
     net = tflearn.regression(net, optimizer=optimizer, loss=logistic_loss)
     return net
 

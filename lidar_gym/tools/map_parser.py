@@ -6,6 +6,7 @@ import voxel_map as vm
 import pkg_resources as pkg
 import os
 import random
+import pickle
 
 from lidar_gym.tools import math_processing as mp
 from os.path import expanduser
@@ -20,7 +21,7 @@ def get_seed():
 
 
 class MapParser:
-
+    # Class for parsing maps from files or from serialized objects
     def __init__(self, voxel_size):
         self._voxel_size = voxel_size
         home = expanduser("~")
@@ -48,6 +49,12 @@ class MapParser:
 
         # Load the data. Optionally, specify the frame range to load.
         index = random.randint(0, len(self._drives)-1)
+        serialized = os.path.join(self._basedir, self._drives[index] + '.vs')
+        # load serialized map if available
+        if os.path.isfile(serialized):
+            print('Deserializing map number:' + self._drives[index])
+            return pickle.load(open(serialized, 'rb'))
+
         dataset = pykitti.raw(self._basedir, self._date, self._drives[index])
         size = len(dataset)
 
@@ -107,5 +114,64 @@ class DatasetTester:
                 velo_points = next(iterator_velo)
 
 
+class DatasetSerializer():
+    # class for serialization of voxel mapsv
+    def __init__(self, voxel_size):
+        self._voxel_size = voxel_size
+        home = expanduser("~")
+        self._basedir = os.path.join(home, 'kitti_dataset')
+        assert os.path.isdir(self._basedir), 'Your kitti dataset must be located in your home directory,' \
+                                             '(viz os.path.expanduser) ... see also download_dataset.sh'
+        # set of drives is hardcoded due to drives in bash script 'download_dataset.sh'
+        self._drives = []
+        self._date = '2011_09_26'
+        # city
+        self._drives.extend(['0002', '0005', '0011', '0018'])
+        # residential
+        self._drives.extend(['0019', '0020', '0022', '0039', '0061'])
+        # road
+        self._drives.extend(['0027', '0015', '0070', '0029', '0032'])
+
+        for drive in self._drives:
+            # VoxelMap initialization
+            m = vm.VoxelMap()
+            m.voxel_size = self._voxel_size
+            m.free_update = - 1.0
+            m.hit_update = 1.0
+            m.occupancy_threshold = 0.0
+
+            # Load the data. Optionally, specify the frame range to load.
+            dataset = pykitti.raw(self._basedir, self._date, drive)
+            size = len(dataset)
+
+            T_matrixes = []
+            anchor_initial = np.zeros((1, 4))
+            np.set_printoptions(precision=4, suppress=True)
+            iterator_oxts = iter(itertools.islice(dataset.oxts, 0, None))
+            iterator_velo = iter(itertools.islice(dataset.velo, 0, None))
+            T_imu_to_velo = np.linalg.inv(dataset.calib.T_velo_imu)
+
+            print('\nParsing drive', drive, 'with length of', size, 'timestamps.\n')
+            # Grab some data
+            for i in range(size):
+                if (i % 10) == 0:
+                    print('.', end='', flush=True)
+                transform_matrix = np.dot(next(iterator_oxts).T_w_imu, T_imu_to_velo)
+                T_matrixes.append(np.asarray(transform_matrix))
+                anchor = mp.transform_points(anchor_initial, transform_matrix)
+                velo_points = next(iterator_velo)
+                pts = mp.transform_points(velo_points, transform_matrix)
+                anchors = np.tile(np.transpose(anchor), (1, len(pts)))
+                m.update_lines(anchors, np.transpose(pts))
+
+            print('Serializing')
+            serialize = m, T_matrixes
+            drive = drive + '.vs'
+            file = open(os.path.join(self._basedir, drive), 'wb')
+            pickle.dump(serialize, file)
+            file.close()
+
+
 if __name__ == "__main__":
-    test = DatasetTester()
+    # test = DatasetTester()
+    DatasetSerializer(0.2)
