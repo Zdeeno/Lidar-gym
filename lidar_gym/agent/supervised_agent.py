@@ -69,16 +69,16 @@ def build_network():
 def build_network():
     # 2D convolutional network building
     cnn_input = tflearn.input_data(shape=[None, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]])
-    net = tflearn.conv_2d(cnn_input, 64, 5, strides=1, activation='relu')
-    net = tflearn.conv_2d(net, 128, 5, strides=1, activation='relu')
+    net = tflearn.conv_2d(cnn_input, 64, 5, strides=1, activation='relu', regularizer='L2')
+    net = tflearn.conv_2d(net, 128, 5, strides=1, activation='relu', regularizer='L2')
     net = tflearn.max_pool_2d(net, 2, strides=2)
-    net = tflearn.conv_2d(net, 256, 5, strides=1, activation='relu')
+    net = tflearn.conv_2d(net, 256, 5, strides=1, activation='relu', regularizer='L2')
     net = tflearn.max_pool_2d(net, 2, strides=2)
-    net = tflearn.conv_2d(net, 512, 5, strides=1, activation='relu')
-    net = tflearn.conv_2d(net, 1024, 5, strides=1, activation='relu')
-    net = tflearn.conv_2d(net, 32, 5, strides=1, activation='linear')
+    net = tflearn.conv_2d(net, 512, 5, strides=1, activation='relu', regularizer='L2')
+    net = tflearn.conv_2d(net, 1024, 5, strides=1, activation='relu', regularizer='L2')
+    net = tflearn.conv_2d(net, 32, 5, strides=1, activation='linear', regularizer='L2')
     net = tflearn.layers.conv.conv_2d_transpose(net, 32, 8, [MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]],
-                                                strides=[1, 4, 4, 1], activation='linear')
+                                                strides=[1, 4, 4, 1], activation='linear', regularizer='L2')
     # optimizer = tflearn.Momentum(learning_rate=0.01, lr_decay=(1/8), decay_step=10, momentum=0.99)
     optimizer = tflearn.Adam(learning_rate=0.001)
     net = tflearn.regression(net, optimizer=optimizer, loss=logistic_loss)
