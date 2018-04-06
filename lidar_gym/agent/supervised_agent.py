@@ -73,7 +73,7 @@ def build_network():
     net = tflearn.conv_2d(net, 128, 5, strides=1, activation='relu')
     net = tflearn.max_pool_2d(net, 2, strides=2)
     net = tflearn.conv_2d(net, 256, 5, strides=1, activation='relu')
-    net = tflearn.max_pool_3d(net, 2, strides=2)
+    net = tflearn.max_pool_2d(net, 2, strides=2)
     net = tflearn.conv_2d(net, 512, 5, strides=1, activation='relu')
     net = tflearn.conv_2d(net, 1024, 5, strides=1, activation='relu')
     net = tflearn.conv_2d(net, 32, 5, strides=1, activation='linear')
