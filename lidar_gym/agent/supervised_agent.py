@@ -43,9 +43,9 @@ def append_to_buffer(obs):
     buffer_Y[buffer_size] = obs['Y']
     buffer_size = buffer_size + 1
 
-
+'''
 def build_network():
-    # Convolutional network building
+    # 3D convolutional network building
     cnn_input = tflearn.input_data(shape=[None, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]])
     cnn_input = tf.expand_dims(cnn_input, -1)
     net = tflearn.conv_3d(cnn_input, 2, 4, strides=1, activation='relu')
@@ -59,6 +59,26 @@ def build_network():
     net = tflearn.layers.conv.conv_3d_transpose(net, 1, 8, [MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]],
                                                 strides=[1, 4, 4, 4, 1], activation='linear')
     net = tf.squeeze(net, [4])
+    # optimizer = tflearn.Momentum(learning_rate=0.01, lr_decay=(1/8), decay_step=10, momentum=0.99)
+    optimizer = tflearn.Adam(learning_rate=0.001)
+    net = tflearn.regression(net, optimizer=optimizer, loss=logistic_loss)
+    return net
+'''
+
+
+def build_network():
+    # 2D convolutional network building
+    cnn_input = tflearn.input_data(shape=[None, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]])
+    net = tflearn.conv_2d(cnn_input, 64, 5, strides=1, activation='relu')
+    net = tflearn.conv_2d(net, 128, 5, strides=1, activation='relu')
+    net = tflearn.max_pool_2d(net, 2, strides=2)
+    net = tflearn.conv_2d(net, 256, 5, strides=1, activation='relu')
+    net = tflearn.max_pool_3d(net, 2, strides=2)
+    net = tflearn.conv_2d(net, 512, 5, strides=1, activation='relu')
+    net = tflearn.conv_2d(net, 1024, 5, strides=1, activation='relu')
+    net = tflearn.conv_2d(net, 32, 5, strides=1, activation='linear')
+    net = tflearn.layers.conv.conv_2d_transpose(net, 32, 8, [MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]],
+                                                strides=[1, 4, 4, 1], activation='linear')
     # optimizer = tflearn.Momentum(learning_rate=0.01, lr_decay=(1/8), decay_step=10, momentum=0.99)
     optimizer = tflearn.Adam(learning_rate=0.001)
     net = tflearn.regression(net, optimizer=optimizer, loss=logistic_loss)
@@ -89,7 +109,7 @@ while True:
 
         if buffer_size == BATCH_SIZE:
             model.fit(buffer_X, buffer_Y, n_epoch=1, shuffle=True, show_metric=True, batch_size=BATCH_SIZE,
-                          run_id='lidar_cnn')
+                      run_id='lidar_cnn')
             init_buffer()
 
         obv, reward, done, info = env.step(obv['X'])
