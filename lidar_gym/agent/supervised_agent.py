@@ -27,6 +27,7 @@ def logistic_loss(y_pred, y_true):
 
     weights = bigger*weights_positive + smaller*weights_negative
 
+    # Here often occurs overflow!
     return tf.reduce_sum(weights * (tf.log(1 + tf.exp(-y_pred * y_true))))
 
 
@@ -43,29 +44,29 @@ def append_to_buffer(obs):
     buffer_Y[buffer_size] = obs['Y']
     buffer_size = buffer_size + 1
 
-'''
+
 def build_network():
     # 3D convolutional network building
     cnn_input = tflearn.input_data(shape=[None, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]])
     cnn_input = tf.expand_dims(cnn_input, -1)
-    net = tflearn.conv_3d(cnn_input, 2, 4, strides=1, activation='relu')
-    net = tflearn.conv_3d(net, 4, 4, strides=1, activation='relu')
+    net = tflearn.conv_3d(cnn_input, 2, 4, strides=1, activation='relu', regularizer='L2')
+    net = tflearn.conv_3d(net, 4, 4, strides=1, activation='relu', regularizer='L2')
     net = tflearn.max_pool_3d(net, 2, strides=2)
-    net = tflearn.conv_3d(net, 8, 4, strides=1, activation='relu')
+    net = tflearn.conv_3d(net, 8, 4, strides=1, activation='relu', regularizer='L2')
     net = tflearn.max_pool_3d(net, 2, strides=2)
-    net = tflearn.conv_3d(net, 16, 4, strides=1, activation='relu')
-    net = tflearn.conv_3d(net, 32, 4, strides=1, activation='relu')
-    net = tflearn.conv_3d(net, 1, 8, strides=1, activation='linear')
+    net = tflearn.conv_3d(net, 16, 4, strides=1, activation='relu', regularizer='L2')
+    net = tflearn.conv_3d(net, 32, 4, strides=1, activation='relu', regularizer='L2')
+    net = tflearn.conv_3d(net, 1, 8, strides=1, activation='linear', regularizer='L2')
     net = tflearn.layers.conv.conv_3d_transpose(net, 1, 8, [MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]],
-                                                strides=[1, 4, 4, 4, 1], activation='linear')
+                                                strides=[1, 4, 4, 4, 1], activation='linear', regularizer='L2')
     net = tf.squeeze(net, [4])
     # optimizer = tflearn.Momentum(learning_rate=0.01, lr_decay=(1/8), decay_step=10, momentum=0.99)
     optimizer = tflearn.Adam(learning_rate=0.001)
     net = tflearn.regression(net, optimizer=optimizer, loss=logistic_loss)
     return net
+
+
 '''
-
-
 def build_network():
     # 2D convolutional network building
     cnn_input = tflearn.input_data(shape=[None, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]])
@@ -83,7 +84,7 @@ def build_network():
     optimizer = tflearn.Adam(learning_rate=0.001)
     net = tflearn.regression(net, optimizer=optimizer, loss=logistic_loss)
     return net
-
+'''
 
 # Create model on GPU
 dir = expanduser("~")

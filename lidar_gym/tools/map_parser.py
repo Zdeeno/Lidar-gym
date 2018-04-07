@@ -37,6 +37,10 @@ class MapParser:
         self._drives.extend(['0019', '0020', '0022', '0039', '0061'])
         # road
         self._drives.extend(['0027', '0015', '0070', '0029', '0032'])
+
+        # testing
+        # self._drives = ['0002', '0020', '0027']
+
         set_seed()
 
     def get_next_map(self):
