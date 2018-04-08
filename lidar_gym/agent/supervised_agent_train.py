@@ -142,7 +142,7 @@ while True:
         append_to_buffer(obv)
 
         if buffer_size == BATCH_SIZE:
-            model.fit(x=buffer_X, y=buffer_Y, epochs=2, shuffle=True, batch_size=BATCH_SIZE, callbacks=tfboard)
+            model.fit(x=buffer_X, y=buffer_Y, epochs=2, shuffle=True, batch_size=BATCH_SIZE)
             init_buffer()
 
         obv, reward, done, info = env.step(obv['X'])
