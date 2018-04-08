@@ -13,6 +13,24 @@ MAP_SIZE = (320, 320, 32)
 BATCH_SIZE = 4
 
 
+def logistic_loss(y_pred, y_true):
+    # own objective function
+    bigger = tf.cast(tf.greater(y_true, 0.0), tf.float32)
+    smaller = tf.cast(tf.greater(0.0, y_true), tf.float32)
+
+    weights_positive = 0.5 / tf.reduce_sum(bigger)
+    weights_negative = 0.5 / tf.reduce_sum(smaller)
+
+    weights = bigger*weights_positive + smaller*weights_negative
+
+    # Here often occurs numeric instability -> nan or inf
+    # return tf.reduce_sum(weights * (tf.log(1 + tf.exp(-y_pred * y_true))))
+    a = -y_pred*y_true
+    b = tf.maximum(0, a)
+    t = b + tf.log(tf.exp(-b) + tf.exp(a-b))
+    return tf.reduce_sum(weights*t)
+
+
 def build_network():
     # 3D convolutional network building
     cnn_input = tflearn.input_data(shape=[None, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]])
