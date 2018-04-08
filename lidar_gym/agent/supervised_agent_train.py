@@ -27,8 +27,12 @@ def logistic_loss(y_pred, y_true):
 
     weights = bigger*weights_positive + smaller*weights_negative
 
-    # Here often occurs overflow!
-    return tf.reduce_sum(weights * (tf.log(1 + tf.exp(-y_pred * y_true))))
+    # Here often occurs numeric instability -> nan or inf
+    # return tf.reduce_sum(weights * (tf.log(1 + tf.exp(-y_pred * y_true))))
+    a = -y_pred*y_true
+    b = tf.maximum(0, a)
+    t = b + tf.log(tf.exp(-b) + tf.exp(a-b))
+    return tf.reduce_sum(weights*t)
 
 
 def init_buffer():
@@ -87,9 +91,9 @@ def build_network():
 '''
 
 # Create model on GPU
-dir = expanduser("~")
-dir = os.path.join(dir, 'tflearn_logs/')
-model = tflearn.DNN(build_network(), tensorboard_verbose=0, tensorboard_dir=dir)
+mydir = expanduser("~")
+mydir = os.path.join(mydir, 'tflearn_logs/')
+model = tflearn.DNN(build_network(), tensorboard_verbose=0, tensorboard_dir=mydir)
 # model.load('trained_models/my_model.tflearn')
 
 env = gym.make('lidar-v0')
