@@ -70,7 +70,7 @@ def build_network():
                              activation='linear')(c5)
     outputs = keras.layers.Conv3DTranspose(1, 8, strides=[4, 4, 4], padding='same', activation='linear',
                                            kernel_regularizer=keras.regularizers.l2(0.01))(c6)
-    outputs = keras.backend.squeeze(outputs, [4])
+    outputs = keras.backend.squeeze(outputs, 4)
 
     return keras.models.Model(inputs, outputs)
 
