@@ -52,7 +52,7 @@ def append_to_buffer(obs):
 def build_network():
     # 3D convolutional network building
     inputs = keras.layers.Input(shape=(MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]))
-    reshape = tf.expand_dims(inputs, -1)
+    reshape = keras.backend.expand_dims(inputs, -1)
 
     c1 = keras.layers.Conv3D(2, 4, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
                              activation='relu')(reshape)
@@ -70,7 +70,7 @@ def build_network():
                              activation='linear')(c5)
     outputs = keras.layers.Conv3DTranspose(1, 8, strides=[4, 4, 4], padding='same', activation='linear',
                                            kernel_regularizer=keras.regularizers.l2(0.01))(c6)
-    outputs = tf.squeeze(outputs, [4])
+    outputs = keras.backend.squeeze(outputs, [4])
 
     return keras.models.Model(inputs, outputs)
 
