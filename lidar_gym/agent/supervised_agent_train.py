@@ -30,7 +30,7 @@ def logistic_loss(y_pred, y_true):
     # Here often occurs numeric instability -> nan or inf
     # return tf.reduce_sum(weights * (tf.log(1 + tf.exp(-y_pred * y_true))))
     a = -y_pred*y_true
-    b = tf.maximum(0, a)
+    b = tf.maximum(0.0, a)
     t = b + tf.log(tf.exp(-b) + tf.exp(a-b))
     return tf.reduce_sum(weights*t)
 

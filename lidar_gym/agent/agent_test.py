@@ -10,7 +10,7 @@ import os
 
 # Constants
 MAP_SIZE = (320, 320, 32)
-BATCH_SIZE = 4
+BATCH_SIZE = 1
 
 
 def logistic_loss(y_pred, y_true):
@@ -26,7 +26,7 @@ def logistic_loss(y_pred, y_true):
     # Here often occurs numeric instability -> nan or inf
     # return tf.reduce_sum(weights * (tf.log(1 + tf.exp(-y_pred * y_true))))
     a = -y_pred*y_true
-    b = tf.maximum(0, a)
+    b = tf.maximum(0.0, a)
     t = b + tf.log(tf.exp(-b) + tf.exp(a-b))
     return tf.reduce_sum(weights*t)
 
@@ -82,17 +82,22 @@ env = gym.make('lidar-v0')
 done = False
 random_action = env.action_space.sample()
 episode = 1
-env.seed(5)
+my_input = np.empty((BATCH_SIZE, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]))
+env.seed(1)
 
 while True:
     obv = env.reset()
     print('\n------------------- Drive number', episode, '-------------------------')
-
+    epoch = 0
     while not done:
 
-        action = model.predict(obv['X'])
-        obv, reward, done, info = env.step(action)
-        env.render()
+        my_input[0] = obv['X']
+        action = model.predict(my_input)
+        obv, reward, done, info = env.step(action[0])
+        print('reward: ' + str(reward))
+        if epoch % 5 == 0:
+            env.render()
+        epoch = epoch + 1
 
     episode += 1
     done = False
