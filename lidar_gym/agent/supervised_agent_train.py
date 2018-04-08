@@ -3,10 +3,10 @@ import numpy as np
 import gym
 import lidar_gym
 import tensorflow as tf
-import tflearn
-import lidar_gym
 from os.path import expanduser
 import os
+import tensorflow.contrib.keras as keras
+
 
 # Constants
 MAP_SIZE = (320, 320, 32)
@@ -17,7 +17,7 @@ BATCH_SIZE = 4
 buffer_X, buffer_Y, buffer_size = None, None, 0
 
 
-def logistic_loss(y_pred, y_true):
+def logistic_loss(y_true, y_pred):
     # own objective function
     bigger = tf.cast(tf.greater(y_true, 0.0), tf.float32)
     smaller = tf.cast(tf.greater(0.0, y_true), tf.float32)
@@ -51,6 +51,29 @@ def append_to_buffer(obs):
 
 def build_network():
     # 3D convolutional network building
+    model = keras.models.Sequential()
+    model.add(keras.layers.Conv3D(2, 4, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
+                                  input_shape=[MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2], 1], activation='relu'))
+    model.add(keras.layers.Conv3D(4, 4, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
+                                  activation='relu'))
+    model.add(keras.layers.MaxPooling3D(pool_size=2))
+    model.add(keras.layers.Conv3D(8, 4, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
+                                  activation='relu'))
+    model.add(keras.layers.MaxPooling3D(pool_size=2))
+    model.add(keras.layers.Conv3D(16, 4, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
+                                  activation='relu'))
+    model.add(keras.layers.Conv3D(32, 4, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
+                                  activation='relu'))
+    model.add(keras.layers.Conv3D(1, 8, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
+                                  activation='linear'))
+    model.add(keras.layers.Conv3DTranspose(1, 8, strides=[4, 4, 4], padding='same', activation='linear',
+                                           kernel_regularizer=keras.regularizers.l2(0.01)))
+
+    return model
+
+'''
+def build_network():
+    # 3D convolutional network building
     cnn_input = tflearn.input_data(shape=[None, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]])
     cnn_input = tf.expand_dims(cnn_input, -1)
     net = tflearn.conv_3d(cnn_input, 2, 4, strides=1, activation='relu', regularizer='L2')
@@ -70,7 +93,6 @@ def build_network():
     return net
 
 
-'''
 def build_network():
     # 2D convolutional network building
     cnn_input = tflearn.input_data(shape=[None, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]])
@@ -91,10 +113,14 @@ def build_network():
 '''
 
 # Create model on GPU
+opt = keras.optimizers.Adam()
+model = build_network()
+model.compile(optimizer=opt, loss=logistic_loss)
+
 mydir = expanduser("~")
+savedir = os.path.join(mydir, 'trained_models/my_keras_model.h5')
 mydir = os.path.join(mydir, 'tflearn_logs/')
-model = tflearn.DNN(build_network(), tensorboard_verbose=0, tensorboard_dir=mydir)
-# model.load('trained_models/my_model.tflearn')
+tfboard = keras.callbacks.TensorBoard(log_dir=mydir, batch_size=BATCH_SIZE, write_graph=True)
 
 env = gym.make('lidar-v0')
 done = False
@@ -107,14 +133,13 @@ while True:
     obv = env.reset()
     print('\n------------------- Drive number', episode, '-------------------------')
     if (episode % 5) == 0 and episode != 0:
-        model.save('trained_models/my_model.tflearn')
+        model.save(savedir)
 
     while not done:
         append_to_buffer(obv)
 
         if buffer_size == BATCH_SIZE:
-            model.fit(buffer_X, buffer_Y, n_epoch=1, shuffle=True, show_metric=True, batch_size=BATCH_SIZE,
-                      run_id='lidar_cnn')
+            model.fit(x=buffer_X, y=buffer_Y, epochs=2, shuffle=True, batch_size=BATCH_SIZE, callbacks=tfboard)
             init_buffer()
 
         obv, reward, done, info = env.step(obv['X'])
