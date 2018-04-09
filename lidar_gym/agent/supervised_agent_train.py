@@ -135,7 +135,7 @@ while True:
     init_buffer()
     obv = env.reset()
     print('\n------------------- Drive number', episode, '-------------------------')
-    if (episode % 5) == 0 and episode != 0:
+    if (episode % 5) == 0:
         model.save(savedir)
 
     while not done:
