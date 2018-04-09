@@ -123,7 +123,7 @@ model.compile(optimizer=opt, loss=logistic_loss)
 mydir = expanduser("~")
 savedir = os.path.join(mydir, 'trained_models/my_keras_model.h5')
 mydir = os.path.join(mydir, 'tflearn_logs/')
-tfboard = keras.callbacks.TensorBoard(log_dir=mydir, batch_size=BATCH_SIZE, write_graph=True)
+tfboard = keras.callbacks.TensorBoard(log_dir=mydir, batch_size=BATCH_SIZE)
 
 env = gym.make('lidar-v0')
 done = False
