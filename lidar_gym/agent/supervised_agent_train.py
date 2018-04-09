@@ -5,7 +5,13 @@ import lidar_gym
 import tensorflow as tf
 from os.path import expanduser
 import os
-import tensorflow.contrib.keras as keras
+from tensorflow.contrib.keras.api.keras.layers import Conv3D, MaxPool3D, Input, Lambda, Conv3DTranspose
+from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims
+from tensorflow.contrib.keras.api.keras.regularizers import l2
+from tensorflow.contrib.keras.api.keras.models import Model
+from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
+from tensorflow.contrib.keras.api.keras.optimizers import Adam
+
 
 
 # Constants
@@ -51,28 +57,21 @@ def append_to_buffer(obs):
 
 def build_network():
     # 3D convolutional network building
-    inputs = keras.layers.Input(shape=(MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]))
-    reshape = keras.layers.Lambda(lambda x: keras.backend.expand_dims(x, -1))(inputs)
+    inputs = Input(shape=(MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]))
+    reshape = Lambda(lambda x: expand_dims(x, -1))(inputs)
 
-    c1 = keras.layers.Conv3D(2, 4, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
-                             activation='relu')(reshape)
-    c2 = keras.layers.Conv3D(4, 4, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
-                             activation='relu')(c1)
-    p1 = keras.layers.MaxPooling3D(pool_size=2)(c2)
-    c3 = keras.layers.Conv3D(8, 4, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
-                             activation='relu')(p1)
-    p2 = keras.layers.MaxPooling3D(pool_size=2)(c3)
-    c4 = keras.layers.Conv3D(16, 4, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
-                             activation='relu')(p2)
-    c5 = keras.layers.Conv3D(32, 4, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
-                             activation='relu')(c4)
-    c6 = keras.layers.Conv3D(1, 8, padding='same', kernel_regularizer=keras.regularizers.l2(0.01),
-                             activation='linear')(c5)
-    out = keras.layers.Conv3DTranspose(1, 8, strides=[4, 4, 4], padding='same', activation='linear',
-                                           kernel_regularizer=keras.regularizers.l2(0.01))(c6)
-    outputs = keras.layers.Lambda(lambda x: keras.backend.squeeze(x, 4))(out)
+    c1 = Conv3D(2, 4, padding='same', kernel_regularizer=l2(0.01), activation='relu')(reshape)
+    c2 = Conv3D(4, 4, padding='same', kernel_regularizer=l2(0.01), activation='relu')(c1)
+    p1 = MaxPool3D(pool_size=2)(c2)
+    c3 = Conv3D(8, 4, padding='same', kernel_regularizer=l2(0.01), activation='relu')(p1)
+    p2 = MaxPool3D(pool_size=2)(c3)
+    c4 = Conv3D(16, 4, padding='same', kernel_regularizer=l2(0.01), activation='relu')(p2)
+    c5 = Conv3D(32, 4, padding='same', kernel_regularizer=l2(0.01), activation='relu')(c4)
+    c6 = Conv3D(1, 8, padding='same', kernel_regularizer=l2(0.01), activation='linear')(c5)
+    out = Conv3DTranspose(1, 8, strides=[4, 4, 4], padding='same', activation='linear', kernel_regularizer=l2(0.01))(c6)
+    outputs = Lambda(lambda x: squeeze(x, 4))(out)
 
-    return keras.models.Model(inputs, outputs)
+    return Model(inputs, outputs)
 
 '''
 def build_network():
@@ -116,14 +115,14 @@ def build_network():
 '''
 
 # Create model on GPU
-opt = keras.optimizers.Adam()
+opt = Adam()
 model = build_network()
 model.compile(optimizer=opt, loss=logistic_loss)
 
 mydir = expanduser("~")
 savedir = os.path.join(mydir, 'trained_models/my_keras_model.h5')
 mydir = os.path.join(mydir, 'training_logs/')
-tfboard = keras.callbacks.TensorBoard(log_dir=mydir, batch_size=BATCH_SIZE)
+tfboard = TensorBoard(log_dir=mydir, batch_size=BATCH_SIZE, write_graph=False)
 
 env = gym.make('lidar-v0')
 done = False
