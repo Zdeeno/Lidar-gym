@@ -49,7 +49,7 @@ done = False
 random_action = env.action_space.sample()
 episode = 1
 my_input = np.empty((BATCH_SIZE, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]))
-env.seed(14)
+env.seed(1)
 
 while True:
     obv = env.reset()

@@ -39,7 +39,6 @@ class Plotter:
             figure=self.fig,
         )
         # plot action map
-        action_map = None
         if action_map is not None:
             mlab.points3d(
                 action_map[:, 0],  # x
