@@ -26,7 +26,7 @@ wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0091/2011_09_26_
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0093/2011_09_26_drive_0093_sync.zip
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0095/2011_09_26_drive_0095_sync.zip
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0096/2011_09_26_drive_0096_sync.zip
-wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_00104/2011_09_26_drive_00104_sync.zip
+wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0104/2011_09_26_drive_0104_sync.zip
 
 
 

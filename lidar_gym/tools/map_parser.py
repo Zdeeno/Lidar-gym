@@ -21,7 +21,7 @@ def get_seed():
 
 
 DRIVES_CITY = ['0002', '0001', '0005', '0011', '0013', '0014', '0017', '0018', '0048', '0051',
-               '0056', '0057', '0059', '0060', '0084', '0091', '0093', '0095', '0096', '00104']
+               '0056', '0057', '0059', '0060', '0084', '0091', '0093', '0095', '0096', '0104']
 
 
 class MapParser:
@@ -176,16 +176,16 @@ class DatasetSerializer():
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='-t for test dataset, -s for serialize dataset')
-    parser.add_argument('-t', '--test', help='Test dataset', required=True)
-    parser.add_argument('-s', '--serialize', help='serialize dataset', required=True)
+    parser.add_argument('-t', '--test', help='Test dataset', action='store_true')
+    parser.add_argument('-s', '--serialize', help='serialize dataset', action='store_true')
     args = vars(parser.parse_args())
     if args['test']:
         DatasetTester()
-        print('If testing doesnt end up with error - dataset is probably correctly downloaded!')
+        print('\nIf testing doesnt end up with error - dataset is probably correctly downloaded!')
 
     if args['serialize']:
         voxel_size = 0.2
-        print('Serializing with voxel size: ' + str(voxel_size))
+        print('\nSerializing with voxel size: ' + str(voxel_size))
         DatasetSerializer(0.2)
         print('Serialization done!')
 

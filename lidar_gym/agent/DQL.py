@@ -19,6 +19,7 @@ class DQN:
         self.env = env
         self.memory = deque(maxlen=2000)
 
+        self.map_shape = (320, 320, 32)
         self.gamma = 0.85
         self.epsilon = 1.0
         self.epsilon_min = 0.01
