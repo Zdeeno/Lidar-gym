@@ -127,7 +127,7 @@ tfboard = TensorBoard(log_dir=mydir, batch_size=BATCH_SIZE, write_graph=False)
 env = gym.make('lidar-v2')
 done = False
 random_action = env.action_space.sample()
-episode = 1
+episode = 0
 env.seed(5)
 
 while True:
