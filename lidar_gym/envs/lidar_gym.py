@@ -221,7 +221,8 @@ class Lidarv0(LidarGym):
         super(Lidarv0, self).__init__(lidar_range, voxel_size, max_rays, density, fov,
                                       forecast, map_voxel_shape, self._shift_T)
 
-        self.action_space = spaces.Box(low=-100, high=100, shape=(320, 320, 32))
+        self.action_space = spaces.Dict({'map': spaces.Box(low=-100, high=100, shape=(320, 320, 32)),
+                                        'rays': spaces.Box(low=0, high=1, shape=(160, 120))})
         self.observation_space = spaces.Box(low=-100, high=100, shape=(320, 320, 32))
         self.reward_range = (-float('Inf'), 0)
 
@@ -246,10 +247,14 @@ class Lidarv0(LidarGym):
         return obs
 
     def _step(self, action):
-        rand_rays = self._action_generator.sample()
-        obs, rew, done, info = super(Lidarv0, self)._step({'rays': rand_rays, 'map': action})
-        obs = self._preprocess_obs(obs)
-        return obs, rew, done, info
+        if action['rays'].dtype is np.dtype('bool'):
+            obs, rew, done, info = super(Lidarv0, self)._step({'rays': action['rays'], 'map': action['map']})
+            obs = self._preprocess_obs(obs)
+            return obs, rew, done, info
+        else:
+            rays = np.zeros(shape=action['rays'].shape, dtype=bool)
+            rays[self._largest_indices(action['rays'], self._max_rays)] = True
+            self._step({'rays': rays, 'map': action['map']})
 
     def _seed(self, seed=None):
         super(Lidarv0, self)._seed(seed)
@@ -291,10 +296,20 @@ class Lidarv0(LidarGym):
         self.curr_T = obs['T'][0]
         return {'X': ret, 'Y': gt}
 
+    def _largest_indices(self, arr, n):
+        """
+        Returns the n largest indices from a numpy array.
+        """
+        flat = arr.flatten()
+        indices = np.argpartition(flat, -n)[-n:]
+        indices = indices[np.argsort(-flat[indices])]
+        return np.unravel_index(indices, arr.shape)
+
 
 class Lidarv1(LidarGym):
     """
     Inherited environment prepared for use, based on work in paper: https://arxiv.org/abs/1708.02074.
+    The most complex environment.
     """
     def __init__(self):
 
@@ -342,3 +357,41 @@ class Lidarv1(LidarGym):
 
     def _render(self, mode='human', close=False):
         super(Lidarv1, self)._render(mode)
+
+
+class Lidarv2(Lidarv0):
+
+    def __init__(self):
+        map_voxel_shape = (320, 320, 32)
+        forecast = 0
+        fov = (120, 90)
+        density = (160, 120)
+        max_rays = 200
+        voxel_size = 0.2
+        lidar_range = 48
+
+        self._shift_T = np.eye(4, dtype=float)
+        self._shift_T[0, 3] = -0.25 * map_voxel_shape[0] * voxel_size
+        self._shift_T[1, 3] = -0.5 * map_voxel_shape[1] * voxel_size
+        self._shift_T[2, 3] = -0.5 * map_voxel_shape[2] * voxel_size
+
+        super(Lidarv0, self).__init__(lidar_range, voxel_size, max_rays, density, fov,
+                                      forecast, map_voxel_shape, self._shift_T)
+        self.action_space = spaces.Box(low=-100, high=100, shape=(320, 320, 32))
+        self._action_generator = LidarMultiBinary((density[1], density[0]), max_rays)
+
+    def _reset(self):
+        return super(Lidarv2, self)._reset()
+
+    def _close(self):
+        super(Lidarv2, self)._close()
+
+    def _seed(self, seed=None):
+        return super(Lidarv2, self)._seed(seed)
+
+    def _step(self, action):
+        rand_rays = self._action_generator.sample()
+        return super(Lidarv2, self)._step({'map': action, 'rays': rand_rays})
+
+    def _render(self, mode='human', close=False):
+        super(Lidarv2, self)._render(mode)

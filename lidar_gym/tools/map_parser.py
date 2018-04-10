@@ -20,6 +20,10 @@ def get_seed():
     return random.seed
 
 
+DRIVES_CITY = ['0002', '0001', '0005', '0011', '0013', '0014', '0017', '0018', '0048', '0051',
+               '0056', '0057', '0059', '0060', '0084', '0091', '0093', '0095', '0096', '00104']
+
+
 class MapParser:
     # Class for parsing maps from files or from serialized objects
     def __init__(self, voxel_size):
@@ -32,11 +36,11 @@ class MapParser:
         self._drives = []
         self._date = '2011_09_26'
         # city
-        self._drives.extend(['0002', '0005', '0011', '0018'])
+        self._drives.extend(DRIVES_CITY)
         # residential
-        self._drives.extend(['0019', '0020', '0022', '0039', '0061'])
+        # self._drives.extend(['0019', '0020', '0022', '0039', '0061'])
         # road
-        self._drives.extend(['0027', '0015', '0070', '0029', '0032'])
+        # self._drives.extend(['0027', '0015', '0070', '0029', '0032'])
 
         # testing
         # self._drives = ['0002', '0020', '0027']
@@ -97,11 +101,8 @@ class DatasetTester:
         self._drives = []
         self._date = '2011_09_26'
         # city
-        self._drives.extend(['0002', '0005', '0011', '0018'])
-        # residential
-        self._drives.extend(['0019', '0020', '0022', '0039', '0061'])
-        # road
-        self._drives.extend(['0027', '0015', '0070', '0029', '0032'])
+        self._drives.extend(DRIVES_CITY)
+
 
         for drive in self._drives:
             dataset = pykitti.raw(self._basedir, self._date, drive)
@@ -130,11 +131,7 @@ class DatasetSerializer():
         self._drives = []
         self._date = '2011_09_26'
         # city
-        self._drives.extend(['0002', '0005', '0011', '0018'])
-        # residential
-        self._drives.extend(['0019', '0020', '0022', '0039', '0061'])
-        # road
-        self._drives.extend(['0027', '0015', '0070', '0029', '0032'])
+        self._drives.extend(DRIVES_CITY)
 
         for drive in self._drives:
             # VoxelMap initialization
@@ -177,5 +174,18 @@ class DatasetSerializer():
 
 
 if __name__ == "__main__":
-    # test = DatasetTester()
-    DatasetSerializer(0.2)
+    import argparse
+    parser = argparse.ArgumentParser(description='-t for test dataset, -s for serialize dataset')
+    parser.add_argument('-t', '--test', help='Test dataset', required=True)
+    parser.add_argument('-s', '--serialize', help='serialize dataset', required=True)
+    args = vars(parser.parse_args())
+    if args['test']:
+        DatasetTester()
+        print('If testing doesnt end up with error - dataset is probably correctly downloaded!')
+
+    if args['serialize']:
+        voxel_size = 0.2
+        print('Serializing with voxel size: ' + str(voxel_size))
+        DatasetSerializer(0.2)
+        print('Serialization done!')
+
