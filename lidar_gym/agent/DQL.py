@@ -6,10 +6,8 @@ from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Input, Lam
                                                       MaxPool2D, Reshape
 from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape
 from tensorflow.contrib.keras.api.keras.regularizers import l2
-from tensorflow.contrib.keras.api.keras.layers import Add, Multiply
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
-import tensorflow.contrib.keras.api.keras.backend as K
-from tensorflow.contrib.keras.api.keras.activations import softmax
+
 
 from collections import deque
 
@@ -55,7 +53,7 @@ class DQN:
         self.epsilon = max(self.epsilon_min, self.epsilon)
         if np.random.random() < self.epsilon:
             return self.env.action_space.sample()
-        return np.argmax(self.model.predict(state)[0])
+        return self.model.predict(state)
 
     def remember(self, state, action, reward, new_state, done):
         self.memory.append([state, action, reward, new_state, done])

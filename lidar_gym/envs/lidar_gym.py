@@ -221,8 +221,8 @@ class Lidarv0(LidarGym):
         super(Lidarv0, self).__init__(lidar_range, voxel_size, max_rays, density, fov,
                                       forecast, map_voxel_shape, self._shift_T)
 
-        self.action_space = spaces.Dict({'map': spaces.Box(low=-100, high=100, shape=(320, 320, 32)),
-                                        'rays': spaces.Box(low=0, high=1, shape=(160, 120))})
+        self.action_space = spaces.Dict({'map': LidarBox(low=-100, high=100, shape=(320, 320, 32)),
+                                        'rays': LidarMultiBinary(n=(160, 120), maxrays=200)})
         self.observation_space = spaces.Box(low=-100, high=100, shape=(320, 320, 32))
         self.reward_range = (-float('Inf'), 0)
 

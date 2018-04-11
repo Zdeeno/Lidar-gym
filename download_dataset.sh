@@ -59,4 +59,4 @@ do
 	find . -name "*.png" -type f -delete        # remove pngs (a lot of bytes on HDD)
 done
 
-echo 'Now you can serialize your dataset using '
+echo 'Now you can serialize your dataset using python -m lidar_gym.tools.map_parser -s'
