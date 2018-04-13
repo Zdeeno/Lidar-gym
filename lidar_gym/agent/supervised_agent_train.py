@@ -17,6 +17,7 @@ from tensorflow.contrib.keras.api.keras.optimizers import Adam
 # Constants
 MAP_SIZE = (320, 320, 32)
 BATCH_SIZE = 4
+LOAD = True
 
 # Variables
 # buffer
@@ -60,15 +61,15 @@ def build_network():
     inputs = Input(shape=(MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]))
     reshape = Lambda(lambda x: expand_dims(x, -1))(inputs)
 
-    c1 = Conv3D(2, 4, padding='same', kernel_regularizer=l2(0.001), activation='relu')(reshape)
-    c2 = Conv3D(4, 4, padding='same', kernel_regularizer=l2(0.001), activation='relu')(c1)
+    c1 = Conv3D(2, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(reshape)
+    c2 = Conv3D(4, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(c1)
     p1 = MaxPool3D(pool_size=2)(c2)
-    c3 = Conv3D(8, 4, padding='same', kernel_regularizer=l2(0.001), activation='relu')(p1)
+    c3 = Conv3D(8, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(p1)
     p2 = MaxPool3D(pool_size=2)(c3)
-    c4 = Conv3D(16, 4, padding='same', kernel_regularizer=l2(0.001), activation='relu')(p2)
-    c5 = Conv3D(32, 4, padding='same', kernel_regularizer=l2(0.001), activation='relu')(c4)
-    c6 = Conv3D(1, 8, padding='same', kernel_regularizer=l2(0.001), activation='linear')(c5)
-    out = Conv3DTranspose(1, 8, strides=[4, 4, 4], padding='same', activation='linear', kernel_regularizer=l2(0.001))(c6)
+    c4 = Conv3D(16, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(p2)
+    c5 = Conv3D(32, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(c4)
+    c6 = Conv3D(1, 8, padding='same', kernel_regularizer=l2(0.0001), activation='linear')(c5)
+    out = Conv3DTranspose(1, 8, strides=[4, 4, 4], padding='same', activation='linear', kernel_regularizer=l2(0.0001))(c6)
     outputs = Lambda(lambda x: squeeze(x, 4))(out)
 
     return Model(inputs, outputs)
@@ -117,12 +118,18 @@ def build_network():
 # Create model on GPU
 opt = Adam()
 model = build_network()
-model.compile(optimizer=opt, loss=logistic_loss)
 
 mydir = expanduser("~")
 savedir = os.path.join(mydir, 'trained_models/my_keras_model.h5')
 mydir = os.path.join(mydir, 'training_logs/')
 tfboard = TensorBoard(log_dir=mydir, batch_size=BATCH_SIZE, write_graph=False)
+
+if LOAD:
+    loaddir = expanduser("~")
+    loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model.h5')
+    model.load_weights(filepath=loaddir)
+
+model.compile(optimizer=opt, loss=logistic_loss)
 
 env = gym.make('lidar-v2')
 done = False
