@@ -13,6 +13,8 @@ from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
 
 
+# TODO make Supervised agent class
+
 
 # Constants
 MAP_SIZE = (320, 320, 32)
@@ -132,12 +134,12 @@ if LOAD:
 model.compile(optimizer=opt, loss=logistic_loss)
 
 env = gym.make('lidar-v2')
-done = False
 random_action = env.action_space.sample()
 episode = 0
 env.seed(5)
 
 while True:
+    done = False
     init_buffer()
     obv = env.reset()
     print('\n------------------- Drive number', episode, '-------------------------')
@@ -154,4 +156,3 @@ while True:
         obv, reward, done, info = env.step(obv['X'])
 
     episode += 1
-    done = False
