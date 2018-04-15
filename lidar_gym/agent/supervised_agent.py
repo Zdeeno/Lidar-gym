@@ -13,19 +13,6 @@ from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
 
 
-# TODO make Supervised agent class
-
-
-# Constants
-MAP_SIZE = (320, 320, 32)
-BATCH_SIZE = 4
-LOAD = True
-
-# Variables
-# buffer
-buffer_X, buffer_Y, buffer_size = None, None, 0
-
-
 def logistic_loss(y_true, y_pred):
     # own objective function
     bigger = tf.cast(tf.greater(y_true, 0.0), tf.float32)
@@ -34,47 +21,82 @@ def logistic_loss(y_true, y_pred):
     weights_positive = 0.5 / tf.reduce_sum(bigger)
     weights_negative = 0.5 / tf.reduce_sum(smaller)
 
-    weights = bigger*weights_positive + smaller*weights_negative
+    weights = bigger * weights_positive + smaller * weights_negative
 
     # Here often occurs numeric instability -> nan or inf
     # return tf.reduce_sum(weights * (tf.log(1 + tf.exp(-y_pred * y_true))))
-    a = -y_pred*y_true
+    a = -y_pred * y_true
     b = tf.maximum(0.0, a)
-    t = b + tf.log(tf.exp(-b) + tf.exp(a-b))
-    return tf.reduce_sum(weights*t)
+    t = b + tf.log(tf.exp(-b) + tf.exp(a - b))
+    return tf.reduce_sum(weights * t)
 
 
-def init_buffer():
-    global buffer_X, buffer_Y, buffer_size
-    buffer_X = np.zeros((BATCH_SIZE, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]))
-    buffer_Y = np.zeros((BATCH_SIZE, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]))
-    buffer_size = 0
+class Supervised:
+    def __init__(self):
+        # Constants
+        self._map_shape = (320, 320, 32)
+        self._batch_size = 4
+        self._epochs_per_batch = 1
+        self._learning_rate = 0.001
+        self._l2reg = 0.0001
 
+        # buffer
+        self._buffer_X, self._buffer_Y, self._buffer_size = self.init_buffer()
 
-def append_to_buffer(obs):
-    global buffer_X, buffer_Y, buffer_size
-    buffer_X[buffer_size] = obs['X']
-    buffer_Y[buffer_size] = obs['Y']
-    buffer_size = buffer_size + 1
+        # model
+        self._model = self.create_model()
+        home = expanduser("~")
+        logdir = os.path.join(home, 'supervised_logs/')
+        self._tfboard = TensorBoard(log_dir=logdir, batch_size=self._batch_size, write_graph=False)
 
+    def init_buffer(self):
+        buffer_X = np.zeros((self._batch_size, self._map_shape[0], self._map_shape[1], self._map_shape[2]))
+        buffer_Y = np.zeros((self._batch_size, self._map_shape[0], self._map_shape[1], self._map_shape[2]))
+        buffer_size = 0
+        return buffer_X, buffer_Y, buffer_size
 
-def build_network():
-    # 3D convolutional network building
-    inputs = Input(shape=(MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]))
-    reshape = Lambda(lambda x: expand_dims(x, -1))(inputs)
+    def append_to_buffer(self, obs):
+        self._buffer_X[self._buffer_size] = obs['X']
+        self._buffer_Y[self._buffer_size] = obs['Y']
+        self._buffer_size += 1
 
-    c1 = Conv3D(2, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(reshape)
-    c2 = Conv3D(4, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(c1)
-    p1 = MaxPool3D(pool_size=2)(c2)
-    c3 = Conv3D(8, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(p1)
-    p2 = MaxPool3D(pool_size=2)(c3)
-    c4 = Conv3D(16, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(p2)
-    c5 = Conv3D(32, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(c4)
-    c6 = Conv3D(1, 8, padding='same', kernel_regularizer=l2(0.0001), activation='linear')(c5)
-    out = Conv3DTranspose(1, 8, strides=[4, 4, 4], padding='same', activation='linear', kernel_regularizer=l2(0.0001))(c6)
-    outputs = Lambda(lambda x: squeeze(x, 4))(out)
+    def create_model(self):
+        # 3D convolutional network building
+        inputs = Input(shape=(self._map_shape[0], self._map_shape[1], self._map_shape[2]))
+        reshape = Lambda(lambda x: expand_dims(x, -1))(inputs)
 
-    return Model(inputs, outputs)
+        c1 = Conv3D(2, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(reshape)
+        c2 = Conv3D(4, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(c1)
+        p1 = MaxPool3D(pool_size=2)(c2)
+        c3 = Conv3D(8, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(p1)
+        p2 = MaxPool3D(pool_size=2)(c3)
+        c4 = Conv3D(16, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(p2)
+        c5 = Conv3D(32, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(c4)
+        c6 = Conv3D(1, 8, padding='same', kernel_regularizer=l2(self._l2reg), activation='linear')(c5)
+        out = Conv3DTranspose(1, 8, strides=[4, 4, 4], padding='same', activation='linear',
+                              kernel_regularizer=l2(self._l2reg))(c6)
+        outputs = Lambda(lambda x: squeeze(x, 4))(out)
+        opt = Adam(lr=self._learning_rate)
+        model = Model(inputs, outputs)
+        model.compile(optimizer=opt, loss=logistic_loss)
+        return model
+
+    def train_model(self):
+        if self._buffer_size == self._batch_size:
+            self._model.fit(x=self._buffer_X, y=self._buffer_Y, epochs=self._epochs_per_batch, shuffle=True,
+                            batch_size=self._batch_size, callbacks=[self._tfboard])
+            # clean buffer
+            self._buffer_X, self._buffer_Y, self._buffer_size = self.init_buffer()
+
+    def load_weights(self, weights_dir):
+        self._model.load_weights(filepath=weights_dir)
+
+    def save_weights(self, save_dir):
+        self._model.save(filepath=save_dir)
+
+    def predict(self, input_X):
+        return self._model.predict(input_X)
+
 
 '''
 def build_network():
@@ -117,42 +139,35 @@ def build_network():
     return net
 '''
 
-# Create model on GPU
-opt = Adam()
-model = build_network()
 
-mydir = expanduser("~")
-savedir = os.path.join(mydir, 'trained_models/my_keras_model.h5')
-mydir = os.path.join(mydir, 'training_logs/')
-tfboard = TensorBoard(log_dir=mydir, batch_size=BATCH_SIZE, write_graph=False)
+if __name__ == "__main__":
 
-if LOAD:
-    loaddir = expanduser("~")
-    loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model.h5')
-    model.load_weights(filepath=loaddir)
+    LOAD = True
+    # Create model on GPU
+    agent = Supervised()
 
-model.compile(optimizer=opt, loss=logistic_loss)
+    home = expanduser("~")
+    savedir = os.path.join(home, 'trained_models/my_keras_model.h5')
 
-env = gym.make('lidar-v2')
-random_action = env.action_space.sample()
-episode = 0
-env.seed(5)
+    if LOAD:
+        loaddir = expanduser("~")
+        loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model.h5')
+        agent.load_weights(loaddir)
 
-while True:
-    done = False
-    init_buffer()
-    obv = env.reset()
-    print('\n------------------- Drive number', episode, '-------------------------')
-    if (episode % 5) == 0:
-        model.save(savedir)
+    env = gym.make('lidar-v2')
+    episode = 0
+    env.seed(5)
 
-    while not done:
-        append_to_buffer(obv)
+    while True:
+        done = False
+        obv = env.reset()
+        print('\n------------------- Drive number', episode, '-------------------------')
+        if (episode % 5) == 0:
+            agent.save_weights(savedir)
 
-        if buffer_size == BATCH_SIZE:
-            model.fit(x=buffer_X, y=buffer_Y, epochs=2, shuffle=True, batch_size=BATCH_SIZE, callbacks=[tfboard])
-            init_buffer()
+        while not done:
+            agent.append_to_buffer(obv)
+            agent.train_model()
+            obv, reward, done, info = env.step(obv['X'])
 
-        obv, reward, done, info = env.step(obv['X'])
-
-    episode += 1
+        episode += 1

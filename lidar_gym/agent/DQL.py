@@ -7,9 +7,15 @@ from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Input, Lam
 from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape
 from tensorflow.contrib.keras.api.keras.regularizers import l2
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
+from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
+
+from os.path import expanduser
+import os
 
 import tensorflow as tf
 from collections import deque
+
+from lidar_gym.agent.supervised_agent import Supervised
 
 
 def logistic_loss(y_true, y_pred):
@@ -29,10 +35,9 @@ def logistic_loss(y_true, y_pred):
     t = b + tf.log(tf.exp(-b) + tf.exp(a-b))
     return tf.reduce_sum(weights*t)
 
-buffer_X, buffer_Y, buffer_size = None, None, 0
-
 
 class DQN:
+
     def __init__(self, env):
         # setup environment
         self._env = env
@@ -54,6 +59,11 @@ class DQN:
         # double network
         self._model = self.create_model()
         self._target_model = self.create_model()
+
+        # logger
+        home = expanduser("~")
+        logdir = os.path.join(home, 'supervised_logs/')
+        self._tfboard = TensorBoard(log_dir=logdir, batch_size=self._batch_size, write_graph=False)
 
     def create_model(self):
         state_input = Input(shape=self._map_shape)
@@ -124,30 +134,32 @@ class DQN:
 if __name__ == "__main__":
     env = gym.make('lidar-v0')
 
-    trials = 1000
-    trial_len = 500
-
     # updateTargetNetwork = 1000
     dqn_agent = DQN(env=env)
-    steps = []
+    supervised = Supervised()
+
+    loaddir = expanduser("~")
+    loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model.h5')
+    supervised.load_weights(loaddir)
+
     episode = 0
 
     while True:
         done = False
-        cur_state = env.reset()
-        # TODO curr_state = Supervised.predict(curr_state)
+        curr_state = env.reset()
+        curr_state = supervised.predict(curr_state)
 
         while not done:
-            action = dqn_agent.act(cur_state)
-            new_state, reward, done, _ = env.step({'rays': action, 'map': cur_state})
+            action = dqn_agent.act(curr_state)
+            new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state})
 
-            # TODO new_state = Supervised.predict(new_state)
-            dqn_agent.append_to_buffer(cur_state, action, reward, new_state, done)
+            new_state = supervised.predict(new_state)
+            dqn_agent.append_to_buffer(curr_state, action, reward, new_state, done)
 
             dqn_agent.replay()  # internally iterates default (prediction) model
             dqn_agent.target_train()  # iterates target model
 
-            cur_state = new_state
+            curr_state = new_state
             if done:
                 break
 
