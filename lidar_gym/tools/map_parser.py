@@ -24,6 +24,44 @@ DRIVES_CITY = ['0002', '0001', '0005', '0011', '0013', '0014', '0017', '0018', '
                '0056', '0057', '0059', '0060', '0084', '0091', '0093', '0095', '0096', '0104']
 
 
+def _iterate_map(dataset, size, voxel_size):
+    m = vm.VoxelMap()
+    m.voxel_size = voxel_size
+    m.free_update = - 1.0
+    m.hit_update = 1.0
+    m.occupancy_threshold = 0.0
+
+    T_matrixes = []
+    anchor_initial = np.zeros((1, 4))
+    np.set_printoptions(precision=4, suppress=True)
+    iterator_oxts = iter(itertools.islice(dataset.oxts, 0, None))
+    iterator_velo = iter(itertools.islice(dataset.velo, 0, None))
+    T_imu_to_velo = np.linalg.inv(dataset.calib.T_velo_imu)
+
+    # next line depends on lidar-car setup in metersW
+    car_x = np.mgrid[-0.8:0.8:voxel_size, -1.2:1.2:voxel_size, -1.7:0:voxel_size]
+    car_x = car_x.reshape(3, -1).T
+    car_v = -np.ones((len(car_x), ))
+    car_l = np.zeros((len(car_x), ))
+
+    # Grab some data
+    for i in range(size):
+        if (i % 10) == 0:
+            print('.', end='', flush=True)
+        transform_matrix = np.dot(next(iterator_oxts).T_w_imu, T_imu_to_velo)
+        T_matrixes.append(np.asarray(transform_matrix))
+        anchor = mp.transform_points(anchor_initial, transform_matrix)
+        velo_points = next(iterator_velo)
+        pts = mp.transform_points(velo_points, transform_matrix)
+        anchors = np.tile(np.transpose(anchor), (1, len(pts)))
+        m.update_lines(anchors, np.transpose(pts))
+
+        # we want car to give negative voxels
+        m.set_voxels(mp.transform_points(car_x, transform_matrix), car_l, car_v)
+
+    return m, T_matrixes
+
+
 class MapParser:
     # Class for parsing maps from files or from serialized objects
     def __init__(self, voxel_size):
@@ -48,13 +86,6 @@ class MapParser:
         set_seed()
 
     def get_next_map(self):
-        # VoxelMap initialization
-        m = vm.VoxelMap()
-        m.voxel_size = self._voxel_size
-        m.free_update = - 1.0
-        m.hit_update = 1.0
-        m.occupancy_threshold = 0.0
-
         # Load the data. Optionally, specify the frame range to load.
         index = random.randint(0, len(self._drives)-1)
         serialized = os.path.join(self._basedir, self._drives[index] + '.vs')
@@ -66,29 +97,9 @@ class MapParser:
         dataset = pykitti.raw(self._basedir, self._date, self._drives[index])
         size = len(dataset)
 
-        T_matrixes = []
-        anchor_initial = np.zeros((1, 4))
-        np.set_printoptions(precision=4, suppress=True)
-        iterator_oxts = iter(itertools.islice(dataset.oxts, 0, None))
-        iterator_velo = iter(itertools.islice(dataset.velo, 0, None))
-        T_imu_to_velo = np.linalg.inv(dataset.calib.T_velo_imu)
-
         print('\nParsing drive', self._drives[index], 'with length of', size, 'timestamps.\n')
         # Grab some data
-        for i in range(size):
-        # for i in range(100):
-            if (i % 10) == 0:
-                print('.', end='', flush=True)
-            transform_matrix = np.dot(next(iterator_oxts).T_w_imu, T_imu_to_velo)
-            T_matrixes.append(np.asarray(transform_matrix))
-            anchor = mp.transform_points(anchor_initial, transform_matrix)
-            velo_points = next(iterator_velo)
-            pts = mp.transform_points(velo_points, transform_matrix)
-            anchors = np.tile(np.transpose(anchor), (1, len(pts)))
-            m.update_lines(anchors, np.transpose(pts))
-            # TODO: car position must make negative voxels
-
-        return m, T_matrixes
+        return _iterate_map(dataset, size, self._voxel_size)
 
 
 class DatasetTester:
@@ -135,39 +146,14 @@ class DatasetSerializer():
         self._drives.extend(DRIVES_CITY)
 
         for drive in self._drives:
-            # VoxelMap initialization
-            m = vm.VoxelMap()
-            m.voxel_size = self._voxel_size
-            m.free_update = - 1.0
-            m.hit_update = 1.0
-            m.occupancy_threshold = 0.0
-
             # Load the data. Optionally, specify the frame range to load.
             dataset = pykitti.raw(self._basedir, self._date, drive)
             size = len(dataset)
 
-            T_matrixes = []
-            anchor_initial = np.zeros((1, 4))
-            np.set_printoptions(precision=4, suppress=True)
-            iterator_oxts = iter(itertools.islice(dataset.oxts, 0, None))
-            iterator_velo = iter(itertools.islice(dataset.velo, 0, None))
-            T_imu_to_velo = np.linalg.inv(dataset.calib.T_velo_imu)
-
             print('\nParsing drive', drive, 'with length of', size, 'timestamps.\n')
-            # Grab some data
-            for i in range(size):
-                if (i % 10) == 0:
-                    print('.', end='', flush=True)
-                transform_matrix = np.dot(next(iterator_oxts).T_w_imu, T_imu_to_velo)
-                T_matrixes.append(np.asarray(transform_matrix))
-                anchor = mp.transform_points(anchor_initial, transform_matrix)
-                velo_points = next(iterator_velo)
-                pts = mp.transform_points(velo_points, transform_matrix)
-                anchors = np.tile(np.transpose(anchor), (1, len(pts)))
-                m.update_lines(anchors, np.transpose(pts))
 
+            serialize = _iterate_map(dataset, size, voxel_size)
             print('Serializing')
-            serialize = m, T_matrixes
             drive = drive + '.vs'
             file = open(os.path.join(self._basedir, drive), 'wb')
             pickle.dump(serialize, file)
