@@ -72,8 +72,8 @@ class Supervised:
         p2 = MaxPool3D(pool_size=2)(c3)
         c4 = Conv3D(16, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(p2)
         c5 = Conv3D(32, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(c4)
-        c6 = Conv3D(1, 8, padding='same', kernel_regularizer=l2(self._l2reg), activation='linear')(c5)
-        out = Conv3DTranspose(1, 8, strides=[4, 4, 4], padding='same', activation='linear',
+        c6 = Conv3D(1, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='linear')(c5)
+        out = Conv3DTranspose(1, 4, strides=[4, 4, 4], padding='same', activation='linear',
                               kernel_regularizer=l2(self._l2reg))(c6)
         outputs = Lambda(lambda x: squeeze(x, 4))(out)
         opt = Adam(lr=self._learning_rate)
@@ -140,31 +140,45 @@ def build_network():
     return net
 '''
 
+def evaluate(supervised):
+    evalenv = gym.make('lidareval-v0')
+    done = False
+    reward_overall = 0
+    _ = evalenv.reset()
+    map = np.zeros((320, 320, 32))
+
+    while not done:
+        a = evalenv.action_space.sample()
+        obv, reward, done, _ = evalenv.step({'map': map, 'rays': a['rays']})
+        reward_overall += reward
+        map = supervised.predict(obv)
+    print('EVALUATION DONE')
+    return reward_overall
+
 
 if __name__ == "__main__":
 
-    LOAD = True
+    LOAD = False
     # Create model on GPU
     agent = Supervised()
 
     home = expanduser("~")
-    savedir = os.path.join(home, 'trained_models/my_keras_model.h5')
+    savedir = os.path.join(home, 'trained_models/my_keras_model_supervised.h5')
 
     if LOAD:
         loaddir = expanduser("~")
-        loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model.h5')
+        loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model_supervised.h5')
         agent.load_weights(loaddir)
 
     env = gym.make('lidar-v2')
-    episode = 0
+    episode = 1
+    max_reward = -float('inf')
     env.seed(5)
 
     while True:
         done = False
         obv = env.reset()
         print('\n------------------- Drive number', episode, '-------------------------')
-        if (episode % 5) == 0:
-            agent.save_weights(savedir)
 
         while not done:
             agent.append_to_buffer(obv)
@@ -172,3 +186,10 @@ if __name__ == "__main__":
             obv, reward, done, info = env.step(obv['X'])
 
         episode += 1
+        # Evaluate and save
+        if episode % 5 == 0:
+            rew = evaluate(agent)
+            if rew > max_reward:
+                print('new best agent - saving with reward:' + rew)
+                max_reward = rew
+                agent.save_weights(savedir)

@@ -146,7 +146,7 @@ class LidarGym(gym.Env):
 
         bools = processing.values_to_bools(v)
         indexes_empty = np.where(~bools)
-        if len(indexes_empty) > 0:
+        if indexes_empty.size > 0:
             free_pts = np.asmatrix(self._rays_endings[:, indexes_empty])
             # print(free_pts.shape) I ran into error one time here, but i didn't manage to replicate it
             tmp_map.set_voxels(free_pts, np.zeros((free_pts.shape[1],)), -np.ones((free_pts.shape[1],)))

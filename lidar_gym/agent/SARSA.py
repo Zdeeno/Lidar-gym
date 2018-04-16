@@ -114,13 +114,6 @@ class SARSA:
     def append_to_buffer(self, state, action, reward, new_state, done):
         self._buffer.append([state, action, reward, new_state, done])
 
-    def _n_best_Q(self, arr, n):
-        """
-        Returns the n largest indices from a numpy array.
-        """
-        indices = self._largest_indices(arr, n)
-        return np.sum(arr[indices])/self._max_rays
-
     def _largest_indices(self, arr, n):
         """
         Returns the n largest indices from a numpy array.
@@ -145,6 +138,7 @@ def evaluate(supervised, dqn):
         obv, reward, done, _ = evalenv.step({'map': map, 'rays': rays})
         reward_overall += reward
         map = supervised.predict(obv)
+    print('EVALUATION DONE')
     return reward_overall
 
 
