@@ -6,7 +6,7 @@ import voxel_map as vm
 import pkg_resources as pkg
 import os
 import random
-import _pickle as pickle
+import pickle
 
 from lidar_gym.tools import math_processing as mp
 from os.path import expanduser
@@ -50,7 +50,8 @@ def _iterate_map(dataset, size, voxel_size):
     # Grab some data
     next_oxts = next(iterator_oxts)
     i = 0
-    while next_oxts is not None:
+    #while next_oxts is not None:
+    for i in range(10):
         if (i % 10) == 0:
             print('.', end='', flush=True)
         transform_matrix = np.dot(next_oxts.T_w_imu, T_imu_to_velo)
@@ -169,7 +170,7 @@ class DatasetSerializer():
         self._drives = []
         self._date = '2011_09_26'
         # city
-        self._drives.extend(DRIVES_CITY)
+        # self._drives.extend(DRIVES_CITY)
         self._drives.extend(VALIDATION)
 
         for drive in self._drives:
@@ -179,7 +180,8 @@ class DatasetSerializer():
 
             print('\nParsing drive', drive, 'with length of', size, 'timestamps.\n')
 
-            serialize = _iterate_map(dataset, size, voxel_size)
+            m, T_matrixes = _iterate_map(dataset, size, voxel_size)
+            serialize = m, T_matrixes
             print('Serializing')
             drive = drive + '.vs'
             file = open(os.path.join(self._basedir, drive), 'wb')
