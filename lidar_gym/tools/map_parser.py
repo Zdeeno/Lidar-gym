@@ -48,10 +48,8 @@ def _iterate_map(dataset, size, voxel_size):
     car_l = np.zeros((len(car_x), ))
 
     # Grab some data
-    next_oxts = next(iterator_oxts)
     i = 0
-    #while next_oxts is not None:
-    for i in range(10):
+    while next_oxts is not None:
         if (i % 10) == 0:
             print('.', end='', flush=True)
         transform_matrix = np.dot(next_oxts.T_w_imu, T_imu_to_velo)
