@@ -48,6 +48,7 @@ def _iterate_map(dataset, size, voxel_size):
     car_l = np.zeros((len(car_x), ))
 
     # Grab some data
+    next_oxts = next(iterator_oxts)
     i = 0
     while next_oxts is not None:
         if (i % 10) == 0:
