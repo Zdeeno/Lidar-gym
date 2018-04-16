@@ -23,6 +23,8 @@ def get_seed():
 DRIVES_CITY = ['0002', '0001', '0005', '0011', '0013', '0014', '0017', '0018', '0048', '0051',
                '0056', '0057', '0059', '0060', '0084', '0091', '0093', '0095', '0096', '0104']
 
+VALIDATION = ['0009']
+
 
 def _iterate_map(dataset, size, voxel_size):
     m = vm.VoxelMap()
@@ -39,8 +41,9 @@ def _iterate_map(dataset, size, voxel_size):
     T_imu_to_velo = np.linalg.inv(dataset.calib.T_velo_imu)
 
     # next line depends on lidar-car setup in metersW
-    car_x = np.mgrid[-0.8:0.8:voxel_size, -1.2:1.2:voxel_size, -1.7:0:voxel_size]
+    car_x = np.mgrid[-0.8:0.8:voxel_size, -1.2:1.2:voxel_size, -1.6:0:voxel_size]
     car_x = car_x.reshape(3, -1).T
+    car_x = np.asmatrix(car_x)
     car_v = -np.ones((len(car_x), ))
     car_l = np.zeros((len(car_x), ))
 
@@ -57,7 +60,8 @@ def _iterate_map(dataset, size, voxel_size):
         m.update_lines(anchors, np.transpose(pts))
 
         # we want car to give negative voxels
-        m.set_voxels(mp.transform_points(car_x, transform_matrix), car_l, car_v)
+        car_pts = mp.transform_points(car_x, transform_matrix)
+        m.set_voxels(car_pts.T, car_l, car_v)
 
     return m, T_matrixes
 
@@ -80,9 +84,6 @@ class MapParser:
         # road
         # self._drives.extend(['0027', '0015', '0070', '0029', '0032'])
 
-        # testing
-        # self._drives = ['0002', '0020', '0027']
-
         set_seed()
 
     def get_next_map(self):
@@ -101,6 +102,21 @@ class MapParser:
         # Grab some data
         return _iterate_map(dataset, size, self._voxel_size)
 
+    def get_validation_map(self):
+        index = 0
+        serialized = os.path.join(self._basedir, VALIDATION[index] + '.vs')
+        # load serialized map if available
+        if os.path.isfile(serialized):
+            print('Deserializing validation map 0009:')
+            return pickle.load(open(serialized, 'rb'))
+
+        dataset = pykitti.raw(self._basedir, self._date, VALIDATION[index])
+        size = len(dataset)
+
+        print('\nParsing drive', VALIDATION[index], 'with length of', size, 'timestamps.\n')
+        # Grab some data
+        return _iterate_map(dataset, size, self._voxel_size)
+
 
 class DatasetTester:
     """Class to check whether is dataset correct"""
@@ -114,7 +130,7 @@ class DatasetTester:
         self._date = '2011_09_26'
         # city
         self._drives.extend(DRIVES_CITY)
-
+        self._drives.extend(VALIDATION)
 
         for drive in self._drives:
             dataset = pykitti.raw(self._basedir, self._date, drive)
@@ -143,7 +159,8 @@ class DatasetSerializer():
         self._drives = []
         self._date = '2011_09_26'
         # city
-        self._drives.extend(DRIVES_CITY)
+        # self._drives.extend(DRIVES_CITY)
+        self._drives.extend(VALIDATION)
 
         for drive in self._drives:
             # Load the data. Optionally, specify the frame range to load.

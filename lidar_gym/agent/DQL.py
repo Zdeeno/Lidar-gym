@@ -14,26 +14,8 @@ import os
 
 import tensorflow as tf
 from collections import deque
-
+import lidar_gym
 from lidar_gym.agent.supervised_agent import Supervised
-
-
-def logistic_loss(y_true, y_pred):
-    # own objective function
-    bigger = tf.cast(tf.greater(y_true, 0.0), tf.float32)
-    smaller = tf.cast(tf.greater(0.0, y_true), tf.float32)
-
-    weights_positive = 0.5 / tf.reduce_sum(bigger)
-    weights_negative = 0.5 / tf.reduce_sum(smaller)
-
-    weights = bigger*weights_positive + smaller*weights_negative
-
-    # Here often occurs numeric instability -> nan or inf
-    # return tf.reduce_sum(weights * (tf.log(1 + tf.exp(-y_pred * y_true))))
-    a = -y_pred*y_true
-    b = tf.maximum(0.0, a)
-    t = b + tf.log(tf.exp(-b) + tf.exp(a-b))
-    return tf.reduce_sum(weights*t)
 
 
 class DQN:
@@ -41,9 +23,10 @@ class DQN:
     def __init__(self, env):
         # setup environment
         self._env = env
-        self._batch_size = 16
+        self._batch_size = 32
         self._map_shape = (320, 320, 32)
         self._max_rays = 200
+        self._rays_shape = (160, 120)
 
         # setup consts
         self._gamma = 0.85
@@ -62,7 +45,7 @@ class DQN:
 
         # logger
         home = expanduser("~")
-        logdir = os.path.join(home, 'supervised_logs/')
+        logdir = os.path.join(home, 'DQN_logs/')
         self._tfboard = TensorBoard(log_dir=logdir, batch_size=self._batch_size, write_graph=False)
 
     def create_model(self):
@@ -74,24 +57,33 @@ class DQN:
         c2 = Conv3D(4, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(p1)
         c3 = Conv3D(1, 8, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(c2)
         s1 = Lambda(lambda x: squeeze(x, 4))(c3)
-        c4 = Conv2D(3, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(s1)
+        c4 = Conv2D(9, 3, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(s1)
         r2 = Reshape((480, 480, 1))(c4)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
-        c5 = Conv2D(2, 4, padding='same', kernel_regularizer=l2(0.0001), activation='linear')(p2)
-        output = Conv2D(1, 4, padding='same', kernel_regularizer=l2(0.0001), activation='softmax')(c5)
+        c5 = Conv2D(2, 4, padding='same', kernel_regularizer=l2(0.0001), activation='relu')(p2)
+        c6 = Conv2D(1, 4, padding='same', kernel_regularizer=l2(0.0001), activation='linear')(c5)
+        output = Lambda(lambda x: squeeze(x, 3))(c6)
 
         model = Model(inputs=state_input, outputs=output)
         adam = Adam(lr=0.001)
-        model.compile(loss=logistic_loss, optimizer=adam)
+        model.compile(loss='mean_squared_error', optimizer=adam)
         return model
+
+    def predict(self, state):
+        return self._model.predict(state)[0]
 
     def act(self, state):
         # Exploration vs exploitation
         self._epsilon *= self._epsilon_decay
         self._epsilon = max(self._epsilon_min, self._epsilon)
         if np.random.random() < self._epsilon:
-            return self._env.action_space['rays'].sample()
-        return self._model.predict(state)
+            return self._env.action_space.sample()['rays']
+        state = np.expand_dims(state, axis=0)
+        rays = self._model.predict(state)[0]
+        # Q values to top n bools
+        ret = np.zeros(shape=self._rays_shape, dtype=bool)
+        ret[self._largest_indices(rays, self._max_rays)] = True
+        return ret
 
     def replay(self):
         if len(self._buffer) < self._batch_size:
@@ -100,13 +92,15 @@ class DQN:
         samples = random.sample(self._buffer, self._batch_size)
         for sample in samples:
             state, action, reward, new_state, done = sample
+            state = np.expand_dims(state, axis=0)
             target = self._target_model.predict(state)
             if done:
                 target[action == 1] = reward
             else:
+                new_state = np.expand_dims(new_state, axis=0)
                 Q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
-                target[action] = reward + Q_future * self._gamma
-            self._model.fit(state, target, epochs=1, verbose=0)
+                target[0, action] = reward + Q_future * self._gamma
+            self._model.fit(state, target, epochs=1, verbose=1)
 
     def target_train(self):
         weights = self._model.get_weights()
@@ -124,11 +118,34 @@ class DQN:
         """
         Returns the n largest indices from a numpy array.
         """
+        indices = self._largest_indices(arr, n)
+        return np.sum(arr[indices])/self._max_rays
+
+    def _largest_indices(self, arr, n):
+        """
+        Returns the n largest indices from a numpy array.
+        """
         flat = arr.flatten()
         indices = np.argpartition(flat, -n)[-n:]
         indices = indices[np.argsort(-flat[indices])]
-        indices = np.unravel_index(indices, arr.shape)
-        return np.sum(arr[indices])/self._max_rays
+        return np.unravel_index(indices, arr.shape)
+
+    def clear_buffer(self):
+        self._buffer.clear()
+
+
+def evaluate(supervised, dqn):
+    evalenv = gym.make('lidareval-v0')
+    done = False
+    reward_overall = 0
+    obv = evalenv.reset()
+    map = np.zeros((320, 320, 32))
+    while not done:
+        rays = dqn.predict(map)
+        obv, reward, done, _ = evalenv.step({'map': map, 'rays': rays})
+        reward_overall += reward
+        map = supervised.predict(obv)
+    return reward_overall
 
 
 if __name__ == "__main__":
@@ -141,26 +158,43 @@ if __name__ == "__main__":
     loaddir = expanduser("~")
     loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model.h5')
     supervised.load_weights(loaddir)
+    savedir = expanduser("~")
+    savedir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_dqn_model.h5')
+
+    shape = dqn_agent._map_shape
 
     episode = 0
+    max_reward = -float('inf')
 
     while True:
         done = False
         curr_state = env.reset()
-        curr_state = supervised.predict(curr_state)
+        curr_state = np.zeros((shape[0], shape[1], shape[2]))
+        epoch = 1
 
+        # training
         while not done:
             action = dqn_agent.act(curr_state)
             new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state})
 
-            new_state = supervised.predict(new_state)
+            new_state = supervised.predict(new_state['X'])
             dqn_agent.append_to_buffer(curr_state, action, reward, new_state, done)
 
-            dqn_agent.replay()  # internally iterates default (prediction) model
-            dqn_agent.target_train()  # iterates target model
+            if epoch % dqn_agent._batch_size == 0:
+                dqn_agent.replay()  # internally iterates default (prediction) model
+                dqn_agent.target_train()  # iterates target model
 
             curr_state = new_state
-            if done:
-                break
+            epoch += 1
 
+        # evaluation and saving
+        print('end of episode')
         episode += 1
+        if episode % 5 == 0:
+            rew = evaluate(supervised, dqn_agent)
+            if rew > max_reward:
+                print('new best agent - saving with reward:' + rew)
+                max_reward = rew
+                dqn_agent.save_model(savedir)
+
+        dqn_agent.clear_buffer()

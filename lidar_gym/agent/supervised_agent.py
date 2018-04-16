@@ -95,7 +95,8 @@ class Supervised:
         self._model.save(filepath=save_dir)
 
     def predict(self, input_X):
-        return self._model.predict(input_X)
+        input_X = np.expand_dims(input_X, axis=0)
+        return self._model.predict(input_X)[0]
 
 
 '''

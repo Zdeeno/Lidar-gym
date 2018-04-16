@@ -9,7 +9,7 @@ cd kitti_dataset
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0001/2011_09_26_drive_0001_sync.zip
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0002/2011_09_26_drive_0002_sync.zip
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0005/2011_09_26_drive_0005_sync.zip
-# wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0009/2011_09_26_drive_0009_sync.zip CORRUPTED DATASET
+wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0009/2011_09_26_drive_0009_sync.zip # VALIDATION
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0011/2011_09_26_drive_0011_sync.zip
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0013/2011_09_26_drive_0013_sync.zip
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0014/2011_09_26_drive_0014_sync.zip
@@ -27,10 +27,6 @@ wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0093/2011_09_26_
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0095/2011_09_26_drive_0095_sync.zip
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0096/2011_09_26_drive_0096_sync.zip
 wget http://kitti.is.tue.mpg.de/kitti/raw_data/2011_09_26_drive_0104/2011_09_26_drive_0104_sync.zip
-
-
-
-
 
 
 # --- using only city dataset
@@ -58,5 +54,13 @@ do
 	rm $f                                       # remove zip files
 	find . -name "*.png" -type f -delete        # remove pngs (a lot of bytes on HDD)
 done
+
+# repair drive 0009 with corrupted dataset
+cd 2011_09_26/2011_09_26_drive_0009_sync/oxts/data
+rm 0000000177.txt
+rm 0000000178.txt
+rm 0000000179.txt
+rm 0000000180.txt
+cd ../../../..
 
 echo 'Now you can serialize your dataset using python -m lidar_gym.tools.map_parser -s'
