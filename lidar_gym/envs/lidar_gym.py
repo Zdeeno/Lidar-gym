@@ -145,7 +145,7 @@ class LidarGym(gym.Env):
         # correct empty pts
 
         bools = processing.values_to_bools(v)
-        indexes_empty = np.where(~bools)
+        indexes_empty = np.asarray(np.where(~bools))
         if indexes_empty.size > 0:
             free_pts = np.asmatrix(self._rays_endings[:, indexes_empty])
             # print(free_pts.shape) I ran into error one time here, but i didn't manage to replicate it
@@ -361,7 +361,9 @@ class Lidarv2(Lidarv0):
         self._action_generator = LidarMultiBinary((160, 120), 200)
 
     def _reset(self):
-        return super(Lidarv2, self)._reset()
+        ret = super(Lidarv2, self)._reset()
+        ret, _, _, _ = self._step(ret)
+        return ret
 
     def _close(self):
         super(Lidarv2, self)._close()

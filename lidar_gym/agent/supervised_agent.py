@@ -181,6 +181,7 @@ if __name__ == "__main__":
         print('\n------------------- Drive number', episode, '-------------------------')
 
         while not done:
+            print(obv)
             agent.append_to_buffer(obv)
             agent.train_model()
             obv, reward, done, info = env.step(obv['X'])
