@@ -6,7 +6,7 @@ import voxel_map as vm
 import pkg_resources as pkg
 import os
 import random
-import pickle
+import _pickle as pickle
 
 from lidar_gym.tools import math_processing as mp
 from os.path import expanduser
@@ -48,10 +48,12 @@ def _iterate_map(dataset, size, voxel_size):
     car_l = np.zeros((len(car_x), ))
 
     # Grab some data
-    for i in range(size):
+    next_oxts = next(iterator_oxts)
+    i = 0
+    while next_oxts is not None:
         if (i % 10) == 0:
             print('.', end='', flush=True)
-        transform_matrix = np.dot(next(iterator_oxts).T_w_imu, T_imu_to_velo)
+        transform_matrix = np.dot(next_oxts.T_w_imu, T_imu_to_velo)
         T_matrixes.append(np.asarray(transform_matrix))
         anchor = mp.transform_points(anchor_initial, transform_matrix)
         velo_points = next(iterator_velo)
@@ -62,6 +64,10 @@ def _iterate_map(dataset, size, voxel_size):
         # we want car to give negative voxels
         car_pts = mp.transform_points(car_x, transform_matrix)
         m.set_voxels(car_pts.T, car_l, car_v)
+
+        # asking for next lidar position to check, whether to continue iterating
+        next_oxts = next(iterator_oxts, None)
+        i += 1
 
     return m, T_matrixes
 
@@ -129,7 +135,7 @@ class DatasetTester:
         self._drives = []
         self._date = '2011_09_26'
         # city
-        self._drives.extend(DRIVES_CITY)
+        # self._drives.extend(DRIVES_CITY)
         self._drives.extend(VALIDATION)
 
         for drive in self._drives:
@@ -139,12 +145,16 @@ class DatasetTester:
             iterator_velo = iter(itertools.islice(dataset.velo, 0, None))
             T_imu_to_velo = np.linalg.inv(dataset.calib.T_velo_imu)
             print('\nParsing drive', drive, 'with length of', size, 'timestamps.\n')
-            for i in range(size):
+            next_oxts = next(iterator_oxts)
+            i = 0
+            while next_oxts is not None:
                 # for i in range(100):
                 if (i % 10) == 0:
                     print('.', end='', flush=True)
-                transform_matrix = np.dot(next(iterator_oxts).T_w_imu, T_imu_to_velo)
+                transform_matrix = np.dot(next_oxts.T_w_imu, T_imu_to_velo)
                 velo_points = next(iterator_velo)
+                next_oxts = next(iterator_oxts, None)
+                i += 1
 
 
 class DatasetSerializer():
@@ -159,7 +169,7 @@ class DatasetSerializer():
         self._drives = []
         self._date = '2011_09_26'
         # city
-        # self._drives.extend(DRIVES_CITY)
+        self._drives.extend(DRIVES_CITY)
         self._drives.extend(VALIDATION)
 
         for drive in self._drives:
