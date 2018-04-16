@@ -18,7 +18,7 @@ import lidar_gym
 from lidar_gym.agent.supervised_agent import Supervised
 
 
-class DQN:
+class SARSA:
 
     def __init__(self, env):
         # setup environment
@@ -98,7 +98,7 @@ class DQN:
                 target[action == 1] = reward
             else:
                 new_state = np.expand_dims(new_state, axis=0)
-                Q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
+                Q_future = self._target_model.predict(new_state)
                 target[0, action] = reward + Q_future * self._gamma
             self._model.fit(state, target, epochs=1, verbose=1)
 
@@ -138,7 +138,7 @@ def evaluate(supervised, dqn):
     evalenv = gym.make('lidareval-v0')
     done = False
     reward_overall = 0
-    obv = evalenv.reset()
+    _ = evalenv.reset()
     map = np.zeros((320, 320, 32))
     while not done:
         rays = dqn.predict(map)
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     env = gym.make('lidar-v0')
 
     # updateTargetNetwork = 1000
-    dqn_agent = DQN(env=env)
+    dqn_agent = SARSA(env=env)
     supervised = Supervised()
 
     loaddir = expanduser("~")

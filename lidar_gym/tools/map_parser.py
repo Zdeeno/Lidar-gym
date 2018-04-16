@@ -169,7 +169,7 @@ class DatasetSerializer():
         self._drives = []
         self._date = '2011_09_26'
         # city
-        # self._drives.extend(DRIVES_CITY)
+        self._drives.extend(DRIVES_CITY)
         self._drives.extend(VALIDATION)
 
         for drive in self._drives:
