@@ -191,6 +191,6 @@ if __name__ == "__main__":
         if episode % 5 == 0:
             rew = evaluate(agent)
             if rew > max_reward:
-                print('new best agent - saving with reward:' + rew)
+                print('new best agent - saving with reward:' + str(rew))
                 max_reward = rew
                 agent.save_weights(savedir)

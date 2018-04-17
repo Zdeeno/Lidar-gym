@@ -104,7 +104,7 @@ class DQN:
                 new_state = np.expand_dims(new_state, axis=0)
                 Q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
                 target[0, action] = reward + Q_future * self._gamma
-            self._model.fit(state, target, epochs=1, verbose=1)
+            self._model.fit(state, target, epochs=1, verbose=0)
 
     def target_train(self):
         weights = self._model.get_weights()
@@ -169,6 +169,7 @@ if __name__ == "__main__":
 
     episode = 0
     max_reward = -float('inf')
+    evaluate(supervised, dqn_agent)
 
     while True:
         done = False
@@ -185,6 +186,7 @@ if __name__ == "__main__":
             dqn_agent.append_to_buffer(curr_state, action, reward, new_state, done)
 
             if epoch % dqn_agent._batch_size == 0:
+                print('replaying batch')
                 dqn_agent.replay()  # internally iterates default (prediction) model
                 dqn_agent.target_train()  # iterates target model
 
