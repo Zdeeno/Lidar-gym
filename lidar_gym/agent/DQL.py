@@ -71,7 +71,10 @@ class DQN:
 
     def predict(self, state):
         state = expand_dims(state, 0)
-        return self._target_model.predict(state)[0]
+        rays = self._target_model.predict(state)[0]
+        ret = np.zeros(shape=self._rays_shape, dtype=bool)
+        ret[self._largest_indices(rays, self._max_rays)] = True
+        return ret
 
     def act(self, state):
         # Exploration vs exploitation
@@ -110,7 +113,7 @@ class DQN:
             target_weights[i] = weights[i] * self._tau + target_weights[i] * (1 - self._tau)
 
     def save_model(self, fn):
-        self._model.save(fn)
+        self._target_model.save(fn)
 
     def append_to_buffer(self, state, action, reward, new_state, done):
         self._buffer.append([state, action, reward, new_state, done])
