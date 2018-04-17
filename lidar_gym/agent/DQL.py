@@ -95,7 +95,7 @@ class DQN:
             state = np.expand_dims(state, axis=0)
             target = self._target_model.predict(state)
             if done:
-                target[action == 1] = reward
+                target[0, action == 1] = reward
             else:
                 new_state = np.expand_dims(new_state, axis=0)
                 Q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
