@@ -140,6 +140,7 @@ class DQN:
 
 def evaluate(supervised, dqn):
     evalenv = gym.make('lidareval-v0')
+    print('Evaluation started')
     done = False
     reward_overall = 0
     obv = evalenv.reset()
@@ -149,13 +150,13 @@ def evaluate(supervised, dqn):
         obv, reward, done, _ = evalenv.step({'map': map, 'rays': rays})
         reward_overall += reward
         map = supervised.predict(obv['X'])
+    print('Evaluation ended with value: ' + str(reward_overall))
     return reward_overall
 
 
 if __name__ == "__main__":
     env = gym.make('lidar-v0')
 
-    # updateTargetNetwork = 1000
     dqn_agent = DQN(env=env)
     supervised = Supervised()
 
@@ -163,13 +164,12 @@ if __name__ == "__main__":
     loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model.h5')
     supervised.load_weights(loaddir)
     savedir = expanduser("~")
-    savedir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_dqn_model.h5')
+    savedir = os.path.join(savedir, 'Projekt/lidar-gym/trained_models/')
 
     shape = dqn_agent._map_shape
 
     episode = 0
     max_reward = -float('inf')
-    evaluate(supervised, dqn_agent)
 
     while True:
         done = False
