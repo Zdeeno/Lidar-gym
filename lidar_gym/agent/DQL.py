@@ -70,7 +70,9 @@ class DQN:
         return model
 
     def predict(self, state):
-        state = expand_dims(state, 0)
+        print(state.shape)
+        state = expand_dims(state, axis=0)
+        print(state.shape)
         rays = self._target_model.predict(state)[0]
         ret = np.zeros(shape=self._rays_shape, dtype=bool)
         ret[self._largest_indices(rays, self._max_rays)] = True
@@ -145,7 +147,6 @@ def evaluate(supervised, dqn):
     obv = evalenv.reset()
     map = np.zeros((320, 320, 32))
     while not done:
-        print(map)
         rays = dqn.predict(map)
         obv, reward, done, _ = evalenv.step({'map': map, 'rays': rays})
         reward_overall += reward
