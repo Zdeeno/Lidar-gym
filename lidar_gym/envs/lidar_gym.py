@@ -149,6 +149,7 @@ class LidarGym(gym.Env):
         if indexes_empty.size > 0:
             free_pts = np.asmatrix(self._rays_endings[:, indexes_empty])
             # print(free_pts.shape) I ran into error one time here, but i didn't manage to replicate it
+            assert free_pts.shape[0] == 3, 'wrong shape of free points ... is' + str(free_pts.shape)
             tmp_map.set_voxels(free_pts, np.zeros((free_pts.shape[1],)), -np.ones((free_pts.shape[1],)))
 
         x, l, v = tmp_map.get_voxels()
