@@ -144,7 +144,7 @@ def evaluate(supervised, dqn):
         rays = dqn.predict(map)
         obv, reward, done, _ = evalenv.step({'map': map, 'rays': rays})
         reward_overall += reward
-        map = supervised.predict(obv)
+        map = supervised.predict(obv['X'])
     return reward_overall
 
 

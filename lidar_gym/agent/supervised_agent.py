@@ -140,6 +140,7 @@ def build_network():
     return net
 '''
 
+
 def evaluate(supervised):
     evalenv = gym.make('lidareval-v0')
     done = False
@@ -151,7 +152,7 @@ def evaluate(supervised):
         a = evalenv.action_space.sample()
         obv, reward, done, _ = evalenv.step({'map': map, 'rays': a['rays']})
         reward_overall += reward
-        map = supervised.predict(obv)
+        map = supervised.predict(obv['X'])
     print('EVALUATION DONE')
     return reward_overall
 

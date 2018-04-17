@@ -389,8 +389,6 @@ class LidarEval(Lidarv0):
         max_rays = 200
 
         super(LidarEval, self).__init__()
-        self.action_space = spaces.Box(low=-100, high=100, shape=(320, 320, 32))
-        self._action_generator = LidarMultiBinary((density[1], density[0]), max_rays)
 
     def _reset(self):
         self._obs_voxel_map = vm.VoxelMap()
@@ -429,7 +427,7 @@ class LidarEval(Lidarv0):
         return super(LidarEval, self)._seed(seed)
 
     def _step(self, action):
-        return super(LidarEval, self)._step(action)['X']
+        return super(LidarEval, self)._step(action)
 
     def _render(self, mode='human', close=False):
         super(LidarEval, self)._render(mode)
