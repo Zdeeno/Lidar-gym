@@ -70,9 +70,8 @@ class DQN:
         return model
 
     def predict(self, state):
-        print(state.shape)
+        state = np.expand_dims(state, axis=0)
         rays = self._target_model.predict(state)[0]
-        print(rays.shape)
         ret = np.zeros(shape=self._rays_shape, dtype=bool)
         ret[self._largest_indices(rays, self._max_rays)] = True
         return ret
