@@ -145,7 +145,7 @@ def evaluate(supervised, dqn):
     obv = evalenv.reset()
     map = np.zeros((320, 320, 32))
     while not done:
-        print(rays)
+        print(map)
         rays = dqn.predict(map)
         obv, reward, done, _ = evalenv.step({'map': map, 'rays': rays})
         reward_overall += reward
