@@ -70,6 +70,7 @@ class DQN:
         return model
 
     def predict(self, state):
+        state = np.expand_dims(state, 0)
         return self._model.predict(state)[0]
 
     def act(self, state):
@@ -78,7 +79,6 @@ class DQN:
         self._epsilon = max(self._epsilon_min, self._epsilon)
         if np.random.random() < self._epsilon:
             return self._env.action_space.sample()['rays']
-        state = np.expand_dims(state, axis=0)
         rays = self._model.predict(state)[0]
         # Q values to top n bools
         ret = np.zeros(shape=self._rays_shape, dtype=bool)
@@ -92,12 +92,10 @@ class DQN:
         samples = random.sample(self._buffer, self._batch_size)
         for sample in samples:
             state, action, reward, new_state, done = sample
-            state = np.expand_dims(state, axis=0)
             target = self._target_model.predict(state)
             if done:
                 target[0, action == 1] = reward
             else:
-                new_state = np.expand_dims(new_state, axis=0)
                 Q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
                 target[0, action] = reward + Q_future * self._gamma
             self._model.fit(state, target, epochs=1, verbose=1)
@@ -159,7 +157,7 @@ if __name__ == "__main__":
     loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model.h5')
     supervised.load_weights(loaddir)
     savedir = expanduser("~")
-    savedir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_dqn_model.h5')
+    savedir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/')
 
     shape = dqn_agent._map_shape
 
@@ -195,6 +193,6 @@ if __name__ == "__main__":
             if rew > max_reward:
                 print('new best agent - saving with reward:' + rew)
                 max_reward = rew
-                dqn_agent.save_model(savedir)
+                dqn_agent.save_model(savedir + 'dqn_model_' + str(max_reward) + '.h5')
 
         dqn_agent.clear_buffer()
