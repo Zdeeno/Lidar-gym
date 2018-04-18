@@ -168,7 +168,7 @@ if __name__ == "__main__":
 
     if LOAD:
         loaddir = expanduser("~")
-        loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model_supervised.h5')
+        loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/')
         agent.load_weights(loaddir)
 
     env = gym.make('lidar-v2')
@@ -193,4 +193,4 @@ if __name__ == "__main__":
             if rew > max_reward:
                 print('new best agent - saving with reward:' + str(rew))
                 max_reward = rew
-                agent.save_weights(savedir)
+                agent.save_weights(savedir + 'supervised_model_' + str(max_reward) + '.h5')

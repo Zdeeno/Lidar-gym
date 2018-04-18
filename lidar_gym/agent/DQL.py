@@ -3,9 +3,8 @@ import numpy as np
 import random
 from tensorflow.contrib.keras.api.keras.models import Model
 from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Input, Lambda, Conv3D, MaxPool3D, Conv2D,\
-                                                      MaxPool2D, Reshape
+                                                      MaxPool2D, Reshape, Add
 from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape
-from tensorflow.contrib.keras.api.keras.regularizers import l2
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
 from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
 
@@ -49,12 +48,22 @@ class DQN:
         self._tfboard = TensorBoard(log_dir=logdir, batch_size=self._batch_size, write_graph=False)
 
     def create_model(self):
-        state_input = Input(shape=self._map_shape)
-        r1 = Lambda(lambda x: expand_dims(x, -1))(state_input)
+        # reconstructed input
+        reconstructed_input = Input(shape=self._map_shape)
+        r11 = Lambda(lambda x: expand_dims(x, -1))(reconstructed_input)
+        c11 = Conv3D(2, 4, padding='same', activation='relu')(r11)
+        p11 = MaxPool3D(pool_size=2)(c11)
+        c21 = Conv3D(4, 4, padding='same', activation='relu')(p11)
 
-        c1 = Conv3D(2, 4, padding='same', activation='relu')(r1)
-        p1 = MaxPool3D(pool_size=2)(c1)
-        c2 = Conv3D(4, 4, padding='same', activation='relu')(p1)
+        # sparse input
+        sparse_input = Input(shape=self._map_shape)
+        r12 = Lambda(lambda x: expand_dims(x, -1))(sparse_input)
+        c12 = Conv3D(2, 4, padding='same', activation='relu')(r12)
+        p12 = MaxPool3D(pool_size=2)(c12)
+        c22 = Conv3D(4, 4, padding='same', activation='relu')(p12)
+
+        # merge inputs
+        c2 = Add()([c21, c22])
         c3 = Conv3D(1, 8, padding='same', activation='relu')(c2)
         s1 = Lambda(lambda x: squeeze(x, 4))(c3)
         c4 = Conv2D(9, 3, padding='same', activation='relu')(s1)
@@ -64,13 +73,13 @@ class DQN:
         c6 = Conv2D(1, 4, padding='same', activation='linear')(c5)
         output = Lambda(lambda x: squeeze(x, 3))(c6)
 
-        model = Model(inputs=state_input, outputs=output)
+        model = Model(inputs=[reconstructed_input, sparse_input], outputs=output)
         adam = Adam(lr=0.001)
         model.compile(loss='mean_squared_error', optimizer=adam)
         return model
 
     def predict(self, state):
-        state = np.expand_dims(state, axis=0)
+        state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         rays = self._target_model.predict(state)[0]
         ret = np.zeros(shape=self._rays_shape, dtype=bool)
         ret[self._largest_indices(rays, self._max_rays)] = True
@@ -82,7 +91,7 @@ class DQN:
         self._epsilon = max(self._epsilon_min, self._epsilon)
         if np.random.random() < self._epsilon:
             return self._env.action_space.sample()['rays']
-        state = np.expand_dims(state, axis=0)
+        state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         rays = self._model.predict(state)[0]
         # Q values to top n bools
         ret = np.zeros(shape=self._rays_shape, dtype=bool)
@@ -96,12 +105,12 @@ class DQN:
         samples = random.sample(self._buffer, self._batch_size)
         for sample in samples:
             state, action, reward, new_state, done = sample
-            state = np.expand_dims(state, axis=0)
+            state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
             target = self._target_model.predict(state)
             if done:
                 target[0, action == 1] = reward
             else:
-                new_state = np.expand_dims(new_state, axis=0)
+                new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
                 Q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
                 target[0, action] = reward + Q_future * self._gamma
             self._model.fit(state, target, epochs=1, verbose=0)
@@ -140,16 +149,18 @@ class DQN:
 
 def evaluate(supervised, dqn):
     evalenv = gym.make('lidareval-v0')
-    print('Evaluation started')
     done = False
     reward_overall = 0
     obv = evalenv.reset()
-    map = np.zeros((320, 320, 32))
+    print('Evaluation started')
+    reconstucted = np.zeros(dqn._map_shape)
+    sparse = np.zeros(dqn._map_shape)
     while not done:
-        rays = dqn.predict(map)
-        obv, reward, done, _ = evalenv.step({'map': map, 'rays': rays})
+        rays = dqn.predict([reconstucted, sparse])
+        obv, reward, done, _ = evalenv.step({'map': reconstucted, 'rays': rays})
         reward_overall += reward
-        map = supervised.predict(obv['X'])
+        sparse = obv['X']
+        reconstucted = supervised.predict(sparse)
     print('Evaluation ended with value: ' + str(reward_overall))
     return reward_overall
 
@@ -174,15 +185,15 @@ if __name__ == "__main__":
     while True:
         done = False
         curr_state = env.reset()
-        curr_state = np.zeros((shape[0], shape[1], shape[2]))
+        curr_state = [np.zeros((shape[0], shape[1], shape[2])), np.zeros((shape[0], shape[1], shape[2]))]
         epoch = 1
 
         # training
         while not done:
             action = dqn_agent.act(curr_state)
-            new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state})
+            new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state[0]})
 
-            new_state = supervised.predict(new_state['X'])
+            new_state = [supervised.predict(new_state['X']), new_state['X']]
             dqn_agent.append_to_buffer(curr_state, action, reward, new_state, done)
 
             if epoch % dqn_agent._batch_size == 0:
