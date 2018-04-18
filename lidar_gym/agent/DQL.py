@@ -199,7 +199,7 @@ if __name__ == "__main__":
         if episode % 5 == 0:
             rew = evaluate(supervised, dqn_agent)
             if rew > max_reward:
-                print('new best agent - saving with reward:' + rew)
+                print('new best agent - saving with reward:' + str(rew))
                 max_reward = rew
                 dqn_agent.save_model(savedir + 'dqn_model_' + str(max_reward) + '.h5')
 
