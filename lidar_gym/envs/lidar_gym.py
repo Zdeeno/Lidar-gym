@@ -154,7 +154,7 @@ class LidarGym(gym.Env):
             else:
                 if free_pts.shape == (1, 3):
                     tmp_map.set_voxels(np.transpose(free_pts),
-                                       np.zeros((free_pts.shape[1],)), -np.ones((free_pts.shape[1],)))
+                                       np.zeros((free_pts.shape[0],)), -np.ones((free_pts.shape[0],)))
 
         x, l, v = tmp_map.get_voxels()
         return x, v
