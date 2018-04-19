@@ -33,7 +33,7 @@ class DQN:
         self._epsilon_min = 0.01
         self._epsilon_decay = 0.995
         self._learning_rate = 0.005
-        self._tau = .125
+        self._tau = .2
 
         # setup buffer
         self._buffer = deque(maxlen=self._batch_size)
@@ -187,7 +187,7 @@ if __name__ == "__main__":
         curr_state = env.reset()
         curr_state = [np.zeros((shape[0], shape[1], shape[2])), np.zeros((shape[0], shape[1], shape[2]))]
         epoch = 1
-
+        print('\n------------------- Drive number', episode, '-------------------------')
         # training
         while not done:
             action = dqn_agent.act(curr_state)
@@ -207,7 +207,7 @@ if __name__ == "__main__":
         # evaluation and saving
         print('end of episode')
         episode += 1
-        if episode % 5 == 0:
+        if episode % 10 == 0:
             rew = evaluate(supervised, dqn_agent)
             if rew > max_reward:
                 print('new best agent - saving with reward:' + str(rew))

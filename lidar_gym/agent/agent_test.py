@@ -7,35 +7,34 @@ from os.path import expanduser
 from lidar_gym.agent.supervised_agent import Supervised
 
 
-# Constants
-MAP_SIZE = (320, 320, 32)
-BATCH_SIZE = 1
-my_input = np.empty((BATCH_SIZE, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]))
-
-agent = Supervised()
-loaddir = expanduser("~")
-loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model.h5')
-agent.load_weights(loaddir)
-env = gym.make('lidar-v2')
-done = False
-random_action = env.action_space.sample()
-episode = 1
-env.seed(2)
-# env.seed(5)
-
-while True:
-    obv = env.reset()
-    print('\n------------------- Drive number', episode, '-------------------------')
-    epoch = 0
-    while not done:
-
-        my_input[0] = obv['X']
-        action = agent.predict(my_input)
-        obv, reward, done, info = env.step(action[0])
-        print('reward: ' + str(reward))
-        if epoch % 5 == 0:
-            env.render()
-        epoch = epoch + 1
-
-    episode += 1
+def evaluate(supervised):
+    evalenv = gym.make('lidareval-v0')
     done = False
+    reward_overall = 0
+    _ = evalenv.reset()
+    map = np.zeros((320, 320, 32))
+    print('Evaluation started!')
+    while not done:
+        a = evalenv.action_space.sample()
+        obv, reward, done, _ = evalenv.step({'map': map, 'rays': a['rays']})
+        reward_overall += reward
+        map = supervised.predict(obv['X'])
+    print('Evaluation done with reward - ' + str(reward_overall))
+    return reward_overall
+
+
+if __name__ == "__main__":
+
+    LOAD = False
+    # Create model on GPU
+    agent = Supervised()
+
+    home = expanduser("~")
+    savedir = os.path.join(home, 'trained_models/')
+
+    if LOAD:
+        loaddir = expanduser("~")
+        loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model_supervised.h5')
+        agent.load_weights(loaddir)
+
+    evaluate(agent)

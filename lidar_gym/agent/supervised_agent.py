@@ -84,7 +84,7 @@ class Supervised:
     def train_model(self):
         if self._buffer_size == self._batch_size:
             self._model.fit(x=self._buffer_X, y=self._buffer_Y, epochs=self._epochs_per_batch, shuffle=True,
-                            batch_size=self._batch_size, callbacks=[self._tfboard])
+                            batch_size=self._batch_size, callbacks=[self._tfboard], verbose=0)
             # clean buffer
             self._buffer_X, self._buffer_Y, self._buffer_size = self.init_buffer()
 
@@ -147,13 +147,13 @@ def evaluate(supervised):
     reward_overall = 0
     _ = evalenv.reset()
     map = np.zeros((320, 320, 32))
-
+    print('Evaluation started!')
     while not done:
         a = evalenv.action_space.sample()
         obv, reward, done, _ = evalenv.step({'map': map, 'rays': a['rays']})
         reward_overall += reward
         map = supervised.predict(obv['X'])
-    print('EVALUATION DONE')
+    print('Evaluation done with reward - ' + str(reward_overall))
     return reward_overall
 
 
@@ -164,11 +164,11 @@ if __name__ == "__main__":
     agent = Supervised()
 
     home = expanduser("~")
-    savedir = os.path.join(home, 'trained_models/my_keras_model_supervised.h5')
+    savedir = os.path.join(home, 'trained_models/')
 
     if LOAD:
         loaddir = expanduser("~")
-        loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/')
+        loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model_supervised.h5')
         agent.load_weights(loaddir)
 
     env = gym.make('lidar-v2')
@@ -188,7 +188,7 @@ if __name__ == "__main__":
 
         episode += 1
         # Evaluate and save
-        if episode % 5 == 0:
+        if episode % 10 == 0:
             rew = evaluate(agent)
             if rew > max_reward:
                 print('new best agent - saving with reward:' + str(rew))
