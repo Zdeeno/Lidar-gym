@@ -246,6 +246,7 @@ def evaluate(supervised, reinforce):
 
 if __name__ == "__main__":
     env = gym.make('lidar-v0')
+    env.seed(1)
 
     sess = tf.Session()
     K.set_session(sess)
@@ -271,7 +272,7 @@ if __name__ == "__main__":
         print('\n------------------- Drive number', episode, '-------------------------')
         # training
         while not done:
-            action_prob = model.act(curr_state)[0]
+            action_prob = model.act(curr_state)
             new_state, reward, done, _ = env.step({'rays': model.probs_to_bools(action_prob), 'map': curr_state[0]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
