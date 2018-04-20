@@ -207,6 +207,7 @@ class ActorCritic:
         return self.probs_to_bools(self.target_actor_model.predict(state)[0])
 
     def probs_to_bools(self, probs):
+        assert probs.ndim == 2
         ret = np.zeros(shape=self.lidar_shape, dtype=bool)
         ret[self._largest_indices(probs, self.max_rays)] = True
         return ret
@@ -270,11 +271,11 @@ if __name__ == "__main__":
         print('\n------------------- Drive number', episode, '-------------------------')
         # training
         while not done:
-            action_probs = model.act(curr_state)
-            new_state, reward, done, _ = env.step({'rays': model.probs_to_bools(action_probs), 'map': curr_state[0]})
+            action_prob = model.act(curr_state)[0]
+            new_state, reward, done, _ = env.step({'rays': model.probs_to_bools(action_prob), 'map': curr_state[0]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
-            model.append_to_buffer(curr_state, action_probs, reward, new_state, done)
+            model.append_to_buffer(curr_state, action_prob, reward, new_state, done)
 
             model.train()
 
