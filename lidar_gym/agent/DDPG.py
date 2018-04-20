@@ -44,7 +44,7 @@ class ActorCritic:
         _, self.target_actor_model = self.create_actor_model()
 
         # where we will feed de/dC (from critic)
-        self.actor_critic_grad = tf.placeholder(tf.float32, [None, self.lidar_shape[0], self.lidar_shape[1], 1])
+        self.actor_critic_grad = tf.placeholder(tf.float32, [None, self.lidar_shape[0], self.lidar_shape[1]])
 
         actor_model_weights = self.actor_model.trainable_weights
         self.actor_grads = tf.gradients(self.actor_model.output,
@@ -107,7 +107,8 @@ class ActorCritic:
         c22 = Conv3D(4, 4, padding='same', activation='relu')(p12)
 
         action_input = Input(shape=self.lidar_shape)
-        c13 = Conv2D(2, 4, padding='same', activation='relu')(action_input)
+        r13 = Lambda(lambda x: expand_dims(x, -1))(action_input)
+        c13 = Conv2D(2, 4, padding='same', activation='relu')(r13)
         c23 = Conv2D(4, 4, padding='same', activation='relu')(c13)
 
         # merge action inputs and output reward
