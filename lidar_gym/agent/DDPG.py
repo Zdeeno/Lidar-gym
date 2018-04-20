@@ -207,7 +207,7 @@ class ActorCritic:
         return self.probs_to_bools(self.target_actor_model.predict(state)[0])
 
     def probs_to_bools(self, probs):
-        assert probs.ndim == 2
+        assert probs.ndim == 2, 'has shape: ' + str(probs.shape)
         ret = np.zeros(shape=self.lidar_shape, dtype=bool)
         ret[self._largest_indices(probs, self.max_rays)] = True
         return ret
