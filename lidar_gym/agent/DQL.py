@@ -121,8 +121,11 @@ class DQN:
         for i in range(len(target_weights)):
             target_weights[i] = weights[i] * self._tau + target_weights[i] * (1 - self._tau)
 
-    def save_model(self, fn):
-        self._target_model.save(fn)
+    def save_model(self, f):
+        self._target_model.save(f)
+
+    def load_model(self, f):
+        self._target_model.load_weights(filepath=f)
 
     def append_to_buffer(self, state, action, reward, new_state, done):
         self._buffer.append([state, action, reward, new_state, done])
@@ -171,11 +174,11 @@ if __name__ == "__main__":
     dqn_agent = DQN(env=env)
     supervised = Supervised()
 
-    loaddir = expanduser("~")
-    loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model.h5')
+    home = expanduser("~")
+    loaddir = os.path.join(home, 'trained_models/supervised_model_-224.35304560542863.h5')
     supervised.load_weights(loaddir)
-    savedir = expanduser("~")
-    savedir = os.path.join(savedir, 'Projekt/lidar-gym/trained_models/')
+    dqn_agent.load_model(os.path.join(home, 'Projekt/lidar-gym/trained_models/dqn_model_-267.78735501225526.h5'))
+    savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
     shape = dqn_agent._map_shape
 
@@ -206,7 +209,7 @@ if __name__ == "__main__":
 
         # evaluation and saving
         print('end of episode')
-        episode += 1
+
         if episode % 10 == 0:
             rew = evaluate(supervised, dqn_agent)
             if rew > max_reward:
@@ -215,3 +218,4 @@ if __name__ == "__main__":
                 dqn_agent.save_model(savedir + 'dqn_model_' + str(max_reward) + '.h5')
 
         dqn_agent.clear_buffer()
+        episode += 1

@@ -72,8 +72,8 @@ class Supervised:
         p2 = MaxPool3D(pool_size=2)(c3)
         c4 = Conv3D(16, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(p2)
         c5 = Conv3D(32, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(c4)
-        c6 = Conv3D(1, 8, padding='same', kernel_regularizer=l2(self._l2reg), activation='linear')(c5)
-        out = Conv3DTranspose(1, 8, strides=[4, 4, 4], padding='same', activation='linear',
+        c6 = Conv3D(1, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='linear')(c5)
+        out = Conv3DTranspose(1, 4, strides=[4, 4, 4], padding='same', activation='linear',
                               kernel_regularizer=l2(self._l2reg))(c6)
         outputs = Lambda(lambda x: squeeze(x, 4))(out)
         opt = Adam(lr=self._learning_rate)
