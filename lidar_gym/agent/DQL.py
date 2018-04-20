@@ -65,9 +65,9 @@ class DQN:
 
         # merge inputs
         c2 = Add()([c21, c22])
-        c3 = Conv3D(1, 8, padding='same', activation='relu')(c2)
+        c3 = Conv3D(1, 4, padding='same', activation='relu')(c2)
         s1 = Lambda(lambda x: squeeze(x, 4))(c3)
-        c4 = Conv2D(9, 3, padding='same', activation='relu')(s1)
+        c4 = Conv2D(9, 4, padding='same', activation='relu')(s1)
         r2 = Reshape((480, 480, 1))(c4)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
         c5 = Conv2D(2, 4, padding='same', activation='relu')(p2)
