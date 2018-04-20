@@ -269,6 +269,8 @@ if __name__ == "__main__":
         # training
         while not done:
             action_probs = model.act(curr_state)
+            print(action_probs)
+            print(type(action_probs))
             new_state, reward, done, _ = env.step({'rays': model.probs_to_bools(action_probs), 'map': curr_state[0]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
