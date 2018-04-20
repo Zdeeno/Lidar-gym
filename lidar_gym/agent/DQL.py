@@ -36,7 +36,8 @@ class DQN:
         self._tau = .2
 
         # setup buffer
-        self._buffer = deque(maxlen=self._batch_size)
+        self._buffer_size = 250
+        self._buffer = deque(maxlen=self._buffer_size)
 
         # double network
         self._model = self.create_model()
@@ -128,7 +129,9 @@ class DQN:
         self._target_model.load_weights(filepath=f)
 
     def append_to_buffer(self, state, action, reward, new_state, done):
-        self._buffer.append([state, action, reward, new_state, done])
+        if len(self.buffer) > 0:
+            _, _, _, state, _ = self.buffer[-1]
+        self.buffer.append([state, action, reward, new_state, done])
 
     def _n_best_Q(self, arr, n):
         """
@@ -171,16 +174,16 @@ def evaluate(supervised, dqn):
 if __name__ == "__main__":
     env = gym.make('lidar-v0')
 
-    dqn_agent = DQN(env=env)
+    dql_agent = DQN(env=env)
     supervised = Supervised()
 
     home = expanduser("~")
-    loaddir = os.path.join(home, 'trained_models/supervised_model_-224.35304560542863.h5')
+    loaddir = os.path.join(home, 'trained_models/supervised_model_-209.51747300555627.h5')
     supervised.load_weights(loaddir)
-    dqn_agent.load_model(os.path.join(home, 'Projekt/lidar-gym/trained_models/dqn_model_-267.78735501225526.h5'))
+    # dql_agent.load_model(os.path.join(home, 'Projekt/lidar-gym/trained_models/dqn_model_-267.78735501225526.h5'))
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
-    shape = dqn_agent._map_shape
+    shape = dql_agent._map_shape
 
     episode = 0
     max_reward = -float('inf')
@@ -193,16 +196,14 @@ if __name__ == "__main__":
         print('\n------------------- Drive number', episode, '-------------------------')
         # training
         while not done:
-            action = dqn_agent.act(curr_state)
+            action = dql_agent.act(curr_state)
             new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state[0]})
 
             new_state = [supervised.predict(new_state['X']), new_state['X']]
-            dqn_agent.append_to_buffer(curr_state, action, reward, new_state, done)
+            dql_agent.append_to_buffer(curr_state, action, reward, new_state, done)
 
-            if epoch % dqn_agent._batch_size == 0:
-                print('replaying batch')
-                dqn_agent.replay()  # internally iterates default (prediction) model
-                dqn_agent.target_train()  # iterates target model
+            dql_agent.replay()  # internally iterates inside (prediction) model
+            dql_agent.target_train()  # iterates target model
 
             curr_state = new_state
             epoch += 1
@@ -211,11 +212,10 @@ if __name__ == "__main__":
         print('end of episode')
 
         if episode % 10 == 0:
-            rew = evaluate(supervised, dqn_agent)
+            rew = evaluate(supervised, dql_agent)
             if rew > max_reward:
                 print('new best agent - saving with reward:' + str(rew))
                 max_reward = rew
-                dqn_agent.save_model(savedir + 'dqn_model_' + str(max_reward) + '.h5')
+                dql_agent.save_model(savedir + 'dqn_model_' + str(max_reward) + '.h5')
 
-        dqn_agent.clear_buffer()
         episode += 1
