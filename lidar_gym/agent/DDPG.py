@@ -197,7 +197,7 @@ class ActorCritic:
     def act(self, state):
         self.epsilon *= self.epsilon_decay
         if np.random.random() < self.epsilon:
-            return np.asarray(self.env.action_space.sample()['rays'], type=float)
+            return np.asarray(self.env.action_space.sample()['rays'], dtype=np.float)
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         rays = self.actor_model.predict(state)
         return rays
