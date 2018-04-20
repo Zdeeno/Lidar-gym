@@ -44,7 +44,7 @@ class ActorCritic:
         _, self.target_actor_model = self.create_actor_model()
 
         # where we will feed de/dC (from critic)
-        self.actor_critic_grad = tf.placeholder(tf.float32, [None, self.lidar_shape[0], self.lidar_shape[1]])
+        self.actor_critic_grad = tf.placeholder(tf.float32, [None, self.lidar_shape[0], self.lidar_shape[1], 1])
 
         actor_model_weights = self.actor_model.trainable_weights
         self.actor_grads = tf.gradients(self.actor_model.output,
