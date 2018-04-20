@@ -74,7 +74,7 @@ class DQN:
         c6 = Conv2D(1, 4, padding='same', activation='linear')(c5)
         output = Lambda(lambda x: squeeze(x, 3))(c6)
 
-        model = Model(inputs=[reconstructed_input, sparse_input], outputs=output)
+        model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
         adam = Adam(lr=0.001)
         model.compile(loss='mean_squared_error', optimizer=adam)
         return model
@@ -129,9 +129,9 @@ class DQN:
         self._target_model.load_weights(filepath=f)
 
     def append_to_buffer(self, state, action, reward, new_state, done):
-        if len(self.buffer) > 0:
-            _, _, _, state, _ = self.buffer[-1]
-        self.buffer.append([state, action, reward, new_state, done])
+        if len(self._buffer) > 0:
+            _, _, _, state, _ = self._buffer[-1]
+        self._buffer.append([state, action, reward, new_state, done])
 
     def _n_best_Q(self, arr, n):
         """
@@ -199,7 +199,7 @@ if __name__ == "__main__":
             action = dql_agent.act(curr_state)
             new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state[0]})
 
-            new_state = [supervised.predict(new_state['X']), new_state['X']]
+            new_state = [new_state['X'], supervised.predict(new_state['X'])]
             dql_agent.append_to_buffer(curr_state, action, reward, new_state, done)
 
             dql_agent.replay()  # internally iterates inside (prediction) model

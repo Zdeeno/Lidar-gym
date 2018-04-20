@@ -87,10 +87,10 @@ class ActorCritic:
         c6 = Conv2D(1, 4, padding='same', activation='softmax')(c5)
         output = Lambda(lambda x: squeeze(x, 3))(c6)
 
-        ret_model = Model(inputs=[reconstructed_input, sparse_input], outputs=output)
+        ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
         adam = Adam(lr=0.001)
         ret_model.compile(loss='mse', optimizer=adam)
-        return [reconstructed_input, sparse_input], ret_model
+        return [sparse_input, reconstructed_input], ret_model
 
     def create_critic_model(self):
 
@@ -126,7 +126,7 @@ class ActorCritic:
         c5 = Conv2D(1, 4, padding='same', activation='relu')(p3)
         output = Dense(1, activation='linear')(c5)
 
-        ret_model = Model(inputs=[[sparse_input, reconstructed_input], action_input], outputs=output)
+        ret_model = Model(inputs=[sparse_input, reconstructed_input, action_input], outputs=output)
 
         adam = Adam(lr=0.001)
         ret_model.compile(loss="mse", optimizer=adam)
@@ -160,7 +160,7 @@ class ActorCritic:
                 future_reward = self.target_critic_model.predict(
                     [new_state, target_action])[0][0]
                 reward += self.gamma * future_reward
-            self.critic_model.fit([cur_state, action], reward, verbose=0)
+            self.critic_model.fit([cur_state[0], curr_state[1], action], reward, verbose=0)
 
     def train(self):
         if len(self.buffer) < self.batch_size:
@@ -271,7 +271,7 @@ if __name__ == "__main__":
             action_probs = model.act(curr_state)
             new_state, reward, done, _ = env.step({'rays': model.probs_to_bools(action_probs), 'map': curr_state[0]})
 
-            new_state = [supervised.predict(new_state['X']), new_state['X']]
+            new_state = [new_state['X'], supervised.predict(new_state['X'])]
             model.append_to_buffer(curr_state, action_probs, reward, new_state, done)
 
             model.train()
