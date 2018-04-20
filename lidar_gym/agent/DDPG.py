@@ -195,7 +195,7 @@ class ActorCritic:
     def act(self, state):
         self.epsilon *= self.epsilon_decay
         if np.random.random() < self.epsilon:
-            return self.env.action_space.sample()['rays']
+            return self.env.action_space.sample()['rays'].astype(float)
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         rays = self.actor_model.predict(state)
         return rays
@@ -269,8 +269,6 @@ if __name__ == "__main__":
         # training
         while not done:
             action_probs = model.act(curr_state)
-            print(action_probs)
-            print(type(action_probs))
             new_state, reward, done, _ = env.step({'rays': model.probs_to_bools(action_probs), 'map': curr_state[0]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
