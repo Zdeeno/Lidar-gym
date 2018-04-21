@@ -36,8 +36,8 @@ class ActorCritic:
         self.epsilon_decay = .995
         self.gamma = .95
         self.tau = .25
-        self.batch_size = 16
-        self.buffer_size = 250
+        self.batch_size = 8
+        self.buffer_size = 200
 
         self.buffer = deque(maxlen=self.buffer_size)
         self.actor_state_input, self.actor_model = self.create_actor_model()
