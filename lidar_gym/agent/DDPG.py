@@ -40,8 +40,8 @@ class ActorCritic:
         self.buffer_size = 200
 
         self.buffer = deque(maxlen=self.buffer_size)
-        self.actor_state_input, self.actor_model = self.create_actor_model()
-        _, self.target_actor_model = self.create_actor_model()
+        self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model = self.create_actor_model()
+        _, _, self.target_actor_model = self.create_actor_model()
 
         # where we will feed de/dC (from critic)
         self.actor_critic_grad = tf.placeholder(tf.float32, [None, self.lidar_shape[0], self.lidar_shape[1]])
@@ -91,7 +91,7 @@ class ActorCritic:
         ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
         adam = Adam(lr=0.001)
         ret_model.compile(loss='mse', optimizer=adam)
-        return [sparse_input, reconstructed_input], ret_model
+        return sparse_input, reconstructed_input, ret_model
 
     def create_critic_model(self):
 
@@ -152,7 +152,8 @@ class ActorCritic:
             })[0]
 
             self.sess.run(self.optimize, feed_dict={
-                self.actor_state_input: state,
+                self.actor_sparse_input: state[0],
+                self.actor_reconstructed_input: state[1],
                 self.actor_critic_grad: grads
             })
 
