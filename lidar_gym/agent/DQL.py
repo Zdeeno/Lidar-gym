@@ -28,7 +28,7 @@ class DQN:
         self._rays_shape = (160, 120)
 
         # setup consts
-        self._gamma = 0.85
+        self._gamma = 0.9
         self._epsilon = 1.0
         self._epsilon_min = 0.01
         self._epsilon_decay = 0.995
@@ -112,7 +112,10 @@ class DQN:
                 target[0, action == 1] = reward
             else:
                 new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
+                ''' Q learning:
                 Q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
+                '''
+                Q_future = self._target_model.predict(new_state)
                 target[0, action] = reward + Q_future * self._gamma
             self._model.fit(state, target, epochs=1, verbose=0)
 
@@ -138,7 +141,7 @@ class DQN:
         Returns the n largest indices from a numpy array.
         """
         indices = self._largest_indices(arr, n)
-        return np.sum(arr[indices])/self._max_rays
+        return np.sum(arr[indices])/n
 
     def _largest_indices(self, arr, n):
         """
