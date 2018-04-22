@@ -142,11 +142,10 @@ class ActorCritic:
     def _train_actor(self, samples):
         for sample in samples:
             state, action, reward, new_state, _ = sample
-            state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
+            state = (np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0))
             predicted_action = self.actor_model.predict(state)
-            print(np.shape(predicted_action), type(predicted_action))
             grads = self.sess.run(self.critic_grads, feed_dict={
-                self.critic_state_input: state,
+                self.critic_state_input: state[0],
                 self.critic_action_input: predicted_action
             })[0]
 
