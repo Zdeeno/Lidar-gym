@@ -156,13 +156,15 @@ class ActorCritic:
     def _train_critic(self, samples):
         for sample in samples:
             cur_state, action, reward, new_state, done = sample
+            cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
+            action = np.expand_dims(action, axis=0)
+
             if not done:
                 new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
                 target_action = self.target_actor_model.predict(new_state)
                 future_reward = self.target_critic_model.predict(
                     [new_state[0], new_state[1], target_action])[0][0]
                 reward += self.gamma * future_reward
-            cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
             self.critic_model.fit([cur_state[0], curr_state[1], action], reward, verbose=0)
 
     def train(self):
@@ -200,7 +202,7 @@ class ActorCritic:
         if np.random.random() < self.epsilon:
             return np.asarray(self.env.action_space.sample()['rays'], dtype=np.float)
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
-        rays = self.actor_model.predict(state)
+        rays = self.actor_model.predict(state)[0]
         return rays
 
     def predict(self, state):

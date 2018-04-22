@@ -22,7 +22,7 @@ class DQN:
     def __init__(self, env):
         # setup environment
         self._env = env
-        self._batch_size = 16
+        self._batch_size = 8
         self._map_shape = (320, 320, 32)
         self._max_rays = 200
         self._rays_shape = (160, 120)
@@ -36,7 +36,7 @@ class DQN:
         self._tau = .2
 
         # setup buffer
-        self._buffer_size = 250
+        self._buffer_size = 200
         self._buffer = deque(maxlen=self._buffer_size)
 
         # double network
