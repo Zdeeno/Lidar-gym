@@ -164,6 +164,7 @@ class ActorCritic:
                 target_action = self.target_actor_model.predict(new_state)
                 future_reward = self.target_critic_model.predict(
                     [new_state[0], new_state[1], target_action])[0][0]
+                print(future_reward)
                 reward += self.gamma * future_reward
             print(reward)
             self.critic_model.fit([cur_state[0], cur_state[1], action], reward, verbose=0)
