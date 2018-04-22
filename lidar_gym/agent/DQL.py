@@ -112,9 +112,9 @@ class DQN:
                 target[0, action == 1] = reward
             else:
                 new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
-                ''' Q learning:
-                Q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
-                '''
+                # Q learning:
+                # Q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
+                # SARSA:
                 Q_future = self._target_model.predict(new_state)
                 target[0, action] = reward + Q_future * self._gamma
             self._model.fit(state, target, epochs=1, verbose=0)
