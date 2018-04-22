@@ -294,7 +294,7 @@ if __name__ == "__main__":
 
         # evaluation and saving
         print('end of episode')
-        if episode % 5 == 0:
+        if episode % 10 == 0:
             rew = evaluate(supervised, model)
             if rew > max_reward:
                 print('new best agent - saving with reward:' + str(rew))
