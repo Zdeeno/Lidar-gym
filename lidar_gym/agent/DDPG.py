@@ -53,8 +53,9 @@ class ActorCritic:
         self.optimize = tf.train.AdamOptimizer(self.learning_rate).apply_gradients(grads)
 
         # critic model
-        self.critic_state_input, self.critic_action_input, self.critic_model = self.create_critic_model()
-        _, _, self.target_critic_model = self.create_critic_model()
+        self.critic_sparse_input, self.critic_reconstructed_input,\
+            self.critic_action_input, self.critic_model = self.create_critic_model()
+        _, _, _, self.target_critic_model = self.create_critic_model()
 
         # where we calculate de/dC for feeding above
         self.critic_grads = tf.gradients(self.critic_model.output, self.critic_action_input)
@@ -131,7 +132,7 @@ class ActorCritic:
 
         adam = Adam(lr=0.001)
         ret_model.compile(loss="mse", optimizer=adam)
-        return [sparse_input, reconstructed_input], action_input, ret_model
+        return sparse_input, reconstructed_input, action_input, ret_model
 
     # training
     def append_to_buffer(self, state, action, reward, new_state, done):
@@ -142,10 +143,11 @@ class ActorCritic:
     def _train_actor(self, samples):
         for sample in samples:
             state, action, reward, new_state, _ = sample
-            state = (np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0))
+            state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
             predicted_action = self.actor_model.predict(state)
             grads = self.sess.run(self.critic_grads, feed_dict={
-                self.critic_state_input: state[0],
+                self.critic_sparse_input: state[0],
+                self.critic_reconstructed_input: state[1],
                 self.critic_action_input: predicted_action
             })[0]
 
