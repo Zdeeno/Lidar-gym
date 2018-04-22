@@ -144,9 +144,10 @@ class ActorCritic:
             state, action, reward, new_state, _ = sample
             state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
             predicted_action = self.actor_model.predict(state)
+            print(predicted_action)
             grads = self.sess.run(self.critic_grads, feed_dict={
                 self.critic_state_input: state,
-                self.critic_action_input: predicted_action
+                self.critic_action_input: predicted_action[0]
             })[0]
 
             self.sess.run(self.optimize, feed_dict={
