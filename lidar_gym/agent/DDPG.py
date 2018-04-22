@@ -6,7 +6,7 @@ import gym
 import numpy as np
 from tensorflow.contrib.keras.api.keras.models import Model
 from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Input, Lambda, Conv3D, MaxPool3D, Conv2D,\
-                                                      MaxPool2D, Reshape
+                                                      MaxPool2D, Reshape, Flatten
 from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape
 from tensorflow.contrib.keras.api.keras.regularizers import l2
 from tensorflow.contrib.keras.api.keras.layers import Add, Multiply
@@ -124,7 +124,8 @@ class ActorCritic:
         c4 = Conv2D(4, 4, padding='same', activation='relu')(p2)
         p3 = MaxPool2D(pool_size=4, strides=4)(c4)
         c5 = Conv2D(1, 4, padding='same', activation='relu')(p3)
-        output = Dense(1, activation='linear')(c5)
+        f1 = Flatten()(c5)
+        output = Dense(1, activation='linear')(f1)
 
         ret_model = Model(inputs=[sparse_input, reconstructed_input, action_input], outputs=output)
 
@@ -164,8 +165,8 @@ class ActorCritic:
                 target_action = self.target_actor_model.predict(new_state)
                 future_reward = self.target_critic_model.predict(
                     [new_state[0], new_state[1], target_action])[0][0]
-                print(future_reward)
                 reward += self.gamma * future_reward
+                print(future_reward)
             print(reward)
             self.critic_model.fit([cur_state[0], cur_state[1], action], reward, verbose=0)
 
