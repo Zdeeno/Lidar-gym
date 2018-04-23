@@ -161,13 +161,14 @@ class ActorCritic:
         for sample in samples:
             cur_state, action, reward, new_state, done = sample
             cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
-            action = np.expand_dims(action, axis=0)
+            action = np.expand_dims(self.probs_to_bools(action), axis=0)
 
             if not done:
                 new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
                 target_action = self.target_actor_model.predict(new_state)
+                target_action = np.expand_dims(self.probs_to_bools(target_action), axis=0)
                 future_reward = self.target_critic_model.predict(
-                    [new_state[0], new_state[1], self.probs_to_bools(target_action)])[0][0]
+                    [new_state[0], new_state[1], target_action])[0][0]
                 reward += self.gamma * future_reward
 
             reward = np.expand_dims(reward, axis=0)
