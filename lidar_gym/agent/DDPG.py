@@ -167,11 +167,11 @@ class ActorCritic:
                 new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
                 target_action = self.target_actor_model.predict(new_state)
                 future_reward = self.target_critic_model.predict(
-                    [new_state[0], new_state[1], target_action])[0][0]
+                    [new_state[0], new_state[1], self.probs_to_bools(target_action)])[0][0]
                 reward += self.gamma * future_reward
 
             reward = np.expand_dims(reward, axis=0)
-            self.critic_model.fit([cur_state[0], cur_state[1], action], reward, verbose=0)
+            self.critic_model.fit([cur_state[0], cur_state[1], self.probs_to_bools(action)], reward, verbose=0)
 
     def train(self):
         if len(self.buffer) < self.batch_size:
@@ -288,10 +288,13 @@ if __name__ == "__main__":
             model.append_to_buffer(curr_state, action_prob, reward, new_state, done)
 
             model.train()
+            model.update_target()
 
             curr_state = new_state
             epoch += 1
+            print('.', end='', flush=True)
 
+        episode += 1
         # evaluation and saving
         print('end of episode')
         if episode % 10 == 0:
@@ -303,4 +306,3 @@ if __name__ == "__main__":
                 actor_name = 'actor_' + str(max_reward) + '.h5'
                 model.save_model(savedir + critic_name, savedir + actor_name)
 
-        episode += 1
