@@ -188,7 +188,7 @@ class ActorCritic:
 
         for i in range(len(actor_target_weights)):
             actor_target_weights[i] = actor_model_weights[i] * self.tau + actor_target_weights[i] * (1 - self.tau)
-        self.target_critic_model.set_weights(actor_target_weights)
+        self.target_actor_model.set_weights(actor_target_weights)
 
     def _update_critic_target(self):
         critic_model_weights = self.critic_model.get_weights()
@@ -264,7 +264,7 @@ if __name__ == "__main__":
     supervised = Supervised()
 
     home = expanduser("~")
-    loaddir = os.path.join(home, 'trained_models/supervised_model_-209.51747300555627.h5')
+    loaddir = os.path.join(home, 'trained_models/supervised_model_-205.62373544534486.h5')
     supervised.load_weights(loaddir)
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
