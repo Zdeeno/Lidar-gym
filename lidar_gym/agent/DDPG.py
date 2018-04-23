@@ -172,7 +172,7 @@ class ActorCritic:
                 reward += self.gamma * future_reward
 
             reward = np.expand_dims(reward, axis=0)
-            self.critic_model.fit([cur_state[0], cur_state[1], self.probs_to_bools(action)], reward, verbose=0)
+            self.critic_model.fit([cur_state[0], cur_state[1], self.probs_to_bools(action[0])], reward, verbose=0)
 
     def train(self):
         if len(self.buffer) < self.batch_size:
