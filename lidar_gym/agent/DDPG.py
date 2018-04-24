@@ -161,11 +161,12 @@ class ActorCritic:
         for sample in samples:
             cur_state, action, reward, new_state, done = sample
             cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
-            action = np.expand_dims(action, axis=0)
+            action = np.expand_dims(self.probs_to_bools(action), axis=0)
 
             if not done:
                 new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
                 target_action = self.target_actor_model.predict(new_state)
+                target_action = np.expand_dims(self.probs_to_bools(target_action[0]), axis=0)
                 future_reward = self.target_critic_model.predict(
                     [new_state[0], new_state[1], target_action])[0][0]
                 reward += self.gamma * future_reward
@@ -188,7 +189,7 @@ class ActorCritic:
 
         for i in range(len(actor_target_weights)):
             actor_target_weights[i] = actor_model_weights[i] * self.tau + actor_target_weights[i] * (1 - self.tau)
-        self.target_critic_model.set_weights(actor_target_weights)
+        self.target_actor_model.set_weights(actor_target_weights)
 
     def _update_critic_target(self):
         critic_model_weights = self.critic_model.get_weights()
@@ -264,7 +265,7 @@ if __name__ == "__main__":
     supervised = Supervised()
 
     home = expanduser("~")
-    loaddir = os.path.join(home, 'trained_models/supervised_model_-209.51747300555627.h5')
+    loaddir = os.path.join(home, 'trained_models/supervised_model_-205.62373544534486.h5')
     supervised.load_weights(loaddir)
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
@@ -292,7 +293,9 @@ if __name__ == "__main__":
 
             curr_state = new_state
             epoch += 1
+            print('.', end='', flush=True)
 
+        episode += 1
         # evaluation and saving
         print('end of episode')
         if episode % 10 == 0:
@@ -304,4 +307,3 @@ if __name__ == "__main__":
                 actor_name = 'actor_' + str(max_reward) + '.h5'
                 model.save_model(savedir + critic_name, savedir + actor_name)
 
-        episode += 1
