@@ -168,7 +168,7 @@ if __name__ == "__main__":
 
     if LOAD:
         loaddir = expanduser("~")
-        loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model_supervised.h5')
+        loaddir = os.path.join(loaddir, 'trained_models/supervised_model_-205.62373544534486.h5')
         agent.load_weights(loaddir)
 
     env = gym.make('lidar-v2')

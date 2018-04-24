@@ -288,6 +288,7 @@ if __name__ == "__main__":
             model.append_to_buffer(curr_state, action_prob, reward, new_state, done)
 
             model.train()
+            model.update_target()
 
             curr_state = new_state
             epoch += 1
