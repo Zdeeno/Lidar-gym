@@ -147,6 +147,7 @@ def evaluate(supervised):
     reward_overall = 0
     _ = evalenv.reset()
     map = np.zeros((320, 320, 32))
+    evalenv.seed(1)
     print('Evaluation started!')
     while not done:
         a = evalenv.action_space.sample()

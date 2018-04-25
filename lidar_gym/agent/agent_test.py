@@ -14,27 +14,28 @@ def evaluate(supervised):
     _ = evalenv.reset()
     map = np.zeros((320, 320, 32))
     print('Evaluation started!')
+    iteration = 1
     while not done:
         a = evalenv.action_space.sample()
         obv, reward, done, _ = evalenv.step({'map': map, 'rays': a['rays']})
+        print(reward)
         reward_overall += reward
         map = supervised.predict(obv['X'])
+        if (iteration % 15) == 0:
+            evalenv.render()
+        iteration += 1
     print('Evaluation done with reward - ' + str(reward_overall))
     return reward_overall
 
 
 if __name__ == "__main__":
 
-    LOAD = False
     # Create model on GPU
     agent = Supervised()
 
     home = expanduser("~")
-    savedir = os.path.join(home, 'trained_models/')
 
-    if LOAD:
-        loaddir = expanduser("~")
-        loaddir = os.path.join(loaddir, 'Projekt/lidar-gym/trained_models/my_keras_model_supervised.h5')
-        agent.load_weights(loaddir)
+    loaddir = os.path.join(home, 'trained_models/supervised_model_-205.62373544534486.h5')
+    agent.load_weights(loaddir)
 
     evaluate(agent)

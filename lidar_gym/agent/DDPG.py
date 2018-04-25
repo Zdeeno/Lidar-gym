@@ -33,9 +33,10 @@ class ActorCritic:
 
         self.learning_rate = 0.001
         self.epsilon = 1.0
-        self.epsilon_decay = .995
+        self.epsilon_decay = .999
+        self.min_epsilon = 0.1
         self.gamma = .95
-        self.tau = .25
+        self.tau = .15
         self.batch_size = 8
         self.buffer_size = 200
 
@@ -206,7 +207,8 @@ class ActorCritic:
     # predictions
     def act(self, state):
         self.epsilon *= self.epsilon_decay
-        if np.random.random() < self.epsilon:
+        epsilon = max(self.epsilon, self.min_epsilon)
+        if np.random.random() < epsilon:
             return np.asarray(self.env.action_space.sample()['rays'], dtype=np.float)
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         rays = self.actor_model.predict(state)[0]
