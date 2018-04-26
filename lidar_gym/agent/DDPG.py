@@ -34,7 +34,7 @@ class ActorCritic:
         self.learning_rate = 0.001
         self.epsilon = 1.0
         self.epsilon_decay = .999
-        self.min_epsilon = 0.1
+        self.min_epsilon = 0.25
         self.gamma = .95
         self.tau = .15
         self.batch_size = 8
@@ -48,8 +48,9 @@ class ActorCritic:
         self.actor_critic_grad = tf.placeholder(tf.float32, [None, self.lidar_shape[0], self.lidar_shape[1]])
 
         actor_model_weights = self.actor_model.trainable_weights
-        self.actor_grads = tf.gradients(self.actor_model.output,
-                                        actor_model_weights, -self.actor_critic_grad)  # dC/dA (from actor)
+        # dC/dA (from actor)
+        self.actor_grads = tf.gradients(self.actor_model.output, actor_model_weights, -self.actor_critic_grad)
+
         grads = zip(self.actor_grads, actor_model_weights)
         self.optimize = tf.train.AdamOptimizer(self.learning_rate).apply_gradients(grads)
 
@@ -176,6 +177,7 @@ class ActorCritic:
             self.critic_model.fit([cur_state[0], cur_state[1], action], reward, verbose=0)
 
     def train(self):
+        self.epsilon *= self.epsilon_decay
         if len(self.buffer) < self.batch_size:
             return
 
@@ -206,7 +208,6 @@ class ActorCritic:
 
     # predictions
     def act(self, state):
-        self.epsilon *= self.epsilon_decay
         epsilon = max(self.epsilon, self.min_epsilon)
         if np.random.random() < epsilon:
             return np.asarray(self.env.action_space.sample()['rays'], dtype=np.float)
@@ -236,6 +237,10 @@ class ActorCritic:
     def save_model(self, critic_path, actor_path):
         self.target_critic_model.save_weights(filepath=critic_path)
         self.target_actor_model.save_weights(filepath=actor_path)
+
+    def load_model(self, f_actor, f_critic):
+        self.target_actor_model.load_weights(filepath=f_actor)
+        self.target_critic_model.load_weights(filepath=f_critic)
 
 
 def evaluate(supervised, reinforce):
@@ -283,12 +288,15 @@ if __name__ == "__main__":
         epoch = 1
         print('\n------------------- Drive number', episode, '-------------------------')
         # training
+        last_reward = -1
         while not done:
             action_prob = model.act(curr_state)
             new_state, reward, done, _ = env.step({'rays': model.probs_to_bools(action_prob), 'map': curr_state[0]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
-            model.append_to_buffer(curr_state, action_prob, reward, new_state, done)
+            print(reward)
+            model.append_to_buffer(curr_state, action_prob, reward - last_reward, new_state, done)
+            last_reward = reward
 
             model.train()
             model.update_target()
@@ -299,7 +307,7 @@ if __name__ == "__main__":
 
         episode += 1
         # evaluation and saving
-        print('end of episode')
+        print('\nend of episode')
         if episode % 10 == 0:
             rew = evaluate(supervised, model)
             if rew > max_reward:

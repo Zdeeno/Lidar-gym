@@ -30,8 +30,8 @@ class DQN:
         # setup consts
         self._gamma = 0.9
         self._epsilon = 1.0
-        self._epsilon_min = 0.01
-        self._epsilon_decay = 0.995
+        self._epsilon_min = 0.25
+        self._epsilon_decay = 0.999
         self._learning_rate = 0.005
         self._tau = .2
 
@@ -88,7 +88,6 @@ class DQN:
 
     def act(self, state):
         # Exploration vs exploitation
-        self._epsilon *= self._epsilon_decay
         self._epsilon = max(self._epsilon_min, self._epsilon)
         if np.random.random() < self._epsilon:
             return self._env.action_space.sample()['rays']
@@ -100,6 +99,8 @@ class DQN:
         return ret
 
     def replay(self):
+        self._epsilon *= self._epsilon_decay
+
         if len(self._buffer) < self._batch_size:
             return
 
@@ -109,14 +110,15 @@ class DQN:
             state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
             target = self._target_model.predict(state)
             if done:
-                target[0, action == 1] = reward
+                target[0, action] = reward
             else:
                 new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
                 # Q learning:
                 # Q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
+                # target[0, action] = reward + Q_future * self._gamma
                 # SARSA:
                 Q_future = self._target_model.predict(new_state)
-                target[0, action] = reward + Q_future * self._gamma
+                target[0, action] = reward + Q_future[0, action] * self._gamma
             self._model.fit(state, target, epochs=1, verbose=0)
 
     def target_train(self):
@@ -181,7 +183,7 @@ if __name__ == "__main__":
     supervised = Supervised()
 
     home = expanduser("~")
-    loaddir = os.path.join(home, 'trained_models/supervised_model_-209.51747300555627.h5')
+    loaddir = os.path.join(home, 'trained_models/supervised_model_-198.22016796653236.h5')
     supervised.load_weights(loaddir)
     # dql_agent.load_model(os.path.join(home, 'Projekt/lidar-gym/trained_models/dqn_model_-267.78735501225526.h5'))
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
@@ -198,12 +200,14 @@ if __name__ == "__main__":
         epoch = 1
         print('\n------------------- Drive number', episode, '-------------------------')
         # training
+        last_reward = -1
         while not done:
             action = dql_agent.act(curr_state)
             new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state[0]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
-            dql_agent.append_to_buffer(curr_state, action, reward, new_state, done)
+            dql_agent.append_to_buffer(curr_state, action, reward - last_reward, new_state, done)
+            last_reward = reward
 
             dql_agent.replay()  # internally iterates inside (prediction) model
             dql_agent.target_train()  # iterates target model
