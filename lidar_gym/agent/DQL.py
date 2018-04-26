@@ -114,11 +114,9 @@ class DQN:
             else:
                 new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
                 # Q learning:
-                # Q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
-                # target[0, action] = reward + Q_future * self._gamma
-                # SARSA:
-                Q_future = self._target_model.predict(new_state)
-                target[0, action] = reward + Q_future[0, action] * self._gamma
+                q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
+                target[0, action] = reward + q_future * self._gamma
+
             self._model.fit(state, target, epochs=1, verbose=0)
 
     def target_train(self):
@@ -200,14 +198,12 @@ if __name__ == "__main__":
         epoch = 1
         print('\n------------------- Drive number', episode, '-------------------------')
         # training
-        last_reward = -1
         while not done:
             action = dql_agent.act(curr_state)
             new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state[0]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
-            dql_agent.append_to_buffer(curr_state, action, reward - last_reward, new_state, done)
-            last_reward = reward
+            dql_agent.append_to_buffer(curr_state, action, reward, new_state, done)
 
             dql_agent.replay()  # internally iterates inside (prediction) model
             dql_agent.target_train()  # iterates target model
