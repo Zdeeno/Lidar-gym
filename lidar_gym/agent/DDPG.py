@@ -213,7 +213,7 @@ class ActorCritic:
             return np.asarray(self.env.action_space.sample()['rays'], dtype=np.float)
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         rays = self.actor_model.predict(state)[0]
-        print_rays(self.probs_to_bools(rays))
+        # print_rays(self.probs_to_bools(rays))
         return rays
 
     def predict(self, state):
