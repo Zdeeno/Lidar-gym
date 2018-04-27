@@ -261,6 +261,14 @@ def evaluate(supervised, reinforce):
     return reward_overall
 
 
+def print_rays(action):
+    to_print = np.chararray(action.shape, unicode=True)
+    to_print[:] = ' '
+    to_print[action] = '+'
+    for i in range(action.shape[0]):
+        print(to_print[i, :])
+
+
 if __name__ == "__main__":
     env = gym.make('lidar-v0')
     env.seed(1)
@@ -272,7 +280,7 @@ if __name__ == "__main__":
     supervised = Supervised()
 
     home = expanduser("~")
-    loaddir = os.path.join(home, 'trained_models/supervised_model_-205.62373544534486.h5')
+    loaddir = os.path.join(home, 'trained_models/supervised_model_-196.40097353881725.h5')
     supervised.load_weights(loaddir)
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
@@ -291,10 +299,11 @@ if __name__ == "__main__":
         last_reward = -1
         while not done:
             action_prob = model.act(curr_state)
-            new_state, reward, done, _ = env.step({'rays': model.probs_to_bools(action_prob), 'map': curr_state[0]})
+            rays = model.probs_to_bools(action_prob)
+            # print_rays(rays)
+            new_state, reward, done, _ = env.step({'rays':rays, 'map': curr_state[1]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
-            print(reward)
             model.append_to_buffer(curr_state, action_prob, reward - last_reward, new_state, done)
             last_reward = reward
 

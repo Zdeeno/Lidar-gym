@@ -181,7 +181,7 @@ if __name__ == "__main__":
     supervised = Supervised()
 
     home = expanduser("~")
-    loaddir = os.path.join(home, 'trained_models/supervised_model_-198.22016796653236.h5')
+    loaddir = os.path.join(home, 'trained_models/supervised_model_-196.40097353881725.h5')
     supervised.load_weights(loaddir)
     # dql_agent.load_model(os.path.join(home, 'Projekt/lidar-gym/trained_models/dqn_model_-267.78735501225526.h5'))
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
@@ -200,7 +200,7 @@ if __name__ == "__main__":
         # training
         while not done:
             action = dql_agent.act(curr_state)
-            new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state[0]})
+            new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state[1]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
             dql_agent.append_to_buffer(curr_state, action, reward, new_state, done)
@@ -214,6 +214,8 @@ if __name__ == "__main__":
         # evaluation and saving
         print('end of episode')
 
+        episode += 1
+
         if episode % 10 == 0:
             rew = evaluate(supervised, dql_agent)
             if rew > max_reward:
@@ -221,4 +223,3 @@ if __name__ == "__main__":
                 max_reward = rew
                 dql_agent.save_model(savedir + 'dqn_model_' + str(max_reward) + '.h5')
 
-        episode += 1
