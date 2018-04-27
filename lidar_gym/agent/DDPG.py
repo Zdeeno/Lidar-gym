@@ -213,6 +213,7 @@ class ActorCritic:
             return np.asarray(self.env.action_space.sample()['rays'], dtype=np.float)
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         rays = self.actor_model.predict(state)[0]
+        print_rays(self.probs_to_bools(rays))
         return rays
 
     def predict(self, state):
@@ -262,11 +263,15 @@ def evaluate(supervised, reinforce):
 
 
 def print_rays(action):
-    to_print = np.chararray(action.shape, unicode=True)
+    to_print = np.empty(action.shape, dtype=str)
     to_print[:] = ' '
     to_print[action] = '+'
-    for i in range(action.shape[0]):
-        print(to_print[i, :])
+    print('------------------------------------------------------------------------------------------------------------------------------------------------------------------')
+    for i in range(action.shape[1]):
+        print('|', end='', flush=True)
+        print(''.join(to_print[:, i]), end='')
+        print('|')
+    print('------------------------------------------------------------------------------------------------------------------------------------------------------------------')
 
 
 if __name__ == "__main__":
@@ -296,16 +301,13 @@ if __name__ == "__main__":
         epoch = 1
         print('\n------------------- Drive number', episode, '-------------------------')
         # training
-        last_reward = -1
         while not done:
             action_prob = model.act(curr_state)
             rays = model.probs_to_bools(action_prob)
-            # print_rays(rays)
             new_state, reward, done, _ = env.step({'rays':rays, 'map': curr_state[1]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
-            model.append_to_buffer(curr_state, action_prob, reward - last_reward, new_state, done)
-            last_reward = reward
+            model.append_to_buffer(curr_state, action_prob, reward, new_state, done)
 
             model.train()
             model.update_target()
