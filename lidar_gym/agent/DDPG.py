@@ -32,7 +32,7 @@ class ActorCritic:
         self.sess = sess
 
         self.learning_rate = 0.001
-        self.epsilon = 1.0
+        self.epsilon = 1
         self.epsilon_decay = .999
         self.min_epsilon = 0.25
         self.gamma = .95
@@ -87,7 +87,7 @@ class ActorCritic:
         r2 = Reshape((480, 480, 1))(c4)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
         c5 = Conv2D(2, 4, padding='same', activation='linear')(p2)
-        c6 = Conv2D(1, 4, padding='same', activation='softmax')(c5)
+        c6 = Conv2D(1, 4, padding='same', activation='linear')(c5)
         output = Lambda(lambda x: squeeze(x, 3))(c6)
 
         ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
