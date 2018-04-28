@@ -68,7 +68,7 @@ class DQN:
         c22 = Conv3D(4, 4, padding='same', activation='relu')(p12)
 
         '''
-        # merge inputs
+        # merge LARGE inputs
         c2 = Add()([c21, c22])
         c3 = Conv3D(1, 4, padding='same', activation='relu')(c2)
         s1 = Lambda(lambda x: squeeze(x, 4))(c3)
@@ -79,7 +79,7 @@ class DQN:
         c6 = Conv2D(1, 4, padding='same', activation='linear')(c5)
         output = Lambda(lambda x: squeeze(x, 3))(c6)
         '''
-        # merge small inputs
+        # merge SMALL inputs
         a1 = Add()([c21, c22])
         c1 = Conv3D(1, 4, padding='same', activation='relu')(a1)
         s1 = Lambda(lambda x: squeeze(x, 4))(c1)

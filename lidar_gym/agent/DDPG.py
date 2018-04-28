@@ -25,9 +25,12 @@ import os
 class ActorCritic:
 
     def __init__(self, env, sess):
-        self.map_shape = (320, 320, 32)
-        self.lidar_shape = (160, 120)
-        self.max_rays = 200
+        # self.map_shape = (320, 320, 32)
+        # self.lidar_shape = (160, 120)
+        # self.max_rays = 200
+        self.map_shape = (160, 160, 16)
+        self.lidar_shape = (120, 90)
+        self.max_rays = 100
         self.env = env
         self.sess = sess
 
@@ -79,12 +82,27 @@ class ActorCritic:
         p12 = MaxPool3D(pool_size=2)(c12)
         c22 = Conv3D(4, 4, padding='same', activation='relu')(p12)
 
-        # merge inputs
+        '''
+        # merge LARGE inputs
         c2 = Add()([c21, c22])
         c3 = Conv3D(1, 4, padding='same', activation='relu')(c2)
         s1 = Lambda(lambda x: squeeze(x, 4))(c3)
         c4 = Conv2D(9, 4, padding='same', activation='relu')(s1)
         r2 = Reshape((480, 480, 1))(c4)
+        p2 = MaxPool2D(pool_size=(3, 4))(r2)
+        c5 = Conv2D(2, 4, padding='same', activation='linear')(p2)
+        c6 = Conv2D(1, 4, padding='same', activation='linear')(c5)
+        output = Lambda(lambda x: squeeze(x, 3))(c6)
+        '''
+
+        # merge SMALL inputs
+        a1 = Add()([c21, c22])
+        c1 = Conv3D(1, 4, padding='same', activation='relu')(a1)
+        s1 = Lambda(lambda x: squeeze(x, 4))(c1)
+        c2 = Conv2D(8, 4, padding='same', activation='relu')(s1)
+        p1 = MaxPool2D(pool_size=2)(c2)
+        c3 = Conv2D(16, 4, padding='same', activation='relu')(p1)
+        r2 = Reshape((360, 360, 1))(c3)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
         c5 = Conv2D(2, 4, padding='same', activation='linear')(p2)
         c6 = Conv2D(1, 4, padding='same', activation='linear')(c5)
@@ -114,7 +132,8 @@ class ActorCritic:
         c13 = Conv2D(2, 4, padding='same', activation='relu')(r13)
         c23 = Conv2D(4, 4, padding='same', activation='relu')(c13)
 
-        # merge action inputs and output reward
+        '''
+        # merge LARGE action inputs and output reward
         a1 = Add()([c21, c22])
         c1 = Conv3D(1, 4, padding='same', activation='relu')(a1)
         s1 = Lambda(lambda x: squeeze(x, 4))(c1)
@@ -128,6 +147,24 @@ class ActorCritic:
         p3 = MaxPool2D(pool_size=4, strides=4)(c4)
         c5 = Conv2D(1, 4, padding='same', activation='relu')(p3)
         f1 = Flatten()(c5)
+        output = Dense(1, activation='linear')(f1)
+        '''
+
+        # merge SMALL action inputs and output action Q value
+        a1 = Add()([c21, c22])
+        c1 = Conv3D(1, 4, padding='same', activation='relu')(a1)
+        s1 = Lambda(lambda x: squeeze(x, 4))(c1)
+        c2 = Conv2D(8, 4, padding='same', activation='relu')(s1)
+        p1 = MaxPool2D(pool_size=2)(c2)
+        c3 = Conv2D(16, 4, padding='same', activation='relu')(p1)
+        r2 = Reshape((360, 360, 1))(c3)
+        a2 = Add()([r2, c23])
+        c4 = Conv2D(2, 4, padding='same', activation='relu')(a2)
+        p2 = MaxPool2D(pool_size=4, strides=4)(c4)
+        c5 = Conv2D(4, 4, padding='same', activation='relu')(p2)
+        p3 = MaxPool2D(pool_size=4, strides=4)(c5)
+        c6 = Conv2D(1, 4, padding='same', activation='relu')(p3)
+        f1 = Flatten()(c6)
         output = Dense(1, activation='linear')(f1)
 
         ret_model = Model(inputs=[sparse_input, reconstructed_input, action_input], outputs=output)
@@ -245,7 +282,7 @@ class ActorCritic:
 
 
 def evaluate(supervised, reinforce):
-    evalenv = gym.make('lidareval-v0')
+    evalenv = gym.make('lidarsmalleval-v0')
     done = False
     reward_overall = 0
     _ = evalenv.reset()
@@ -275,7 +312,7 @@ def print_rays(action):
 
 
 if __name__ == "__main__":
-    env = gym.make('lidar-v0')
+    env = gym.make('lidarsmall-v0')
     env.seed(1)
 
     sess = tf.Session()
