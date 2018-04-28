@@ -205,28 +205,23 @@ class LidarBox(spaces.Box):
         return np.random.uniform(low=-10, high=0.01, size=self.low.shape)
 
 
-class Lidarv0(LidarGym):
+# ------------------------------- INHERITED ENVIRONMENTS -----------------------------------------------
+class LidarTrain(LidarGym):
     """
-    Inherited environment prepared for use, simplified for basic training.
+    Inherited environment, simplified for basic training.
     observation is dictionary of sparse and ground thruth maps: {'x': np.array, 'y': np.array}
     and action is dictionary of reconstructed map and planed rays {'map' np.array, 'rays': np.array}
     """
-    def __init__(self):
+    def __init__(self, map_voxel_shape, fov, density, max_rays, voxel_size, lidar_range):
 
-        map_voxel_shape = (320, 320, 32)
         forecast = 0
-        fov = (120, 90)
-        density = (160, 120)
-        max_rays = 200
-        voxel_size = 0.2
-        lidar_range = 48
 
         self._shift_T = np.eye(4, dtype=float)
         self._shift_T[0, 3] = -0.25 * map_voxel_shape[0] * voxel_size
         self._shift_T[1, 3] = -0.5 * map_voxel_shape[1] * voxel_size
         self._shift_T[2, 3] = -0.5 * map_voxel_shape[2] * voxel_size
 
-        super(Lidarv0, self).__init__(lidar_range, voxel_size, max_rays, density, fov,
+        super(LidarTrain, self).__init__(lidar_range, voxel_size, max_rays, density, fov,
                                       forecast, map_voxel_shape, self._shift_T)
 
         self.action_space = spaces.Dict({'map': LidarBox(low=-100, high=100, shape=map_voxel_shape),
@@ -239,30 +234,21 @@ class Lidarv0(LidarGym):
         # lidarv0 specific:
         self._obs_voxel_map = None
 
-    def _close(self):
-        super(Lidarv0)._close()
-
     def _reset(self):
         self._obs_voxel_map = vm.VoxelMap()
         self._obs_voxel_map.voxel_size = self._voxel_size
         self._obs_voxel_map.free_update = - 1.0
         self._obs_voxel_map.hit_update = 1.0
         self._obs_voxel_map.occupancy_threshold = 0.0
-        obs = super(Lidarv0, self)._reset()
+        obs = super(LidarTrain, self)._reset()
         self.curr_T = obs['T'][0]
         return np.zeros(shape=self._input_map_shape)
 
     def _step(self, action):
         assert action['rays'].dtype is np.dtype('bool')
-        obs, rew, done, info = super(Lidarv0, self)._step({'rays': action['rays'].T, 'map': action['map']})
+        obs, rew, done, info = super(LidarTrain, self)._step({'rays': action['rays'].T, 'map': action['map']})
         obs = self._preprocess_obs(obs)
         return obs, rew, done, info
-
-    def _seed(self, seed=None):
-        super(Lidarv0, self)._seed(seed)
-
-    def _render(self, mode='human', close=False):
-        super(Lidarv0, self)._render(mode)
 
     def _preprocess_obs(self, obs):
         new_points = np.transpose(obs['points'])
@@ -297,6 +283,19 @@ class Lidarv0(LidarGym):
 
         self.curr_T = obs['T'][0]
         return {'X': ret, 'Y': gt}
+
+
+# ------------------------------------ Ready to use environments ---------------------------------------
+class Lidarv0(LidarTrain):
+
+    def __init__(self):
+        super(Lidarv0).__init__((320, 320, 32), (120, 90), (160, 120), 200, 0.2, 48)
+
+
+class LidarSmallv0(LidarTrain):
+
+    def __init__(self):
+        super(LidarSmallv0).__init__((160, 160, 16), (120, 90), (120, 90), 100, 0.4, 48)
 
 
 class Lidarv1(LidarGym):
@@ -338,27 +337,15 @@ class Lidarv1(LidarGym):
 
     def _reset(self):
         # first obs should not be zeros
-        first_action = np.zeros(shape=(320, 320, 32))
+        first_action = np.zeros(shape=self._input_map_shape)
         obs, _, _, _ = self._step(first_action)
         super(Lidarv1, self)._reset()
         return obs
 
-    def _close(self):
-        super(Lidarv1, self)._close()
-
-    def _seed(self, seed=None):
-        return super(Lidarv1, self)._seed(seed)
-
-    def _step(self, action):
-        return super(Lidarv1, self)._step(action)
-
-    def _render(self, mode='human', close=False):
-        super(Lidarv1, self)._render(mode)
-
 
 class Lidarv2(Lidarv0):
     """
-    action space is only reconstructed map, rays are chosen randomly
+    action space is only reconstructed map, rays are chosen randomly, suited for supervised learning
     """
     def __init__(self):
         super(Lidarv2, self).__init__()
@@ -370,18 +357,28 @@ class Lidarv2(Lidarv0):
         ret, _, _, _ = self._step(ret)
         return ret
 
-    def _close(self):
-        super(Lidarv2, self)._close()
-
-    def _seed(self, seed=None):
-        return super(Lidarv2, self)._seed(seed)
-
     def _step(self, action):
         rand_rays = self._action_generator.sample()
         return super(Lidarv2, self)._step({'map': action, 'rays': rand_rays})
 
-    def _render(self, mode='human', close=False):
-        super(Lidarv2, self)._render(mode)
+
+class LidarSmallv2(LidarSmallv0):
+    """
+    action space is only reconstructed map, rays are chosen randomly, suited for supervised learning
+    """
+    def __init__(self):
+        super(LidarSmallv2, self).__init__()
+        self.action_space = spaces.Box(low=-100, high=100, shape=(320, 320, 32))
+        self._action_generator = LidarMultiBinary((160, 120), 200)
+
+    def _reset(self):
+        ret = super(LidarSmallv2, self)._reset()
+        ret, _, _, _ = self._step(ret)
+        return ret
+
+    def _step(self, action):
+        rand_rays = self._action_generator.sample()
+        return super(LidarSmallv2, self)._step({'map': action, 'rays': rand_rays})
 
 
 class LidarEval(Lidarv0):
@@ -389,10 +386,6 @@ class LidarEval(Lidarv0):
     one map only for agent evaluation
     """
     def __init__(self):
-
-        density = (160, 120)
-        max_rays = 200
-
         super(LidarEval, self).__init__()
 
     def _reset(self):
@@ -425,14 +418,40 @@ class LidarEval(Lidarv0):
         self.curr_T = self._curr_T
         return np.zeros(shape=self._input_map_shape)
 
-    def _close(self):
-        super(LidarEval, self)._close()
 
-    def _seed(self, seed=None):
-        return super(LidarEval, self)._seed(seed)
+class LidarSmallEval(LidarSmallv0):
+    """
+    one map only for agent evaluation
+    """
+    def __init__(self):
+        super(LidarSmallEval, self).__init__()
 
-    def _step(self, action):
-        return super(LidarEval, self)._step(action)
+    def _reset(self):
+        self._obs_voxel_map = vm.VoxelMap()
+        self._obs_voxel_map.voxel_size = self._voxel_size
+        self._obs_voxel_map.free_update = - 1.0
+        self._obs_voxel_map.hit_update = 1.0
+        self._obs_voxel_map.occupancy_threshold = 0.0
 
-    def _render(self, mode='human', close=False):
-        super(LidarEval, self)._render(mode)
+        # reset values
+        self._next_timestamp = 0
+        self._curr_position = None
+        self._curr_T = None
+        self._last_T = None
+        self._done = False
+        self._render_init = False
+        self._rays_endings = None
+        self._map_length = None
+        self._map = None
+        self._T_matrices = None
+
+        print('RESETING')
+        # parse new map
+        self._map, self._T_matrices = self._maps.get_validation_map()
+        self._reward_counter.reset(self._map)
+        self._map_length = len(self._T_matrices)
+        self._curr_T = self._T_matrices[0]
+        self._to_next()
+
+        self.curr_T = self._curr_T
+        return np.zeros(shape=self._input_map_shape)

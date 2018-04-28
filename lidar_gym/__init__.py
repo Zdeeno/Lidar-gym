@@ -23,3 +23,21 @@ register(
     entry_point='lidar_gym.envs:Lidarv0',
     timestep_limit=1000000,
 )
+
+register(
+    id='lidarsmall-v0',
+    entry_point='lidar_gym.envs:LidarSmallv0',
+    timestep_limit=1000000,
+)
+
+register(
+    id='lidarsmall-v2',
+    entry_point='lidar_gym.envs:LidarSmallv2',
+    timestep_limit=1000000,
+)
+
+register(
+    id='lidarsmalleval-v0',
+    entry_point='lidar_gym.envs:LidarSmallEval',
+    timestep_limit=1000000,
+)
