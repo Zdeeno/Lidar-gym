@@ -102,7 +102,7 @@ class Supervised:
 
 def evaluate(supervised):
     # evalenv = gym.make('lidareval-v0')
-    evalenv = gym.make('lidareval-v0')
+    evalenv = gym.make('lidarsmalleval-v0')
     done = False
     reward_overall = 0
     _ = evalenv.reset()
@@ -134,9 +134,9 @@ if __name__ == "__main__":
         agent.load_weights(loaddir)
 
     env = gym.make('lidarsmall-v2')
-    episode = 1
+    episode = 0
     max_reward = -float('inf')
-    env.seed(5)
+    env.seed(1)
 
     while True:
         done = False
@@ -148,7 +148,7 @@ if __name__ == "__main__":
             agent.train_model()
             obv, reward, done, info = env.step(obv['X'])
 
-        episode += 1
+        # episode += 1
         # Evaluate and save
         if episode % 10 == 0:
             rew = evaluate(agent)

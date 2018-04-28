@@ -22,10 +22,13 @@ class DQN:
     def __init__(self, env):
         # setup environment
         self._env = env
-        self._batch_size = 4
-        self._map_shape = (320, 320, 32)
-        self._max_rays = 200
-        self._rays_shape = (160, 120)
+        self._batch_size = 8
+        # self._map_shape = (320, 320, 32)
+        # self._max_rays = 200
+        # self._rays_shape = (160, 120)
+        self._map_shape = (160, 160, 16)
+        self._max_rays = 100
+        self._rays_shape = (120, 90)
 
         # setup consts
         self._gamma = 0.9
@@ -36,7 +39,8 @@ class DQN:
         self._tau = .2
 
         # setup buffer
-        self._buffer_size = 200
+        # self._buffer_size = 200
+        self._buffer_size = 1000
         self._buffer = deque(maxlen=self._buffer_size)
 
         # double network
@@ -63,6 +67,7 @@ class DQN:
         p12 = MaxPool3D(pool_size=2)(c12)
         c22 = Conv3D(4, 4, padding='same', activation='relu')(p12)
 
+        '''
         # merge inputs
         c2 = Add()([c21, c22])
         c3 = Conv3D(1, 4, padding='same', activation='relu')(c2)
@@ -71,6 +76,19 @@ class DQN:
         r2 = Reshape((480, 480, 1))(c4)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
         c5 = Conv2D(2, 4, padding='same', activation='relu')(p2)
+        c6 = Conv2D(1, 4, padding='same', activation='linear')(c5)
+        output = Lambda(lambda x: squeeze(x, 3))(c6)
+        '''
+        # merge small inputs
+        a1 = Add()([c21, c22])
+        c1 = Conv3D(1, 4, padding='same', activation='relu')(a1)
+        s1 = Lambda(lambda x: squeeze(x, 4))(c1)
+        c2 = Conv2D(8, 4, padding='same', activation='relu')(s1)
+        p1 = MaxPool2D(pool_size=2)(c2)
+        c3 = Conv2D(16, 4, padding='same', activation='relu')(p1)
+        r2 = Reshape((360, 360, 1))(c3)
+        p2 = MaxPool2D(pool_size=(3, 4))(r2)
+        c5 = Conv2D(2, 4, padding='same', activation='linear')(p2)
         c6 = Conv2D(1, 4, padding='same', activation='linear')(c5)
         output = Lambda(lambda x: squeeze(x, 3))(c6)
 

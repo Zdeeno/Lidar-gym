@@ -109,7 +109,7 @@ class MapParser:
 
     def get_validation_map(self):
         index = 0
-        serialized = os.path.join(self._basedir, VALIDATION[index] + '.vs')
+        serialized = os.path.join(self._basedir, str(self._voxel_size), VALIDATION[index] + '.vs')
         # load serialized map if available
         if os.path.isfile(serialized):
             print('Deserializing validation map 0009:')
