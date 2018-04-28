@@ -40,8 +40,10 @@ class ActorCritic:
         self.min_epsilon = 0.25
         self.gamma = .95
         self.tau = .15
-        self.batch_size = 4
-        self.buffer_size = 200
+        # self.batch_size = 4
+        # self.buffer_size = 200
+        self.batch_size = 8
+        self.buffer_size = 1000
 
         self.buffer = deque(maxlen=self.buffer_size)
         self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model = self.create_actor_model()
@@ -101,7 +103,7 @@ class ActorCritic:
         s1 = Lambda(lambda x: squeeze(x, 4))(c1)
         c2 = Conv2D(8, 4, padding='same', activation='relu')(s1)
         p1 = MaxPool2D(pool_size=2)(c2)
-        c3 = Conv2D(16, 4, padding='same', activation='relu')(p1)
+        c3 = Conv2D(81, 4, padding='same', activation='relu')(p1)
         r2 = Reshape((360, 360, 1))(c3)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
         c5 = Conv2D(2, 4, padding='same', activation='linear')(p2)
@@ -156,9 +158,10 @@ class ActorCritic:
         s1 = Lambda(lambda x: squeeze(x, 4))(c1)
         c2 = Conv2D(8, 4, padding='same', activation='relu')(s1)
         p1 = MaxPool2D(pool_size=2)(c2)
-        c3 = Conv2D(16, 4, padding='same', activation='relu')(p1)
+        c3 = Conv2D(81, 4, padding='same', activation='relu')(p1)
         r2 = Reshape((360, 360, 1))(c3)
-        a2 = Add()([r2, c23])
+        p2 = MaxPool2D(pool_size=(3, 4))(r2)
+        a2 = Add()([p2, c23])
         c4 = Conv2D(2, 4, padding='same', activation='relu')(a2)
         p2 = MaxPool2D(pool_size=4, strides=4)(c4)
         c5 = Conv2D(4, 4, padding='same', activation='relu')(p2)
@@ -282,6 +285,7 @@ class ActorCritic:
 
 
 def evaluate(supervised, reinforce):
+    # evalenv = gym.make('lidareval-v0')
     evalenv = gym.make('lidarsmalleval-v0')
     done = False
     reward_overall = 0
@@ -312,6 +316,7 @@ def print_rays(action):
 
 
 if __name__ == "__main__":
+    # env = gym.make('lidar-v0')
     env = gym.make('lidarsmall-v0')
     env.seed(1)
 

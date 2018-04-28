@@ -85,7 +85,7 @@ class DQN:
         s1 = Lambda(lambda x: squeeze(x, 4))(c1)
         c2 = Conv2D(8, 4, padding='same', activation='relu')(s1)
         p1 = MaxPool2D(pool_size=2)(c2)
-        c3 = Conv2D(16, 4, padding='same', activation='relu')(p1)
+        c3 = Conv2D(81, 4, padding='same', activation='relu')(p1)
         r2 = Reshape((360, 360, 1))(c3)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
         c5 = Conv2D(2, 4, padding='same', activation='linear')(p2)
@@ -155,8 +155,9 @@ class DQN:
 
     def append_to_buffer(self, state, action, reward, new_state, done):
         if len(self._buffer) > 0:
-            _, _, _, state, _ = self._buffer[-1]
-        self._buffer.append([state, action, reward, new_state, done])
+            self._buffer.append([self._buffer[-1][3], action, reward, new_state, done])
+        else:
+            self._buffer.append([state, action, reward, new_state, done])
 
     def _n_best_Q(self, arr, n):
         """
@@ -179,7 +180,8 @@ class DQN:
 
 
 def evaluate(supervised, dqn):
-    evalenv = gym.make('lidareval-v0')
+    # evalenv = gym.make('lidareval-v0')
+    evalenv = gym.make('lidarsmalleval-v0')
     done = False
     reward_overall = 0
     obv = evalenv.reset()
@@ -197,13 +199,14 @@ def evaluate(supervised, dqn):
 
 
 if __name__ == "__main__":
-    env = gym.make('lidar-v0')
+    # env = gym.make('lidar-v0')
+    env = gym.make('lidarsmall-v0')
 
     dql_agent = DQN(env=env)
     supervised = Supervised()
 
     home = expanduser("~")
-    loaddir = os.path.join(home, 'trained_models/supervised_model_-196.40097353881725.h5')
+    loaddir = os.path.join(home, 'trained_models/supervised_small_model_-274.0974594540126.h5')
     supervised.load_weights(loaddir)
     # dql_agent.load_model(os.path.join(home, 'Projekt/lidar-gym/trained_models/dqn_model_-267.78735501225526.h5'))
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
@@ -217,7 +220,6 @@ if __name__ == "__main__":
         done = False
         curr_state = env.reset()
         curr_state = [np.zeros((shape[0], shape[1], shape[2])), np.zeros((shape[0], shape[1], shape[2]))]
-        epoch = 1
         print('\n------------------- Drive number', episode, '-------------------------')
         # training
         while not done:
@@ -231,7 +233,7 @@ if __name__ == "__main__":
             dql_agent.target_train()  # iterates target model
 
             curr_state = new_state
-            epoch += 1
+            print('.', end='', flush=True)
 
         # evaluation and saving
         print('end of episode')
