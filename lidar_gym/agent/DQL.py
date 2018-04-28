@@ -15,6 +15,45 @@ import tensorflow as tf
 from collections import deque
 import lidar_gym
 from lidar_gym.agent.supervised_agent import Supervised
+from lidar_gym.tools.sum_tree import SumTree
+
+
+class Memory:
+    # store (s, a, r, s', d) in SumTree
+
+    def __init__(self, capacity):
+        self.length = 0
+        self.capacity = capacity
+        self.e = 0.01
+        self.a = 0.6
+        self.tree = SumTree(capacity)
+
+    def _getPriority(self, error):
+        return (error + self.e) ** self.a
+
+    def add(self, error, sample):
+        p = self._getPriority(error)
+        self.tree.add(p, sample)
+        if self.length < self.capacity:
+            self.length += 1
+
+    def sample(self, n):
+        batch = []
+        segment = self.tree.total() / n
+
+        for i in range(n):
+            a = segment * i
+            b = segment * (i + 1)
+
+            s = random.uniform(a, b)
+            (idx, p, data) = self.tree.get(s)
+            batch.append((idx, data))
+
+        return batch
+
+    def update(self, idx, error):
+        p = self._getPriority(error)
+        self.tree.update(idx, p)
 
 
 class DQN:
@@ -40,8 +79,8 @@ class DQN:
 
         # setup buffer
         # self._buffer_size = 200
-        self._buffer_size = 1000
-        self._buffer = deque(maxlen=self._buffer_size)
+        self._buffer_size = 512
+        self._buffer = Memory(self._buffer_size)
 
         # double network
         self._model = self.create_model()
@@ -119,14 +158,16 @@ class DQN:
     def replay(self):
         self._epsilon *= self._epsilon_decay
 
-        if len(self._buffer) < self._batch_size:
+        if self._buffer.length < self._batch_size:
             return
 
-        samples = random.sample(self._buffer, self._batch_size)
+        samples = self._buffer.sample(self._batch_size)
         for sample in samples:
-            state, action, reward, new_state, done = sample
+            idx, data = sample
+            state, action, reward, new_state, done = data
             state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
-            target = self._target_model.predict(state)
+            Q = self._target_model.predict(state)
+            target = np.copy(Q)
             if done:
                 target[0, action] = reward
             else:
@@ -139,7 +180,20 @@ class DQN:
                 q_future = np.sum(self._target_model.predict(new_state)[online_max])/self._max_rays
                 target[0, action] = reward + q_future * self._gamma
 
+            self._buffer.update(idx, np.abs(np.sum(Q - target)))
             self._model.fit(state, target, epochs=1, verbose=0)
+
+    def TD_size(self, sample):
+        state, action, reward, new_state, done = sample
+        state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
+        Q = self._target_model.predict(state)
+        target = np.copy(Q)
+        if done:
+            target[0, action] = reward
+        else:
+            q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
+            target[0, action] = reward + q_future * self._gamma
+        return np.abs(np.sum(Q - target))
 
     def target_train(self):
         weights = self._model.get_weights()
@@ -154,10 +208,8 @@ class DQN:
         self._model.load_weights(filepath=f)
 
     def append_to_buffer(self, state, action, reward, new_state, done):
-        if len(self._buffer) > 0:
-            self._buffer.append([self._buffer[-1][3], action, reward, new_state, done])
-        else:
-            self._buffer.append([state, action, reward, new_state, done])
+        sample = state, action, reward, new_state, done
+        self._buffer.add(self.TD_size(sample), sample)
 
     def _n_best_Q(self, arr, n):
         """
@@ -229,8 +281,8 @@ if __name__ == "__main__":
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
             dql_agent.append_to_buffer(curr_state, action, reward, new_state, done)
 
-            dql_agent.replay()  # internally iterates inside (prediction) model
-            dql_agent.target_train()  # iterates target model
+            dql_agent.replay()        # internally iterates inside (prediction) model
+            dql_agent.target_train()  # updates target model
 
             curr_state = new_state
             print('.', end='', flush=True)
