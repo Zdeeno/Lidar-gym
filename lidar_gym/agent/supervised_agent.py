@@ -99,54 +99,14 @@ class Supervised:
         return self._model.predict(input_X)[0]
 
 
-'''
-def build_network():
-    # 3D convolutional network building
-    cnn_input = tflearn.input_data(shape=[None, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]])
-    cnn_input = tf.expand_dims(cnn_input, -1)
-    net = tflearn.conv_3d(cnn_input, 2, 4, strides=1, activation='relu', regularizer='L2')
-    net = tflearn.conv_3d(net, 4, 4, strides=1, activation='relu', regularizer='L2')
-    net = tflearn.max_pool_3d(net, 2, strides=2)
-    net = tflearn.conv_3d(net, 8, 4, strides=1, activation='relu', regularizer='L2')
-    net = tflearn.max_pool_3d(net, 2, strides=2)
-    net = tflearn.conv_3d(net, 16, 4, strides=1, activation='relu', regularizer='L2')
-    net = tflearn.conv_3d(net, 32, 4, strides=1, activation='relu', regularizer='L2')
-    net = tflearn.conv_3d(net, 1, 8, strides=1, activation='linear', regularizer='L2')
-    net = tflearn.layers.conv.conv_3d_transpose(net, 1, 8, [MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]],
-                                                strides=[1, 4, 4, 4, 1], activation='linear', regularizer='L2')
-    net = tf.squeeze(net, [4])
-    # optimizer = tflearn.Momentum(learning_rate=0.01, lr_decay=(1/8), decay_step=10, momentum=0.99)
-    optimizer = tflearn.Adam(learning_rate=0.001)
-    net = tflearn.regression(net, optimizer=optimizer, loss=logistic_loss)
-    return net
-
-
-def build_network():
-    # 2D convolutional network building
-    cnn_input = tflearn.input_data(shape=[None, MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]])
-    net = tflearn.conv_2d(cnn_input, 64, 5, strides=1, activation='relu', regularizer='L2')
-    net = tflearn.conv_2d(net, 128, 5, strides=1, activation='relu', regularizer='L2')
-    net = tflearn.max_pool_2d(net, 2, strides=2)
-    net = tflearn.conv_2d(net, 256, 5, strides=1, activation='relu', regularizer='L2')
-    net = tflearn.max_pool_2d(net, 2, strides=2)
-    net = tflearn.conv_2d(net, 512, 5, strides=1, activation='relu', regularizer='L2')
-    net = tflearn.conv_2d(net, 1024, 5, strides=1, activation='relu', regularizer='L2')
-    net = tflearn.conv_2d(net, 32, 5, strides=1, activation='linear', regularizer='L2')
-    net = tflearn.layers.conv.conv_2d_transpose(net, 32, 8, [MAP_SIZE[0], MAP_SIZE[1], MAP_SIZE[2]],
-                                                strides=[1, 4, 4, 1], activation='linear', regularizer='L2')
-    # optimizer = tflearn.Momentum(learning_rate=0.01, lr_decay=(1/8), decay_step=10, momentum=0.99)
-    optimizer = tflearn.Adam(learning_rate=0.001)
-    net = tflearn.regression(net, optimizer=optimizer, loss=logistic_loss)
-    return net
-'''
-
-
 def evaluate(supervised):
+    # evalenv = gym.make('lidareval-v0')
     evalenv = gym.make('lidareval-v0')
     done = False
     reward_overall = 0
     _ = evalenv.reset()
-    map = np.zeros((320, 320, 32))
+    # map = np.zeros((320, 320, 32))
+    map = np.zeros((160, 160, 16))
     evalenv.seed(1)
     print('Evaluation started!')
     while not done:
@@ -194,4 +154,5 @@ if __name__ == "__main__":
             if rew > max_reward:
                 print('new best agent - saving with reward:' + str(rew))
                 max_reward = rew
-                agent.save_weights(savedir + 'supervised_model_' + str(max_reward) + '.h5')
+                # agent.save_weights(savedir + 'supervised_model_' + str(max_reward) + '.h5')
+                agent.save_weights(savedir + 'supervised_small_model_' + str(max_reward) + '.h5')

@@ -3,7 +3,6 @@ import itertools
 import numpy as np
 import pykitti
 import voxel_map as vm
-import pkg_resources as pkg
 import os
 import random
 import pickle
@@ -95,7 +94,7 @@ class MapParser:
     def get_next_map(self):
         # Load the data. Optionally, specify the frame range to load.
         index = random.randint(0, len(self._drives)-1)
-        serialized = os.path.join(self._basedir, self._drives[index] + '.vs')
+        serialized = os.path.join(self._basedir, str(self._voxel_size), self._drives[index] + '.vs')
         # load serialized map if available
         if os.path.isfile(serialized):
             print('Deserializing map number:' + self._drives[index])
@@ -169,8 +168,11 @@ class DatasetSerializer():
         self._drives = []
         self._date = '2011_09_26'
         # city
-        # self._drives.extend(DRIVES_CITY)
+        self._drives.extend(DRIVES_CITY)
         self._drives.extend(VALIDATION)
+        serdir = os.path.join(self._basedir, str(self._voxel_size))
+        if not os.path.exists(serdir):
+            os.makedirs(serdir)
 
         for drive in self._drives:
             # Load the data. Optionally, specify the frame range to load.
@@ -183,7 +185,7 @@ class DatasetSerializer():
             serialize = m, T_matrixes
             print('Serializing')
             drive = drive + '.vs'
-            file = open(os.path.join(self._basedir, drive), 'wb')
+            file = open(os.path.join(serdir, drive), 'wb')
             pickle.dump(serialize, file)
             file.close()
 
@@ -199,8 +201,8 @@ if __name__ == "__main__":
         print('\nIf testing doesnt end up with error - dataset is probably correctly downloaded!')
 
     if args['serialize']:
-        voxel_size = 0.2
+        voxel_size = 0.4
         print('\nSerializing with voxel size: ' + str(voxel_size))
-        DatasetSerializer(0.2)
+        DatasetSerializer(voxel_size)
         print('Serialization done!')
 

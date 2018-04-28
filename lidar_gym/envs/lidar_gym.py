@@ -222,7 +222,7 @@ class LidarTrain(LidarGym):
         self._shift_T[2, 3] = -0.5 * map_voxel_shape[2] * voxel_size
 
         super(LidarTrain, self).__init__(lidar_range, voxel_size, max_rays, density, fov,
-                                      forecast, map_voxel_shape, self._shift_T)
+                                         forecast, map_voxel_shape, self._shift_T)
 
         self.action_space = spaces.Dict({'map': LidarBox(low=-100, high=100, shape=map_voxel_shape),
                                          'rays': LidarMultiBinary(n=density, maxrays=max_rays)})
@@ -289,13 +289,13 @@ class LidarTrain(LidarGym):
 class Lidarv0(LidarTrain):
 
     def __init__(self):
-        super(Lidarv0).__init__((320, 320, 32), (120, 90), (160, 120), 200, 0.2, 48)
+        super(Lidarv0, self).__init__((320, 320, 32), (120, 90), (160, 120), 200, 0.2, 48)
 
 
 class LidarSmallv0(LidarTrain):
 
     def __init__(self):
-        super(LidarSmallv0).__init__((160, 160, 16), (120, 90), (120, 90), 100, 0.4, 48)
+        super(LidarSmallv0, self).__init__((160, 160, 16), (120, 90), (120, 90), 100, 0.4, 48)
 
 
 class Lidarv1(LidarGym):
