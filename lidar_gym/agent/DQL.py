@@ -114,7 +114,11 @@ class DQN:
             else:
                 new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
                 # Q learning:
-                q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
+                # q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
+                # target[0, action] = reward + q_future * self._gamma
+                # double Q learning
+                online_max = self._largest_indices(self._model.predict(new_state), self._max_rays)
+                q_future = np.sum(self._target_model.predict(new_state)[online_max])/self._max_rays
                 target[0, action] = reward + q_future * self._gamma
 
             self._model.fit(state, target, epochs=1, verbose=0)
@@ -145,7 +149,7 @@ class DQN:
 
     def _largest_indices(self, arr, n):
         """
-        Returns the n largest indices from a numpy array.
+        Returns the n indices with largest values from a numpy array.
         """
         flat = arr.flatten()
         indices = np.argpartition(flat, -n)[-n:]
