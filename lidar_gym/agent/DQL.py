@@ -258,7 +258,7 @@ if __name__ == "__main__":
     supervised = Supervised()
 
     home = expanduser("~")
-    loaddir = os.path.join(home, 'trained_models/supervised_small_model_-274.0974594540126.h5')
+    loaddir = os.path.join(home, 'trained_models/supervised_small_model_-242.64441054044056.h5')
     supervised.load_weights(loaddir)
     # dql_agent.load_model(os.path.join(home, 'Projekt/lidar-gym/trained_models/dqn_model_-267.78735501225526.h5'))
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
