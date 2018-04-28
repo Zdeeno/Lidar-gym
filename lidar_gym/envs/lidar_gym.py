@@ -368,8 +368,8 @@ class LidarSmallv2(LidarSmallv0):
     """
     def __init__(self):
         super(LidarSmallv2, self).__init__()
-        self.action_space = spaces.Box(low=-100, high=100, shape=(320, 320, 32))
-        self._action_generator = LidarMultiBinary((160, 120), 200)
+        self.action_space = spaces.Box(low=-100, high=100, shape=(160, 160, 16))
+        self._action_generator = LidarMultiBinary((120, 90), 100)
 
     def _reset(self):
         ret = super(LidarSmallv2, self)._reset()

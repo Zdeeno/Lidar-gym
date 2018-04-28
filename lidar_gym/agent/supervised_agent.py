@@ -34,11 +34,12 @@ def logistic_loss(y_true, y_pred):
 class Supervised:
     def __init__(self):
         # Constants
-        self._map_shape = (320, 320, 32)
+        # self._map_shape = (320, 320, 32)
+        self._map_shape = (160, 160, 16)
         self._batch_size = 4
         self._epochs_per_batch = 1
         self._learning_rate = 0.001
-        self._l2reg = 0.0001
+        self._l2reg = 0.001
 
         # buffer
         self._buffer_X, self._buffer_Y, self._buffer_size = self.init_buffer()
@@ -84,7 +85,7 @@ class Supervised:
     def train_model(self):
         if self._buffer_size == self._batch_size:
             self._model.fit(x=self._buffer_X, y=self._buffer_Y, epochs=self._epochs_per_batch, shuffle=True,
-                            batch_size=self._batch_size, callbacks=[self._tfboard], verbose=0)
+                            batch_size=self._batch_size, callbacks=[self._tfboard], verbose=1)
             # clean buffer
             self._buffer_X, self._buffer_Y, self._buffer_size = self.init_buffer()
 
@@ -132,7 +133,7 @@ if __name__ == "__main__":
         loaddir = os.path.join(loaddir, 'trained_models/supervised_model_-205.62373544534486.h5')
         agent.load_weights(loaddir)
 
-    env = gym.make('lidar-v2')
+    env = gym.make('lidarsmall-v2')
     episode = 1
     max_reward = -float('inf')
     env.seed(5)
