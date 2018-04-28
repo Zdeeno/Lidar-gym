@@ -148,7 +148,7 @@ if __name__ == "__main__":
             agent.train_model()
             obv, reward, done, info = env.step(obv['X'])
 
-        # episode += 1
+        episode += 1
         # Evaluate and save
         if episode % 10 == 0:
             rew = evaluate(agent)
