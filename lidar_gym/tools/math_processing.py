@@ -116,8 +116,11 @@ class RewardCounter:
         weights[values_g_t > 0] = weights_positive
         weights[values_g_t < 0] = weights_negative
 
-        # calculate reward
-        reward = np.sum(-weights * (np.log(1 + np.exp(-values_a_m * values_g_t))))
+        # calculate reward as log loss: np.sum(-weights * (np.log(1 + np.exp(-values_a_m * values_g_t))))
+        a = -values_a_m * values_g_t
+        b = np.maximum(0.0, a)
+        t = b + np.log(np.exp(-b) + np.exp(a - b))
+        reward = np.sum(-weights * t)
         return reward
 
     def get_render_data(self):

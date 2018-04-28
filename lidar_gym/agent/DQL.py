@@ -22,7 +22,7 @@ class DQN:
     def __init__(self, env):
         # setup environment
         self._env = env
-        self._batch_size = 8
+        self._batch_size = 4
         self._map_shape = (320, 320, 32)
         self._max_rays = 200
         self._rays_shape = (160, 120)
@@ -81,7 +81,7 @@ class DQN:
 
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
-        rays = self._target_model.predict(state)[0]
+        rays = self._model.predict(state)[0]
         ret = np.zeros(shape=self._rays_shape, dtype=bool)
         ret[self._largest_indices(rays, self._max_rays)] = True
         return ret
@@ -126,10 +126,10 @@ class DQN:
             target_weights[i] = weights[i] * self._tau + target_weights[i] * (1 - self._tau)
 
     def save_model(self, f):
-        self._target_model.save(f)
+        self._model.save(f)
 
     def load_model(self, f):
-        self._target_model.load_weights(filepath=f)
+        self._model.load_weights(filepath=f)
 
     def append_to_buffer(self, state, action, reward, new_state, done):
         if len(self._buffer) > 0:

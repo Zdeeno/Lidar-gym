@@ -37,7 +37,7 @@ class ActorCritic:
         self.min_epsilon = 0.25
         self.gamma = .95
         self.tau = .15
-        self.batch_size = 8
+        self.batch_size = 4
         self.buffer_size = 200
 
         self.buffer = deque(maxlen=self.buffer_size)
@@ -218,7 +218,7 @@ class ActorCritic:
 
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
-        return self.probs_to_bools(self.target_actor_model.predict(state)[0])
+        return self.probs_to_bools(self.actor_model.predict(state)[0])
 
     def probs_to_bools(self, probs):
         assert probs.ndim == 2, 'has shape: ' + str(probs.shape)
@@ -236,12 +236,12 @@ class ActorCritic:
         return np.unravel_index(indices, arr.shape)
 
     def save_model(self, critic_path, actor_path):
-        self.target_critic_model.save_weights(filepath=critic_path)
-        self.target_actor_model.save_weights(filepath=actor_path)
+        self.critic_model.save_weights(filepath=critic_path)
+        self.actor_model.save_weights(filepath=actor_path)
 
     def load_model(self, f_actor, f_critic):
-        self.target_actor_model.load_weights(filepath=f_actor)
-        self.target_critic_model.load_weights(filepath=f_critic)
+        self.actor_model.load_weights(filepath=f_actor)
+        self.critic_model.load_weights(filepath=f_critic)
 
 
 def evaluate(supervised, reinforce):
