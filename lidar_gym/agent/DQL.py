@@ -191,6 +191,7 @@ class DQN:
         if done:
             target[0, action] = reward
         else:
+            new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
             q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
             target[0, action] = reward + q_future * self._gamma
         return np.abs(np.sum(Q - target))
@@ -226,9 +227,6 @@ class DQN:
         indices = np.argpartition(flat, -n)[-n:]
         indices = indices[np.argsort(-flat[indices])]
         return np.unravel_index(indices, arr.shape)
-
-    def clear_buffer(self):
-        self._buffer.clear()
 
 
 def evaluate(supervised, dqn):
