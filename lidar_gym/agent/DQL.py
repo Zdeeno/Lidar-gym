@@ -24,12 +24,14 @@ class Memory:
     def __init__(self, capacity):
         self.length = 0
         self.capacity = capacity
+
+        # constants
         self.e = 0.01
-        self.a = 0.6
+        self.a = 2
         self.tree = SumTree(capacity)
 
     def _getPriority(self, error):
-        return (error + self.e) ** self.a
+        return ((error + self.e)/10) ** self.a
 
     def add(self, error, sample):
         p = self._getPriority(error)
@@ -61,7 +63,8 @@ class DQN:
     def __init__(self, env):
         # setup environment
         self._env = env
-        self._batch_size = 8
+        # plus one in TD compute
+        self._batch_size = 7
         # self._map_shape = (320, 320, 32)
         # self._max_rays = 200
         # self._rays_shape = (160, 120)
@@ -184,6 +187,7 @@ class DQN:
             self._model.fit(state, target, epochs=1, verbose=0)
 
     def TD_size(self, sample):
+        # we already make a computation to fit nn here so why not to fit
         state, action, reward, new_state, done = sample
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         Q = self._target_model.predict(state)
@@ -192,9 +196,13 @@ class DQN:
             target[0, action] = reward
         else:
             new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
-            q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
+            online_max = self._largest_indices(self._model.predict(new_state), self._max_rays)
+            q_future = np.sum(self._target_model.predict(new_state)[online_max]) / self._max_rays
             target[0, action] = reward + q_future * self._gamma
-        return np.abs(np.sum(Q - target))
+        self._model.fit(state, target, epochs=1, verbose=0)
+        ret = np.abs(np.sum(Q - target))
+        print(ret)
+        return ret
 
     def target_train(self):
         weights = self._model.get_weights()

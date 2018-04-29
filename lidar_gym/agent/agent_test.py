@@ -10,6 +10,24 @@ import tensorflow as tf
 import tensorflow.contrib.keras.api.keras.backend as K
 
 
+def evaluate_supervised(supervised):
+    done = False
+    reward_overall = 0
+    _ = evalenv.reset()
+    # map = np.zeros((320, 320, 32))
+    map = np.zeros((160, 160, 16))
+    evalenv.seed(1)
+    episode = 0
+    print('Evaluation started!')
+    while not done:
+        a = evalenv.action_space.sample()
+        obv, reward, done, _ = evalenv.step({'map': map, 'rays': a['rays']})
+        reward_overall += reward
+        map = supervised.predict(obv['X'])
+    print('Evaluation done with reward - ' + str(reward_overall))
+    return reward_overall
+
+
 def evaluate(supervised, reinforce):
     done = False
     reward_overall = 0
@@ -33,7 +51,7 @@ def evaluate(supervised, reinforce):
 
 
 if __name__ == "__main__":
-    evalenv = gym.make('lidareval-v0')
+    evalenv = gym.make('lidarsmalleval-v0')
 
     # Create models on GPU
     agent = Supervised()
@@ -44,9 +62,10 @@ if __name__ == "__main__":
 
     home = expanduser("~")
 
-    loaddir = os.path.join(home, 'trained_models/supervised_model_-205.62373544534486.h5')
+    loaddir = os.path.join(home, 'trained_models/supervised_model_-196.40097353881725.h5')
     agent.load_weights(loaddir)
-    actor = os.path.join(home, 'Projekt/lidar-gym/trained_models/actor_-274.21080331962463.h5')
-    critic = os.path.join(home, 'Projekt/lidar-gym/trained_models/critic_-274.21080331962463.h5')
-    agent_rays.load_model(actor, critic)
-    evaluate(agent, agent_rays)
+    # actor = os.path.join(home, 'Projekt/lidar-gym/trained_models/actor_-274.21080331962463.h5')
+    # critic = os.path.join(home, 'Projekt/lidar-gym/trained_models/critic_-274.21080331962463.h5')
+    # agent_rays.load_model(actor, critic)
+    # evaluate(agent, agent_rays)
+    evaluate_supervised(agent)
