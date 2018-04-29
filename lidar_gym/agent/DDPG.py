@@ -327,7 +327,7 @@ if __name__ == "__main__":
     supervised = Supervised()
 
     home = expanduser("~")
-    loaddir = os.path.join(home, 'trained_models/supervised_model_-196.40097353881725.h5')
+    loaddir = os.path.join(home, 'trained_models/supervised_small_model_-242.64441054044056.h5')
     supervised.load_weights(loaddir)
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
