@@ -75,7 +75,7 @@ class DQN:
         # setup consts
         self._gamma = 0.9
         self._epsilon = 1.0
-        self._epsilon_min = 0.25
+        self._epsilon_min = 0.2
         self._epsilon_decay = 0.999
         self._learning_rate = 0.005
         self._tau = .2

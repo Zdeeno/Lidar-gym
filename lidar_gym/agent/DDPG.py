@@ -37,13 +37,14 @@ class ActorCritic:
         self.learning_rate = 0.001
         self.epsilon = 1
         self.epsilon_decay = .999
-        self.min_epsilon = 0.25
+        self.min_epsilon = 0.2
         self.gamma = .95
         self.tau = .15
         # self.batch_size = 4
         # self.buffer_size = 200
         self.batch_size = 8
         self.buffer_size = 1000
+        self.num_proto_actions = 5
 
         self.buffer = deque(maxlen=self.buffer_size)
         self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model = self.create_actor_model()
@@ -253,17 +254,18 @@ class ActorCritic:
             return np.asarray(self.env.action_space.sample()['rays'], dtype=np.float)
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         rays = self.actor_model.predict(state)[0]
-        print_rays(self.probs_to_bools(rays))
+        # print_rays(self.probs_to_bools(rays))
         return rays
 
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         return self.probs_to_bools(self.actor_model.predict(state)[0])
 
-    def probs_to_bools(self, probs):
+    def probs_to_bestQ(self, probs):
         assert probs.ndim == 2, 'has shape: ' + str(probs.shape)
-        ret = np.zeros(shape=self.lidar_shape, dtype=bool)
-        ret[self._largest_indices(probs, self.max_rays)] = True
+        ret = np.zeros(shape=(self.num_proto_actions, ) + self.lidar_shape, dtype=bool)
+        # sample more rays and choose 5 actions randomly
+        indexes = self._largest_indices(probs, self.max_rays*2)
         return ret
 
     def _largest_indices(self, arr, n):
@@ -307,12 +309,12 @@ def print_rays(action):
     to_print = np.empty(action.shape, dtype=str)
     to_print[:] = ' '
     to_print[action] = '+'
-    print('------------------------------------------------------------------------------------------------------------------------------------------------------------------')
+    print('------------------------------------------------------------------------------------------------------------------------------------')
     for i in range(action.shape[1]):
         print('|', end='', flush=True)
         print(''.join(to_print[:, i]), end='')
         print('|')
-    print('------------------------------------------------------------------------------------------------------------------------------------------------------------------')
+    print('------------------------------------------------------------------------------------------------------------------------------------')
 
 
 if __name__ == "__main__":
