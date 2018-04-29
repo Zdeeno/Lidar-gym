@@ -27,7 +27,7 @@ class Memory:
 
         # constants
         self.e = 0.01
-        self.a = 2
+        self.a = 1
         self.tree = SumTree(capacity)
 
     def _getPriority(self, error):
@@ -201,7 +201,6 @@ class DQN:
             target[0, action] = reward + q_future * self._gamma
         self._model.fit(state, target, epochs=1, verbose=0)
         ret = np.abs(np.sum(Q - target))
-        print(ret)
         return ret
 
     def target_train(self):
