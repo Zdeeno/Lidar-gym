@@ -118,7 +118,6 @@ class ActorCritic:
         beta_s = Lambda(lambda x: squeeze(x, 3))(addb)
 
 
-
         ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
         adam = Adam(lr=0.001)
         ret_model.compile(loss='mse', optimizer=adam)
