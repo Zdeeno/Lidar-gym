@@ -7,7 +7,7 @@ import numpy as np
 from tensorflow.contrib.keras.api.keras.models import Model
 from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Input, Lambda, Conv3D, MaxPool3D, Conv2D,\
                                                       MaxPool2D, Reshape, Flatten
-from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape
+from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape, constant
 from tensorflow.contrib.keras.api.keras.regularizers import l2
 from tensorflow.contrib.keras.api.keras.layers import Add, Multiply
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
@@ -72,6 +72,7 @@ class ActorCritic:
 
     # Model Definitions
     def create_actor_model(self):
+
         reconstructed_input = Input(shape=self.map_shape)
         r11 = Lambda(lambda x: expand_dims(x, -1))(reconstructed_input)
         c11 = Conv3D(2, 4, padding='same', activation='relu')(r11)
@@ -107,8 +108,15 @@ class ActorCritic:
         r2 = Reshape((360, 360, 1))(c3)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
         c5 = Conv2D(2, 4, padding='same', activation='linear')(p2)
-        c6 = Conv2D(1, 4, padding='same', activation='linear')(c5)
-        output = Lambda(lambda x: squeeze(x, 3))(c6)
+        # stochastic policy with beta distribution
+        alpha = Conv2D(1, 4, padding='same', activation='softplus')(c5)
+        adda = Add()[alpha, constant(1)]
+        alpha_s = Lambda(lambda x: squeeze(x, 3))(adda)
+        beta = Conv2D(1, 4, padding='same', activation='softplus')(c5)
+        addb = Add()[beta, constant(1)]
+        beta_s = Lambda(lambda x: squeeze(x, 3))(addb)
+
+
 
         ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
         adam = Adam(lr=0.001)
