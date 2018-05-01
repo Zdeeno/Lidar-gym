@@ -15,11 +15,52 @@ import tensorflow.contrib.keras.api.keras.backend as K
 from tensorflow.contrib.keras.api.keras.activations import softmax
 import tensorflow as tf
 from lidar_gym.agent.supervised_agent import Supervised
+from lidar_gym.tools.sum_tree import SumTree
 
 import random
 from collections import deque
 from os.path import expanduser
 import os
+
+
+class Memory:
+    # store (s, a, r, s', d) in SumTree
+
+    def __init__(self, capacity):
+        self.length = 0
+        self.capacity = capacity
+
+        # constants
+        self.e = 0.01
+        self.a = 1
+        self.tree = SumTree(capacity)
+
+    def _getPriority(self, error):
+        return ((error + self.e)/10) ** self.a
+
+    def add(self, error, sample):
+        p = self._getPriority(error)
+        self.tree.add(p, sample)
+        if self.length < self.capacity:
+            self.length += 1
+
+    def sample(self, n):
+        batch = []
+        segment = self.tree.total() / n
+
+        for i in range(n):
+            a = segment * i
+            b = segment * (i + 1)
+
+            s = random.uniform(a, b)
+            (idx, p, data) = self.tree.get(s)
+            batch.append((idx, data))
+
+        return batch
+
+    def update(self, idx, error):
+        p = self._getPriority(error)
+        self.tree.update(idx, p)
 
 
 class ActorCritic:
@@ -46,7 +87,7 @@ class ActorCritic:
         self.buffer_size = 1000
         self.num_proto_actions = 5
 
-        self.buffer = deque(maxlen=self.buffer_size)
+        self.buffer = Memory(self.buffer_size)
         self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model = self.create_actor_model()
         _, _, self.target_actor_model = self.create_actor_model()
 
@@ -116,7 +157,7 @@ class ActorCritic:
         beta = Conv2D(1, 4, padding='same', activation='softplus')(c5)
         addb = Add()[beta, constant(1)]
         beta_s = Lambda(lambda x: squeeze(x, 3))(addb)
-
+        output = tf.distributions.Beta(alpha_s, beta_s).sample()
 
         ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
         adam = Adam(lr=0.001)
@@ -226,7 +267,7 @@ class ActorCritic:
 
     def train(self):
         self.epsilon *= self.epsilon_decay
-        if len(self.buffer) < self.batch_size:
+        if self.buffer.length < self.batch_size:
             return
 
         samples = random.sample(self.buffer, self.batch_size)
