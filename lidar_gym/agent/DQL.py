@@ -214,6 +214,7 @@ class DQN:
 
     def load_model(self, f):
         self._model.load_weights(filepath=f)
+        self._target_model.load_weights(filepath=f)
 
     def append_to_buffer(self, state, action, reward, new_state, done):
         sample = state, action, reward, new_state, done
@@ -245,14 +246,36 @@ def evaluate(supervised, dqn):
     print('Evaluation started')
     reconstucted = np.zeros(dqn._map_shape)
     sparse = np.zeros(dqn._map_shape)
+    step = 0
     while not done:
         rays = dqn.predict([reconstucted, sparse])
         obv, reward, done, _ = evalenv.step({'map': reconstucted, 'rays': rays})
         reward_overall += reward
         sparse = obv['X']
         reconstucted = supervised.predict(sparse)
+        step += 1
+        if step == 100:
+            with open('train_log', 'a+') as f:
+                f.write(ray_string(rays))
+    with open('train_log', 'a+') as f:
+        f.write(ray_string(reward_overall))
     print('Evaluation ended with value: ' + str(reward_overall))
     return reward_overall
+
+
+def ray_string(action_in):
+    to_print = np.empty(action_in.shape, dtype=str)
+    to_print[:] = ' '
+    to_print[action_in] = '+'
+    ret = '\n--------------------------------------------------------' \
+          '----------------------------------------------------------------------------\n'
+    for i in range(action_in.shape[1]):
+        ret += '|'
+        ret += ''.join(to_print[:, i])
+        ret += '|\n'
+    ret += '----------------------------------------------------------' \
+           '--------------------------------------------------------------------------\n\n'
+    return ret
 
 
 if __name__ == "__main__":
@@ -265,7 +288,7 @@ if __name__ == "__main__":
     home = expanduser("~")
     loaddir = os.path.join(home, 'trained_models/supervised_small_model_-242.64441054044056.h5')
     supervised.load_weights(loaddir)
-    # dql_agent.load_model(os.path.join(home, 'Projekt/lidar-gym/trained_models/dqn_model_-267.78735501225526.h5'))
+    dql_agent.load_model(os.path.join(home, 'trained_models/dqn_model_-250.39402455340868.h5'))
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
     shape = dql_agent._map_shape
@@ -297,7 +320,7 @@ if __name__ == "__main__":
 
         episode += 1
 
-        if episode % 10 == 0:
+        if episode % 25 == 0:
             rew = evaluate(supervised, dql_agent)
             if rew > max_reward:
                 print('new best agent - saving with reward:' + str(rew))
