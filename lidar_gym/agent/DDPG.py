@@ -83,7 +83,7 @@ class ActorCritic:
         self.tau = .15
         # self.batch_size = 4
         # self.buffer_size = 200
-        self.batch_size = 8
+        self.batch_size = 7
         self.buffer_size = 1000
         self.num_proto_actions = 5
 
@@ -114,6 +114,7 @@ class ActorCritic:
 
     # Model Definitions
     def create_actor_model(self):
+        const = constant(1, shape=(1, self.lidar_shape[0], self.lidar_shape[1], 1))
 
         reconstructed_input = Input(shape=self.map_shape)
         r11 = Lambda(lambda x: expand_dims(x, -1))(reconstructed_input)
@@ -152,12 +153,17 @@ class ActorCritic:
         c5 = Conv2D(2, 4, padding='same', activation='linear')(p2)
         # stochastic policy with beta distribution
         alpha = Conv2D(1, 4, padding='same', activation='softplus')(c5)
-        adda = Add()[alpha, constant(1)]
-        alpha_s = Lambda(lambda x: squeeze(x, 3))(adda)
+        adda = Add()([alpha, const])
+
         beta = Conv2D(1, 4, padding='same', activation='softplus')(c5)
-        addb = Add()[beta, constant(1)]
-        beta_s = Lambda(lambda x: squeeze(x, 3))(addb)
-        output = tf.distributions.Beta(alpha_s, beta_s).sample()
+        addb = Add()([beta, const])
+
+        alpha_sample = Lambda(lambda x: tf.random_gamma(shape=(), alpha=x))(adda)
+        beta_sample = Lambda(lambda x: tf.random_gamma(shape=(), alpha=x))(addb)
+        output = Lambda(lambda x: x[1] / (x[1] + x[0]))([alpha_sample, beta_sample])
+
+        # output = Lambda(lambda x: squeeze(x, 3))(out)
+        print(alpha.shape, adda.shape, const.shape, output.shape)
 
         ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
         adam = Adam(lr=0.001)
@@ -225,11 +231,9 @@ class ActorCritic:
         ret_model.compile(loss="mse", optimizer=adam)
         return sparse_input, reconstructed_input, action_input, ret_model
 
-    # training
     def append_to_buffer(self, state, action, reward, new_state, done):
-        if len(self.buffer) > 0:
-            _, _, _, state, _ = self.buffer[-1]
-        self.buffer.append([state, action, reward, new_state, done])
+        sample = state, action, reward, new_state, done
+        self.buffer.add(self.TD_size(sample), sample)
 
     def _train_actor(self, samples):
         for sample in samples:
@@ -250,19 +254,22 @@ class ActorCritic:
 
     def _train_critic(self, samples):
         for sample in samples:
-            cur_state, action, reward, new_state, done = sample
+            idx, data = sample
+            cur_state, action, reward, new_state, done = data
             cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
-            action = np.expand_dims(self.probs_to_bools(action), axis=0)
+            action = np.expand_dims(self.probs_to_bestQ(action), axis=0)
 
             if not done:
                 new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
                 target_action = self.target_actor_model.predict(new_state)
-                target_action = np.expand_dims(self.probs_to_bools(target_action[0]), axis=0)
+                target_action = np.expand_dims(self.probs_to_bestQ(target_action[0]), axis=0)
                 future_reward = self.target_critic_model.predict(
                     [new_state[0], new_state[1], target_action])[0][0]
                 reward += self.gamma * future_reward
 
             reward = np.expand_dims(reward, axis=0)
+            TD = np.abs(self.critic_model.predict([cur_state[0], cur_state[1], action])[0][0] - reward[0])
+            self.buffer.update(idx, TD)
             self.critic_model.fit([cur_state[0], cur_state[1], action], reward, verbose=0)
 
     def train(self):
@@ -302,19 +309,23 @@ class ActorCritic:
             return np.asarray(self.env.action_space.sample()['rays'], dtype=np.float)
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         rays = self.actor_model.predict(state)[0]
-        # print_rays(self.probs_to_bools(rays))
         return rays
 
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
-        return self.probs_to_bools(self.actor_model.predict(state)[0])
+        return self.probs_to_bestQ(self.actor_model.predict(state)[0])
 
     def probs_to_bestQ(self, probs):
         assert probs.ndim == 2, 'has shape: ' + str(probs.shape)
-        ret = np.zeros(shape=(self.num_proto_actions, ) + self.lidar_shape, dtype=bool)
+        proto_action = np.zeros(shape=(self.num_proto_actions, ) + self.lidar_shape, dtype=bool)
         # sample more rays and choose 5 actions randomly
         indexes = self._largest_indices(probs, self.max_rays*2)
-        return ret
+        for i in range(self.num_proto_actions):
+            samples = random.sample(indexes, self.max_rays)
+            proto_action[i, samples] = True
+        rewards = self.critic_model.predict(proto_action, self.num_proto_actions)
+        index_max = np.argmax(rewards)
+        return proto_action[index_max]
 
     def _largest_indices(self, arr, n):
         """
@@ -333,6 +344,24 @@ class ActorCritic:
         self.actor_model.load_weights(filepath=f_actor)
         self.critic_model.load_weights(filepath=f_critic)
 
+    def TD_size(self, sample):
+        cur_state, action, reward, new_state, done = sample
+        cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
+        action = np.expand_dims(self.probs_to_bestQ(action), axis=0)
+
+        if not done:
+            new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
+            target_action = self.target_actor_model.predict(new_state)
+            target_action = np.expand_dims(self.probs_to_bestQ(target_action[0]), axis=0)
+            future_reward = self.target_critic_model.predict(
+                [new_state[0], new_state[1], target_action])[0][0]
+            reward += self.gamma * future_reward
+
+        reward = np.expand_dims(reward, axis=0)
+        TD = np.abs(self.critic_model.predict([cur_state[0], cur_state[1], action])[0][0] - reward[0])
+        self.critic_model.fit([cur_state[0], cur_state[1], action], reward, verbose=0)
+        return TD
+
 
 def evaluate(supervised, reinforce):
     # evalenv = gym.make('lidareval-v0')
@@ -343,26 +372,36 @@ def evaluate(supervised, reinforce):
     print('Evaluation started')
     reconstucted = np.zeros(reinforce.map_shape)
     sparse = np.zeros(reinforce.map_shape)
+    step = 0
     while not done:
         rays = reinforce.predict([reconstucted, sparse])
         obv, reward, done, _ = evalenv.step({'map': reconstucted, 'rays': rays})
         reward_overall += reward
         sparse = obv['X']
         reconstucted = supervised.predict(sparse)
+        step += 1
+        if step == 100:
+            with open('train_log', 'a+') as f:
+                f.write(ray_string(rays))
+    with open('train_log', 'a+') as f:
+        f.write(str(reward_overall))
     print('Evaluation ended with value: ' + str(reward_overall))
     return reward_overall
 
 
-def print_rays(action):
-    to_print = np.empty(action.shape, dtype=str)
+def ray_string(action_in):
+    to_print = np.empty(action_in.shape, dtype=str)
     to_print[:] = ' '
-    to_print[action] = '+'
-    print('------------------------------------------------------------------------------------------------------------------------------------')
-    for i in range(action.shape[1]):
-        print('|', end='', flush=True)
-        print(''.join(to_print[:, i]), end='')
-        print('|')
-    print('------------------------------------------------------------------------------------------------------------------------------------')
+    to_print[action_in] = '+'
+    ret = '\n--------------------------------------------------------' \
+          '----------------------------------------------------------------------------\n'
+    for i in range(action_in.shape[1]):
+        ret += '|'
+        ret += ''.join(to_print[:, i])
+        ret += '|\n'
+    ret += '----------------------------------------------------------' \
+           '--------------------------------------------------------------------------\n\n'
+    return ret
 
 
 if __name__ == "__main__":
@@ -395,7 +434,7 @@ if __name__ == "__main__":
         # training
         while not done:
             action_prob = model.act(curr_state)
-            rays = model.probs_to_bools(action_prob)
+            rays = model.probs_to_bestQ(action_prob)
             new_state, reward, done, _ = env.step({'rays':rays, 'map': curr_state[1]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
