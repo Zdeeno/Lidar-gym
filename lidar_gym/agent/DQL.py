@@ -258,7 +258,7 @@ def evaluate(supervised, dqn):
             with open('train_log', 'a+') as f:
                 f.write(ray_string(rays))
     with open('train_log', 'a+') as f:
-        f.write(ray_string(reward_overall))
+        f.write(str(reward_overall))
     print('Evaluation ended with value: ' + str(reward_overall))
     return reward_overall
 
@@ -297,6 +297,7 @@ if __name__ == "__main__":
     max_reward = -float('inf')
 
     while True:
+
         done = False
         curr_state = env.reset()
         curr_state = [np.zeros((shape[0], shape[1], shape[2])), np.zeros((shape[0], shape[1], shape[2]))]
