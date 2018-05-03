@@ -6,16 +6,15 @@ import gym
 import numpy as np
 from tensorflow.contrib.keras.api.keras.models import Model
 from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Input, Lambda, Conv3D, MaxPool3D, Conv2D,\
-                                                      MaxPool2D, Reshape, Flatten
-from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape, constant
+                                                      MaxPool2D, Reshape, Flatten, Layer
+from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape
 from tensorflow.contrib.keras.api.keras.regularizers import l2
 from tensorflow.contrib.keras.api.keras.layers import Add, Multiply
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
 import tensorflow.contrib.keras.api.keras.backend as K
-from tensorflow.contrib.keras.api.keras.activations import softmax
 import tensorflow as tf
 from lidar_gym.agent.supervised_agent import Supervised
-from lidar_gym.tools.sum_tree import SumTree
+from lidar_gym.tools.sum_tree import Memory
 
 import random
 from collections import deque
@@ -23,44 +22,21 @@ from os.path import expanduser
 import os
 
 
-class Memory:
-    # store (s, a, r, s', d) in SumTree
+class AddConst(Layer):
+    def __init__(self, const, **kwargs):
+        self.const = const
+        super(AddConst, self).__init__(**kwargs)
 
-    def __init__(self, capacity):
-        self.length = 0
-        self.capacity = capacity
+    def build(self, input_shape):
+        super(AddConst, self).build(input_shape)
 
-        # constants
-        self.e = 0.01
-        self.a = 1
-        self.tree = SumTree(capacity)
+    def call(self, inputs, **kwargs):
+        print(inputs.shape)
+        const = tf.constant(self.const, dtype='float', shape=inputs.shape[1:])
+        return tf.add(inputs, const)
 
-    def _getPriority(self, error):
-        return ((error + self.e)/10) ** self.a
-
-    def add(self, error, sample):
-        p = self._getPriority(error)
-        self.tree.add(p, sample)
-        if self.length < self.capacity:
-            self.length += 1
-
-    def sample(self, n):
-        batch = []
-        segment = self.tree.total() / n
-
-        for i in range(n):
-            a = segment * i
-            b = segment * (i + 1)
-
-            s = random.uniform(a, b)
-            (idx, p, data) = self.tree.get(s)
-            batch.append((idx, data))
-
-        return batch
-
-    def update(self, idx, error):
-        p = self._getPriority(error)
-        self.tree.update(idx, p)
+    def compute_output_shape(self, input_shape):
+        return input_shape
 
 
 class ActorCritic:
@@ -114,8 +90,6 @@ class ActorCritic:
 
     # Model Definitions
     def create_actor_model(self):
-        const = constant(1, shape=(1, self.lidar_shape[0], self.lidar_shape[1], 1))
-
         reconstructed_input = Input(shape=self.map_shape)
         r11 = Lambda(lambda x: expand_dims(x, -1))(reconstructed_input)
         c11 = Conv3D(2, 4, padding='same', activation='relu')(r11)
@@ -152,20 +126,18 @@ class ActorCritic:
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
         c5 = Conv2D(2, 4, padding='same', activation='linear')(p2)
         # stochastic policy with beta distribution
-        alpha = Conv2D(1, 4, padding='same', activation='softplus')(c5)
-        adda = Add()([alpha, const])
+        alpha = Conv2D(1.0, 4, padding='same', activation='softplus')(c5)
+        adda = AddConst(1)(alpha)
 
         beta = Conv2D(1, 4, padding='same', activation='softplus')(c5)
-        addb = Add()([beta, const])
+        addb = AddConst(1.0)(beta)
 
-        alpha_sample = Lambda(lambda x: tf.random_gamma(shape=(), alpha=x))(adda)
-        beta_sample = Lambda(lambda x: tf.random_gamma(shape=(), alpha=x))(addb)
-        output = Lambda(lambda x: x[1] / (x[1] + x[0]))([alpha_sample, beta_sample])
+        outputalpha = Lambda(lambda x: squeeze(x, 3))(adda)
+        outputbeta = Lambda(lambda x: squeeze(x, 3))(addb)
 
-        # output = Lambda(lambda x: squeeze(x, 3))(out)
-        print(alpha.shape, adda.shape, const.shape, output.shape)
+        # print(alpha.shape, adda.shape, const.shape, output.shape)
 
-        ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
+        ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=[outputalpha, outputbeta])
         adam = Adam(lr=0.001)
         ret_model.compile(loss='mse', optimizer=adam)
         return sparse_input, reconstructed_input, ret_model
