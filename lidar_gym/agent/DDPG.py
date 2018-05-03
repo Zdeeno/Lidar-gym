@@ -64,8 +64,8 @@ class ActorCritic:
         self.num_proto_actions = 5
 
         self.buffer = Memory(self.buffer_size)
-        self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model = self.create_actor_model()
-        _, _, self.target_actor_model = self.create_actor_model()
+        self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model = self._create_actor_model()
+        _, _, self.target_actor_model = self._create_actor_model()
 
         # where we will feed de/dC (from critic)
         self.actor_critic_grad = tf.placeholder(tf.float32, [None, self.lidar_shape[0], self.lidar_shape[1]])
@@ -79,8 +79,8 @@ class ActorCritic:
 
         # critic model
         self.critic_sparse_input, self.critic_reconstructed_input,\
-            self.critic_action_input, self.critic_model = self.create_critic_model()
-        _, _, _, self.target_critic_model = self.create_critic_model()
+            self.critic_action_input, self.critic_model = self._create_critic_model()
+        _, _, _, self.target_critic_model = self._create_critic_model()
 
         # where we calculate de/dC for feeding above
         self.critic_grads = tf.gradients(self.critic_model.output, self.critic_action_input)
@@ -89,7 +89,7 @@ class ActorCritic:
         self.sess.run(tf.initialize_all_variables())
 
     # Model Definitions
-    def create_actor_model(self):
+    def _create_actor_model(self):
         reconstructed_input = Input(shape=self.map_shape)
         r11 = Lambda(lambda x: expand_dims(x, -1))(reconstructed_input)
         c11 = Conv3D(2, 4, padding='same', activation='relu')(r11)
@@ -127,7 +127,7 @@ class ActorCritic:
         c5 = Conv2D(2, 4, padding='same', activation='linear')(p2)
         # stochastic policy with beta distribution
         alpha = Conv2D(1.0, 4, padding='same', activation='softplus')(c5)
-        adda = AddConst(1)(alpha)
+        adda = AddConst(1.0)(alpha)
 
         beta = Conv2D(1, 4, padding='same', activation='softplus')(c5)
         addb = AddConst(1.0)(beta)
@@ -142,7 +142,7 @@ class ActorCritic:
         ret_model.compile(loss='mse', optimizer=adam)
         return sparse_input, reconstructed_input, ret_model
 
-    def create_critic_model(self):
+    def _create_critic_model(self):
 
         reconstructed_input = Input(shape=self.map_shape)
         r11 = Lambda(lambda x: expand_dims(x, -1))(reconstructed_input)
@@ -205,7 +205,7 @@ class ActorCritic:
 
     def append_to_buffer(self, state, action, reward, new_state, done):
         sample = state, action, reward, new_state, done
-        self.buffer.add(self.TD_size(sample), sample)
+        self.buffer.add(self._TD_size(sample), sample)
 
     def _train_actor(self, samples):
         for sample in samples:
@@ -229,12 +229,12 @@ class ActorCritic:
             idx, data = sample
             cur_state, action, reward, new_state, done = data
             cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
-            action = np.expand_dims(self.probs_to_bestQ(action), axis=0)
+            action = np.expand_dims(self._probs_to_bestQ(action), axis=0)
 
             if not done:
                 new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
                 target_action = self.target_actor_model.predict(new_state)
-                target_action = np.expand_dims(self.probs_to_bestQ(target_action[0]), axis=0)
+                target_action = np.expand_dims(self._probs_to_bestQ(target_action[0]), axis=0)
                 future_reward = self.target_critic_model.predict(
                     [new_state[0], new_state[1], target_action])[0][0]
                 reward += self.gamma * future_reward
@@ -280,14 +280,18 @@ class ActorCritic:
         if np.random.random() < epsilon:
             return np.asarray(self.env.action_space.sample()['rays'], dtype=np.float)
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
-        rays = self.actor_model.predict(state)[0]
+        rays = self.predict(state)
         return rays
 
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
-        return self.probs_to_bestQ(self.actor_model.predict(state)[0])
+        alpha, beta = self.actor_model.predict(state)[0]
+        alpha_sample = tf.random_gamma(shape=(), alpha=alpha)
+        beta_sample = tf.random_gamma(shape=(), alpha=beta)
+        probs = beta_sample / alpha_sample + beta_sample
+        return self._probs_to_bestQ(probs)
 
-    def probs_to_bestQ(self, probs):
+    def _probs_to_bestQ(self, probs):
         assert probs.ndim == 2, 'has shape: ' + str(probs.shape)
         proto_action = np.zeros(shape=(self.num_proto_actions, ) + self.lidar_shape, dtype=bool)
         # sample more rays and choose 5 actions randomly
@@ -316,15 +320,15 @@ class ActorCritic:
         self.actor_model.load_weights(filepath=f_actor)
         self.critic_model.load_weights(filepath=f_critic)
 
-    def TD_size(self, sample):
+    def _TD_size(self, sample):
         cur_state, action, reward, new_state, done = sample
         cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
-        action = np.expand_dims(self.probs_to_bestQ(action), axis=0)
+        action = np.expand_dims(self._probs_to_bestQ(action), axis=0)
 
         if not done:
             new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
             target_action = self.target_actor_model.predict(new_state)
-            target_action = np.expand_dims(self.probs_to_bestQ(target_action[0]), axis=0)
+            target_action = np.expand_dims(self._probs_to_bestQ(target_action[0]), axis=0)
             future_reward = self.target_critic_model.predict(
                 [new_state[0], new_state[1], target_action])[0][0]
             reward += self.gamma * future_reward
@@ -353,9 +357,9 @@ def evaluate(supervised, reinforce):
         reconstucted = supervised.predict(sparse)
         step += 1
         if step == 100:
-            with open('train_log', 'a+') as f:
+            with open('train_log_DDPG', 'a+') as f:
                 f.write(ray_string(rays))
-    with open('train_log', 'a+') as f:
+    with open('train_log_DDPG', 'a+') as f:
         f.write(str(reward_overall))
     print('Evaluation ended with value: ' + str(reward_overall))
     return reward_overall
@@ -405,12 +409,11 @@ if __name__ == "__main__":
         print('\n------------------- Drive number', episode, '-------------------------')
         # training
         while not done:
-            action_prob = model.act(curr_state)
-            rays = model.probs_to_bestQ(action_prob)
-            new_state, reward, done, _ = env.step({'rays':rays, 'map': curr_state[1]})
+            rays = model.act(curr_state)
+            new_state, reward, done, _ = env.step({'rays': rays, 'map': curr_state[1]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
-            model.append_to_buffer(curr_state, action_prob, reward, new_state, done)
+            model.append_to_buffer(curr_state, rays, reward, new_state, done)
 
             model.train()
             model.update_target()
