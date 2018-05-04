@@ -3,7 +3,7 @@ import numpy as np
 import random
 from tensorflow.contrib.keras.api.keras.models import Model
 from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Input, Lambda, Conv3D, MaxPool3D, Conv2D,\
-                                                      MaxPool2D, Reshape, Add
+                                                      MaxPool2D, Reshape, Add, Multiply
 from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
 from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
@@ -81,8 +81,9 @@ class DQN:
         c6 = Conv2D(1, 4, padding='same', activation='linear')(c5)
         output = Lambda(lambda x: squeeze(x, 3))(c6)
         '''
+
         # merge SMALL inputs
-        a1 = Add()([c21, c22])
+        a1 = Multiply()([c21, c22])
         c1 = Conv3D(1, 4, padding='same', activation='relu')(a1)
         s1 = Lambda(lambda x: squeeze(x, 4))(c1)
         c2 = Conv2D(8, 4, padding='same', activation='relu')(s1)

@@ -21,22 +21,6 @@ from os.path import expanduser
 import os
 
 
-class AddConst(Layer):
-    def __init__(self, const, **kwargs):
-        self.const = const
-        super(AddConst, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        super(AddConst, self).build(input_shape)
-
-    def call(self, inputs, **kwargs):
-        const = tf.constant(self.const, dtype='float', shape=inputs.shape[1:])
-        return tf.add(inputs, const)
-
-    def compute_output_shape(self, input_shape):
-        return input_shape
-
-
 class ActorCritic:
 
     def __init__(self, env, sess):
@@ -45,6 +29,7 @@ class ActorCritic:
         # self.max_rays = 200
         self.map_shape = (160, 160, 16)
         self.lidar_shape = (120, 90)
+        self.action_size = self.lidar_shape[0]*self.lidar_shape[1]
         self.max_rays = 100
         self.env = env
         self.sess = sess
@@ -55,15 +40,19 @@ class ActorCritic:
         self.min_epsilon = 0.2
         self.gamma = .95
         self.tau = .15
-        # self.batch_size = 4
-        # self.buffer_size = 200
         self.batch_size = 7
         self.buffer_size = 1000
         self.num_proto_actions = 5
 
+        self.pert_threshold_dist = 0.1
+        self.pert_threshold_decay = 0.95
+        self.pert_alpha = 1.01
+        self.pert_variance = 0.1
+
         self.buffer = Memory(self.buffer_size)
         self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model = self._create_actor_model()
         _, _, self.target_actor_model = self._create_actor_model()
+        _, _, self.perturbed_actor_model = self._create_actor_model()
 
         # where we will feed de/dC (from critic)
         self.actor_critic_grad = tf.placeholder(tf.float32, [None, self.lidar_shape[0], self.lidar_shape[1]])
@@ -265,6 +254,10 @@ class ActorCritic:
             critic_target_weights[i] = critic_model_weights[i] * self.tau + critic_target_weights[i] * (1 - self.tau)
         self.target_critic_model.set_weights(critic_target_weights)
 
+    def _update_perturbed(self):
+        actor_weights = self.actor_model.get_weights()
+        self.perturbed_actor_model.set_weights(np.random.normal(actor_weights, self.pert_variance))
+
     def update_target(self):
         self._update_actor_target()
         self._update_critic_target()
@@ -274,6 +267,21 @@ class ActorCritic:
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         probs = self.actor_model.predict(state)
         return self._probs_to_bestQ(probs[0], state[0], state[1])
+
+    def predict_perturbed(self, state):
+        state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
+        self._update_perturbed()
+        probs = self.actor_model.predict(state)
+        probs_perturbed = self.perturbed_actor_model.predict(state)
+        dist = np.sqrt(np.sum(np.square(probs - probs_perturbed))/self.action_size)
+        if dist > self.pert_threshold_dist:
+            self.pert_variance /= self.pert_alpha
+        else:
+            self.pert_variance *= self.pert_alpha
+        return self._probs_to_bestQ(probs_perturbed[0], state[0], state[1])
+
+    def perturbation_decay(self):
+        self.pert_threshold_dist *= self.pert_threshold_decay
 
     def _probs_to_bestQ(self, probs, sparse_state, reconstructed_state):
         # pseudo - wolpetinger policy
@@ -353,6 +361,7 @@ def evaluate(supervised, reinforce):
 
 
 def ray_string(action_in):
+    # create string to visualise action in console
     to_print = np.empty(action_in.shape, dtype=str)
     to_print[:] = ' '
     to_print[action_in] = '+'
@@ -396,7 +405,7 @@ if __name__ == "__main__":
         print('\n------------------- Drive number', episode, '-------------------------')
         # training
         while not done:
-            rays = model.predict(curr_state)
+            rays = model.predict_perturbed(curr_state)
             # print(ray_string(rays))
             new_state, reward, done, _ = env.step({'rays': rays, 'map': curr_state[1]})
 
@@ -413,7 +422,8 @@ if __name__ == "__main__":
         episode += 1
         # evaluation and saving
         print('\nend of episode')
-        if episode % 10 == 0:
+        if episode % 25 == 0:
+            model.perturbation_decay()
             rew = evaluate(supervised, model)
             if rew > max_reward:
                 print('new best agent - saving with reward:' + str(rew))
