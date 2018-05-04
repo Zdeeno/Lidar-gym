@@ -6,10 +6,9 @@ import gym
 import numpy as np
 from tensorflow.contrib.keras.api.keras.models import Model
 from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Input, Lambda, Conv3D, MaxPool3D, Conv2D,\
-                                                      MaxPool2D, Reshape, Flatten, Layer
+                                                      MaxPool2D, Reshape, Flatten, Layer, Add, Multiply
 from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape
 from tensorflow.contrib.keras.api.keras.regularizers import l2
-from tensorflow.contrib.keras.api.keras.layers import Add, Multiply
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
 import tensorflow.contrib.keras.api.keras.backend as K
 import tensorflow as tf
@@ -31,7 +30,6 @@ class AddConst(Layer):
         super(AddConst, self).build(input_shape)
 
     def call(self, inputs, **kwargs):
-        print(inputs.shape)
         const = tf.constant(self.const, dtype='float', shape=inputs.shape[1:])
         return tf.add(inputs, const)
 
@@ -116,7 +114,7 @@ class ActorCritic:
         '''
 
         # merge SMALL inputs
-        a1 = Add()([c21, c22])
+        a1 = Multiply()([c21, c22])
         c1 = Conv3D(1, 4, padding='same', activation='relu')(a1)
         s1 = Lambda(lambda x: squeeze(x, 4))(c1)
         c2 = Conv2D(8, 4, padding='same', activation='relu')(s1)
@@ -124,20 +122,15 @@ class ActorCritic:
         c3 = Conv2D(81, 4, padding='same', activation='relu')(p1)
         r2 = Reshape((360, 360, 1))(c3)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
-        c5 = Conv2D(2, 4, padding='same', activation='linear')(p2)
-        # stochastic policy with beta distribution
-        alpha = Conv2D(1.0, 4, padding='same', activation='softplus')(c5)
-        adda = AddConst(1.0)(alpha)
+        c5 = Conv2D(2, 4, padding='same', activation='relu')(p2)
+        c6 = Conv2D(4, 4, padding='same', activation='linear')(c5)
+        c7 = Conv2D(1, 4, padding='same', activation='tanh')(c6)
 
-        beta = Conv2D(1, 4, padding='same', activation='softplus')(c5)
-        addb = AddConst(1.0)(beta)
-
-        outputalpha = Lambda(lambda x: squeeze(x, 3))(adda)
-        outputbeta = Lambda(lambda x: squeeze(x, 3))(addb)
+        output = Lambda(lambda x: squeeze(x, 3))(c7)
 
         # print(alpha.shape, adda.shape, const.shape, output.shape)
 
-        ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=[outputalpha, outputbeta])
+        ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
         adam = Adam(lr=0.001)
         ret_model.compile(loss='mse', optimizer=adam)
         return sparse_input, reconstructed_input, ret_model
@@ -158,8 +151,8 @@ class ActorCritic:
 
         action_input = Input(shape=self.lidar_shape)
         r13 = Lambda(lambda x: expand_dims(x, -1))(action_input)
-        c13 = Conv2D(2, 4, padding='same', activation='relu')(r13)
-        c23 = Conv2D(4, 4, padding='same', activation='relu')(c13)
+        c13 = Conv2D(4, 4, padding='same', activation='relu')(r13)
+        c23 = Conv2D(1, 4, padding='same', activation='relu')(c13)
 
         '''
         # merge LARGE action inputs and output reward
@@ -180,7 +173,7 @@ class ActorCritic:
         '''
 
         # merge SMALL action inputs and output action Q value
-        a1 = Add()([c21, c22])
+        a1 = Multiply()([c21, c22])
         c1 = Conv3D(1, 4, padding='same', activation='relu')(a1)
         s1 = Lambda(lambda x: squeeze(x, 4))(c1)
         c2 = Conv2D(8, 4, padding='same', activation='relu')(s1)
@@ -188,7 +181,7 @@ class ActorCritic:
         c3 = Conv2D(81, 4, padding='same', activation='relu')(p1)
         r2 = Reshape((360, 360, 1))(c3)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
-        a2 = Add()([p2, c23])
+        a2 = Multiply()([p2, c23])
         c4 = Conv2D(2, 4, padding='same', activation='relu')(a2)
         p2 = MaxPool2D(pool_size=4, strides=4)(c4)
         c5 = Conv2D(4, 4, padding='same', activation='relu')(p2)
@@ -209,9 +202,11 @@ class ActorCritic:
 
     def _train_actor(self, samples):
         for sample in samples:
-            state, action, reward, new_state, _ = sample
+            idx, data = sample
+            state, action, reward, new_state, _ = data
             state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
-            predicted_action = self.actor_model.predict(state)
+            pred = self.predict(new_state)
+            predicted_action = np.expand_dims(pred, axis=0)
             grads = self.sess.run(self.critic_grads, feed_dict={
                 self.critic_sparse_input: state[0],
                 self.critic_reconstructed_input: state[1],
@@ -229,12 +224,12 @@ class ActorCritic:
             idx, data = sample
             cur_state, action, reward, new_state, done = data
             cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
-            action = np.expand_dims(self._probs_to_bestQ(action), axis=0)
+            action = np.expand_dims(action, axis=0)
 
             if not done:
                 new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
-                target_action = self.target_actor_model.predict(new_state)
-                target_action = np.expand_dims(self._probs_to_bestQ(target_action[0]), axis=0)
+                probs = self.target_actor_model.predict(new_state)
+                target_action = np.expand_dims(self._probs_to_bestQ(probs[0], cur_state[0], cur_state[1]), axis=0)
                 future_reward = self.target_critic_model.predict(
                     [new_state[0], new_state[1], target_action])[0][0]
                 reward += self.gamma * future_reward
@@ -249,7 +244,7 @@ class ActorCritic:
         if self.buffer.length < self.batch_size:
             return
 
-        samples = random.sample(self.buffer, self.batch_size)
+        samples = self.buffer.sample(self.batch_size)
         self._train_critic(samples)
         self._train_actor(samples)
 
@@ -275,32 +270,22 @@ class ActorCritic:
         self._update_critic_target()
 
     # predictions
-    def act(self, state):
-        epsilon = max(self.epsilon, self.min_epsilon)
-        if np.random.random() < epsilon:
-            return np.asarray(self.env.action_space.sample()['rays'], dtype=np.float)
-        state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
-        rays = self.predict(state)
-        return rays
-
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
-        alpha, beta = self.actor_model.predict(state)[0]
-        alpha_sample = tf.random_gamma(shape=(), alpha=alpha)
-        beta_sample = tf.random_gamma(shape=(), alpha=beta)
-        probs = beta_sample / alpha_sample + beta_sample
-        return self._probs_to_bestQ(probs)
+        probs = self.actor_model.predict(state)
+        return self._probs_to_bestQ(probs[0], state[0], state[1])
 
-    def _probs_to_bestQ(self, probs):
+    def _probs_to_bestQ(self, probs, sparse_state, reconstructed_state):
+        # pseudo - wolpetinger policy
         assert probs.ndim == 2, 'has shape: ' + str(probs.shape)
         proto_action = np.zeros(shape=(self.num_proto_actions, ) + self.lidar_shape, dtype=bool)
         # sample more rays and choose 5 actions randomly
         indexes = self._largest_indices(probs, self.max_rays*2)
         for i in range(self.num_proto_actions):
-            samples = random.sample(indexes, self.max_rays)
-            proto_action[i, samples] = True
-        rewards = self.critic_model.predict(proto_action, self.num_proto_actions)
-        index_max = np.argmax(rewards)
+            samples = np.asarray(random.sample(list(np.transpose(indexes)), self.max_rays))
+            proto_action[i, samples[:, 0], samples[:, 1]] = True
+        q_values = self.critic_model.predict([sparse_state, reconstructed_state, proto_action], self.num_proto_actions)
+        index_max = np.argmax(q_values)
         return proto_action[index_max]
 
     def _largest_indices(self, arr, n):
@@ -323,12 +308,14 @@ class ActorCritic:
     def _TD_size(self, sample):
         cur_state, action, reward, new_state, done = sample
         cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
-        action = np.expand_dims(self._probs_to_bestQ(action), axis=0)
+        action = np.expand_dims(action, axis=0)
 
         if not done:
             new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
-            target_action = self.target_actor_model.predict(new_state)
-            target_action = np.expand_dims(self._probs_to_bestQ(target_action[0]), axis=0)
+
+            probs = self.target_actor_model.predict(new_state)
+            target_action = np.expand_dims(self._probs_to_bestQ(probs[0], cur_state[0], cur_state[1]), axis=0)
+
             future_reward = self.target_critic_model.predict(
                 [new_state[0], new_state[1], target_action])[0][0]
             reward += self.gamma * future_reward
@@ -409,7 +396,8 @@ if __name__ == "__main__":
         print('\n------------------- Drive number', episode, '-------------------------')
         # training
         while not done:
-            rays = model.act(curr_state)
+            rays = model.predict(curr_state)
+            # print(ray_string(rays))
             new_state, reward, done, _ = env.step({'rays': rays, 'map': curr_state[1]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
