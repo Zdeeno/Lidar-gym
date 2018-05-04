@@ -249,7 +249,7 @@ if __name__ == "__main__":
     home = expanduser("~")
     loaddir = os.path.join(home, 'trained_models/supervised_small_model_-242.64441054044056.h5')
     supervised.load_weights(loaddir)
-    dql_agent.load_model(os.path.join(home, 'trained_models/dqn_model_-250.39402455340868.h5'))
+    # dql_agent.load_model(os.path.join(home, 'trained_models/dqn_model_-250.39402455340868.h5'))
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
     shape = dql_agent._map_shape
