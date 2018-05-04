@@ -255,8 +255,10 @@ class ActorCritic:
         self.target_critic_model.set_weights(critic_target_weights)
 
     def _update_perturbed(self):
-        actor_weights = self.actor_model.get_weights()
-        self.perturbed_actor_model.set_weights(np.random.normal(actor_weights, self.pert_variance))
+        perturbed_weights = self.actor_model.get_weights()
+        for i in range(len(perturbed_weights)):
+            perturbed_weights[i] += np.random.normal(0, self.pert_variance, perturbed_weights[i].shape)
+        self.perturbed_actor_model.set_weights(perturbed_weights)
 
     def update_target(self):
         self._update_actor_target()
