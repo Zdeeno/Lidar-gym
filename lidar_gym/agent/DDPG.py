@@ -39,15 +39,15 @@ class ActorCritic:
         self.epsilon_decay = .999
         self.min_epsilon = 0.2
         self.gamma = .95
-        self.tau = .15
+        self.tau = .001
         self.batch_size = 7
         self.buffer_size = 1000
         self.num_proto_actions = 5
 
-        self.pert_threshold_dist = 0.1
-        self.pert_threshold_decay = 0.95
+        self.pert_threshold_dist = 0.05
+        self.pert_threshold_decay = 0.9999
         self.pert_alpha = 1.01
-        self.pert_variance = 0.1
+        self.pert_variance = self.pert_threshold_dist
 
         self.buffer = Memory(self.buffer_size)
         self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model = self._create_actor_model()
@@ -79,15 +79,15 @@ class ActorCritic:
     def _create_actor_model(self):
         reconstructed_input = Input(shape=self.map_shape)
         r11 = Lambda(lambda x: expand_dims(x, -1))(reconstructed_input)
-        c11 = Conv3D(2, 4, padding='same', activation='relu')(r11)
+        c11 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r11)
         p11 = MaxPool3D(pool_size=2)(c11)
-        c21 = Conv3D(4, 4, padding='same', activation='relu')(p11)
+        c21 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p11)
 
         sparse_input = Input(shape=self.map_shape)
         r12 = Lambda(lambda x: expand_dims(x, -1))(sparse_input)
-        c12 = Conv3D(2, 4, padding='same', activation='relu')(r12)
+        c12 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r12)
         p12 = MaxPool3D(pool_size=2)(c12)
-        c22 = Conv3D(4, 4, padding='same', activation='relu')(p12)
+        c22 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p12)
 
         '''
         # merge LARGE inputs
@@ -103,17 +103,17 @@ class ActorCritic:
         '''
 
         # merge SMALL inputs
-        a1 = Multiply()([c21, c22])
-        c1 = Conv3D(1, 4, padding='same', activation='relu')(a1)
+        a1 = Add()([c21, c22])
+        c1 = Conv3D(1, 4, padding='same', activation='relu', kernel_regularizer='l2')(a1)
         s1 = Lambda(lambda x: squeeze(x, 4))(c1)
-        c2 = Conv2D(8, 4, padding='same', activation='relu')(s1)
+        c2 = Conv2D(8, 4, padding='same', activation='relu', kernel_regularizer='l2')(s1)
         p1 = MaxPool2D(pool_size=2)(c2)
-        c3 = Conv2D(81, 4, padding='same', activation='relu')(p1)
+        c3 = Conv2D(81, 4, padding='same', activation='relu', kernel_regularizer='l2')(p1)
         r2 = Reshape((360, 360, 1))(c3)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
-        c5 = Conv2D(2, 4, padding='same', activation='relu')(p2)
-        c6 = Conv2D(4, 4, padding='same', activation='linear')(c5)
-        c7 = Conv2D(1, 4, padding='same', activation='tanh')(c6)
+        c5 = Conv2D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(p2)
+        c6 = Conv2D(4, 4, padding='same', activation='linear', kernel_regularizer='l2')(c5)
+        c7 = Conv2D(1, 4, padding='same', activation='sigmoid', kernel_regularizer='l2')(c6)
 
         output = Lambda(lambda x: squeeze(x, 3))(c7)
 
@@ -128,20 +128,20 @@ class ActorCritic:
 
         reconstructed_input = Input(shape=self.map_shape)
         r11 = Lambda(lambda x: expand_dims(x, -1))(reconstructed_input)
-        c11 = Conv3D(2, 4, padding='same', activation='relu')(r11)
+        c11 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r11)
         p11 = MaxPool3D(pool_size=2)(c11)
-        c21 = Conv3D(4, 4, padding='same', activation='relu')(p11)
+        c21 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p11)
 
         sparse_input = Input(shape=self.map_shape)
         r12 = Lambda(lambda x: expand_dims(x, -1))(sparse_input)
-        c12 = Conv3D(2, 4, padding='same', activation='relu')(r12)
+        c12 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r12)
         p12 = MaxPool3D(pool_size=2)(c12)
-        c22 = Conv3D(4, 4, padding='same', activation='relu')(p12)
+        c22 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p12)
 
         action_input = Input(shape=self.lidar_shape)
         r13 = Lambda(lambda x: expand_dims(x, -1))(action_input)
-        c13 = Conv2D(4, 4, padding='same', activation='relu')(r13)
-        c23 = Conv2D(1, 4, padding='same', activation='relu')(c13)
+        c13 = Conv2D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(r13)
+        c23 = Conv2D(1, 4, padding='same', activation='relu', kernel_regularizer='l2')(c13)
 
         '''
         # merge LARGE action inputs and output reward
@@ -163,19 +163,19 @@ class ActorCritic:
 
         # merge SMALL action inputs and output action Q value
         a1 = Multiply()([c21, c22])
-        c1 = Conv3D(1, 4, padding='same', activation='relu')(a1)
+        c1 = Conv3D(1, 4, padding='same', activation='relu', kernel_regularizer='l2')(a1)
         s1 = Lambda(lambda x: squeeze(x, 4))(c1)
-        c2 = Conv2D(8, 4, padding='same', activation='relu')(s1)
+        c2 = Conv2D(8, 4, padding='same', activation='relu', kernel_regularizer='l2')(s1)
         p1 = MaxPool2D(pool_size=2)(c2)
-        c3 = Conv2D(81, 4, padding='same', activation='relu')(p1)
+        c3 = Conv2D(81, 4, padding='same', activation='relu', kernel_regularizer='l2')(p1)
         r2 = Reshape((360, 360, 1))(c3)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
         a2 = Multiply()([p2, c23])
-        c4 = Conv2D(2, 4, padding='same', activation='relu')(a2)
+        c4 = Conv2D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(a2)
         p2 = MaxPool2D(pool_size=4, strides=4)(c4)
-        c5 = Conv2D(4, 4, padding='same', activation='relu')(p2)
+        c5 = Conv2D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p2)
         p3 = MaxPool2D(pool_size=4, strides=4)(c5)
-        c6 = Conv2D(1, 4, padding='same', activation='relu')(p3)
+        c6 = Conv2D(1, 4, padding='same', activation='relu', kernel_regularizer='l2')(p3)
         f1 = Flatten()(c6)
         output = Dense(1, activation='linear')(f1)
 
@@ -268,6 +268,7 @@ class ActorCritic:
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         probs = self.actor_model.predict(state)
+        print(probs)
         return self._probs_to_bestQ(probs[0], state[0], state[1])
 
     def predict_perturbed(self, state):
@@ -408,7 +409,7 @@ if __name__ == "__main__":
         # training
         while not done:
             rays = model.predict_perturbed(curr_state)
-            # print(ray_string(rays))
+            print(ray_string(rays))
             new_state, reward, done, _ = env.step({'rays': rays, 'map': curr_state[1]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
@@ -420,6 +421,7 @@ if __name__ == "__main__":
             curr_state = new_state
             epoch += 1
             print('.', end='', flush=True)
+            print(model.pert_variance)
 
         episode += 1
         # evaluation and saving

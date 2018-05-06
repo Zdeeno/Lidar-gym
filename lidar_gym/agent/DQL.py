@@ -37,8 +37,8 @@ class DQN:
         self._epsilon = 1.0
         self._epsilon_min = 0.2
         self._epsilon_decay = 0.999
-        self._learning_rate = 0.005
-        self._tau = .2
+        self._learning_rate = 0.001
+        self._tau = .1
 
         # setup buffer
         # self._buffer_size = 200
@@ -58,16 +58,16 @@ class DQN:
         # reconstructed input
         reconstructed_input = Input(shape=self._map_shape)
         r11 = Lambda(lambda x: expand_dims(x, -1))(reconstructed_input)
-        c11 = Conv3D(2, 4, padding='same', activation='relu')(r11)
+        c11 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r11)
         p11 = MaxPool3D(pool_size=2)(c11)
-        c21 = Conv3D(4, 4, padding='same', activation='relu')(p11)
+        c21 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p11)
 
         # sparse input
         sparse_input = Input(shape=self._map_shape)
         r12 = Lambda(lambda x: expand_dims(x, -1))(sparse_input)
-        c12 = Conv3D(2, 4, padding='same', activation='relu')(r12)
+        c12 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r12)
         p12 = MaxPool3D(pool_size=2)(c12)
-        c22 = Conv3D(4, 4, padding='same', activation='relu')(p12)
+        c22 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p12)
 
         '''
         # merge LARGE inputs
@@ -83,16 +83,16 @@ class DQN:
         '''
 
         # merge SMALL inputs
-        a1 = Multiply()([c21, c22])
-        c1 = Conv3D(1, 4, padding='same', activation='relu')(a1)
+        a1 = Add()([c21, c22])
+        c1 = Conv3D(1, 4, padding='same', activation='relu', kernel_regularizer='l2')(a1)
         s1 = Lambda(lambda x: squeeze(x, 4))(c1)
-        c2 = Conv2D(8, 4, padding='same', activation='relu')(s1)
+        c2 = Conv2D(8, 4, padding='same', activation='relu', kernel_regularizer='l2')(s1)
         p1 = MaxPool2D(pool_size=2)(c2)
-        c3 = Conv2D(81, 4, padding='same', activation='relu')(p1)
+        c3 = Conv2D(81, 4, padding='same', activation='relu', kernel_regularizer='l2')(p1)
         r2 = Reshape((360, 360, 1))(c3)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
-        c5 = Conv2D(2, 4, padding='same', activation='linear')(p2)
-        c6 = Conv2D(1, 4, padding='same', activation='linear')(c5)
+        c5 = Conv2D(2, 4, padding='same', activation='linear', kernel_regularizer='l2')(p2)
+        c6 = Conv2D(1, 4, padding='same', activation='linear', kernel_regularizer='l2')(c5)
         output = Lambda(lambda x: squeeze(x, 3))(c6)
 
         model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
