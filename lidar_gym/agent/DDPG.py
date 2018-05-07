@@ -39,7 +39,7 @@ class ActorCritic:
         self.epsilon_decay = .999
         self.min_epsilon = 0.2
         self.gamma = .95
-        self.tau = .01
+        self.tau = .15
         self.batch_size = 7
         self.buffer_size = 1000
         self.num_proto_actions = 5
@@ -240,12 +240,6 @@ class ActorCritic:
         self._train_critic(samples)
         self._train_actor(samples)
 
-    # updating target models
-    def _update_actor_target(self):
-        self._soft_update(self.actor_model, self.target_actor_model, self.tau)
-
-    def _update_critic_target(self):
-        self._soft_update(self.critic_model, self.target_critic_model, self.tau)
 
     def _soft_update(self, target, model, tau):
         model_weights = model.get_weights()
@@ -261,8 +255,8 @@ class ActorCritic:
         self.perturbed_actor_model.set_weights(perturbed_weights)
 
     def update_target(self):
-        self._update_actor_target()
-        self._update_critic_target()
+        self._soft_update(self.critic_model, self.target_critic_model, self.tau)
+        self._soft_update(self.actor_model, self.target_actor_model, self.tau)
 
     # predictions
     def predict(self, state):
@@ -289,8 +283,8 @@ class ActorCritic:
         # action space perturbation
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         probs = self.actor_model.predict(state)
-        # print(probs)
-        probs_perturbed = probs + np.random.normal(0, self.pert_variance, probs.shape)
+        print(probs)
+        probs_perturbed = probs # + np.random.normal(0, self.pert_variance, probs.shape)
         dist = np.mean(np.abs(probs - probs_perturbed))
         if dist > self.pert_threshold_dist:
             self.pert_variance /= self.pert_alpha
@@ -410,6 +404,9 @@ if __name__ == "__main__":
     supervised.load_weights(loaddir)
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
+    load_actor = os.path.join(home, 'Projekt/lidar-gym/trained_models/actor_-272.92755734050354.h5')
+    load_critic = os.path.join(home, 'Projekt/lidar-gym/trained_models/critic_-272.92755734050354.h5')
+    model.load_model(load_actor, load_critic)
     shape = model.map_shape
 
     episode = 0
@@ -424,7 +421,7 @@ if __name__ == "__main__":
         # training
         while not done:
             rays = model.predict_perturbed(curr_state)
-            # print(ray_string(rays))
+            print(ray_string(rays))
             new_state, reward, done, _ = env.step({'rays': rays, 'map': curr_state[1]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
