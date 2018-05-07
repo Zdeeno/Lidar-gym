@@ -296,7 +296,6 @@ class ActorCritic:
             self.pert_variance /= self.pert_alpha
         else:
             self.pert_variance *= self.pert_alpha
-            # print(dist, self.pert_variance)
         return self._probs_to_bestQ(probs_perturbed[0], state[0], state[1])
 
     def perturbation_decay(self):
