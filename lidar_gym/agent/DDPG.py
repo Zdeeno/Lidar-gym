@@ -289,14 +289,14 @@ class ActorCritic:
         # action space perturbation
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         probs = self.actor_model.predict(state)
-        print(probs)
+        # print(probs)
         probs_perturbed = probs + np.random.normal(0, self.pert_variance, probs.shape)
         dist = np.mean(np.abs(probs - probs_perturbed))
         if dist > self.pert_threshold_dist:
             self.pert_variance /= self.pert_alpha
         else:
             self.pert_variance *= self.pert_alpha
-            print(dist, self.pert_variance)
+            # print(dist, self.pert_variance)
         return self._probs_to_bestQ(probs_perturbed[0], state[0], state[1])
 
     def perturbation_decay(self):
@@ -425,7 +425,7 @@ if __name__ == "__main__":
         # training
         while not done:
             rays = model.predict_perturbed(curr_state)
-            print(ray_string(rays))
+            # print(ray_string(rays))
             new_state, reward, done, _ = env.step({'rays': rays, 'map': curr_state[1]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
