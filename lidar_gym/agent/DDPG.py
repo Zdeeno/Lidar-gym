@@ -39,13 +39,13 @@ class ActorCritic:
         self.epsilon_decay = .999
         self.min_epsilon = 0.2
         self.gamma = .95
-        self.tau = .001
+        self.tau = .01
         self.batch_size = 7
         self.buffer_size = 1000
         self.num_proto_actions = 5
 
-        self.pert_threshold_dist = 0.05
-        self.pert_threshold_decay = 0.9999
+        self.pert_threshold_dist = 0.025
+        self.pert_threshold_decay = 0.995
         self.pert_alpha = 1.01
         self.pert_variance = self.pert_threshold_dist
 
@@ -112,10 +112,12 @@ class ActorCritic:
         r2 = Reshape((360, 360, 1))(c3)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
         c5 = Conv2D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(p2)
-        c6 = Conv2D(4, 4, padding='same', activation='linear', kernel_regularizer='l2')(c5)
-        c7 = Conv2D(1, 4, padding='same', activation='sigmoid', kernel_regularizer='l2')(c6)
+        c6 = Conv2D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(c5)
+        c7 = Conv2D(1, 4, padding='same', activation='linear', kernel_regularizer='l2')(c6)
+        sigmoid = Lambda(lambda x: x/(tf.abs(x)+50))(c7)
+        bias = Lambda(lambda x: (x+1)/2)(sigmoid)
 
-        output = Lambda(lambda x: squeeze(x, 3))(c7)
+        output = Lambda(lambda x: squeeze(x, 3))(bias)
 
         # print(alpha.shape, adda.shape, const.shape, output.shape)
 
@@ -162,7 +164,7 @@ class ActorCritic:
         '''
 
         # merge SMALL action inputs and output action Q value
-        a1 = Multiply()([c21, c22])
+        a1 = Add()([c21, c22])
         c1 = Conv3D(1, 4, padding='same', activation='relu', kernel_regularizer='l2')(a1)
         s1 = Lambda(lambda x: squeeze(x, 4))(c1)
         c2 = Conv2D(8, 4, padding='same', activation='relu', kernel_regularizer='l2')(s1)
@@ -207,6 +209,7 @@ class ActorCritic:
                 self.actor_reconstructed_input: state[1],
                 self.actor_critic_grad: grads
             })
+        # self._soft_update(self.actor_model, self.target_actor_model, self.tau)
 
     def _train_critic(self, samples):
         for sample in samples:
@@ -239,20 +242,17 @@ class ActorCritic:
 
     # updating target models
     def _update_actor_target(self):
-        actor_model_weights = self.actor_model.get_weights()
-        actor_target_weights = self.target_actor_model.get_weights()
-
-        for i in range(len(actor_target_weights)):
-            actor_target_weights[i] = actor_model_weights[i] * self.tau + actor_target_weights[i] * (1 - self.tau)
-        self.target_actor_model.set_weights(actor_target_weights)
+        self._soft_update(self.actor_model, self.target_actor_model, self.tau)
 
     def _update_critic_target(self):
-        critic_model_weights = self.critic_model.get_weights()
-        critic_target_weights = self.target_critic_model.get_weights()
+        self._soft_update(self.critic_model, self.target_critic_model, self.tau)
 
-        for i in range(len(critic_target_weights)):
-            critic_target_weights[i] = critic_model_weights[i] * self.tau + critic_target_weights[i] * (1 - self.tau)
-        self.target_critic_model.set_weights(critic_target_weights)
+    def _soft_update(self, target, model, tau):
+        model_weights = model.get_weights()
+        target_weights = target.get_weights()
+        for i in range(len(target_weights)):
+            target_weights[i] = model_weights[i] * tau + target_weights[i] * (1 - tau)
+        target.set_weights(target_weights)
 
     def _update_perturbed(self):
         perturbed_weights = self.actor_model.get_weights()
@@ -268,19 +268,35 @@ class ActorCritic:
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         probs = self.actor_model.predict(state)
-        print(probs)
         return self._probs_to_bestQ(probs[0], state[0], state[1])
 
     def predict_perturbed(self, state):
+        '''
+        # parameter space perturbation
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         self._update_perturbed()
         probs = self.actor_model.predict(state)
+        print(probs)
         probs_perturbed = self.perturbed_actor_model.predict(state)
-        dist = np.sqrt(np.sum(np.square(probs - probs_perturbed))/self.action_size)
+        dist = np.sum(np.linalg.norm(probs - probs_perturbed))/self.action_size
         if dist > self.pert_threshold_dist:
             self.pert_variance /= self.pert_alpha
         else:
             self.pert_variance *= self.pert_alpha
+            # print(dist)
+        '''
+
+        # action space perturbation
+        state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
+        probs = self.actor_model.predict(state)
+        print(probs)
+        probs_perturbed = probs + np.random.normal(0, self.pert_variance, probs.shape)
+        dist = np.mean(np.abs(probs - probs_perturbed))
+        if dist > self.pert_threshold_dist:
+            self.pert_variance /= self.pert_alpha
+        else:
+            self.pert_variance *= self.pert_alpha
+            print(dist, self.pert_variance)
         return self._probs_to_bestQ(probs_perturbed[0], state[0], state[1])
 
     def perturbation_decay(self):
@@ -343,7 +359,7 @@ def evaluate(supervised, reinforce):
     done = False
     reward_overall = 0
     _ = evalenv.reset()
-    print('Evaluation started')
+    # print('Evaluation started')
     reconstucted = np.zeros(reinforce.map_shape)
     sparse = np.zeros(reinforce.map_shape)
     step = 0
@@ -421,7 +437,7 @@ if __name__ == "__main__":
             curr_state = new_state
             epoch += 1
             print('.', end='', flush=True)
-            print(model.pert_variance)
+            # print(model.pert_variance)
 
         episode += 1
         # evaluation and saving
