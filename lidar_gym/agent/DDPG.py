@@ -35,9 +35,6 @@ class ActorCritic:
         self.sess = sess
 
         self.learning_rate = 0.001
-        self.epsilon = 1
-        self.epsilon_decay = .999
-        self.min_epsilon = 0.2
         self.gamma = .95
         self.tau = .15
         self.batch_size = 7
@@ -232,14 +229,12 @@ class ActorCritic:
             self.critic_model.fit([cur_state[0], cur_state[1], action], reward, verbose=0)
 
     def train(self):
-        self.epsilon *= self.epsilon_decay
         if self.buffer.length < self.batch_size:
             return
 
         samples = self.buffer.sample(self.batch_size)
         self._train_critic(samples)
         self._train_actor(samples)
-
 
     def _soft_update(self, target, model, tau):
         model_weights = model.get_weights()
@@ -283,8 +278,8 @@ class ActorCritic:
         # action space perturbation
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         probs = self.actor_model.predict(state)
-        print(probs)
-        probs_perturbed = probs # + np.random.normal(0, self.pert_variance, probs.shape)
+        # print(probs)
+        probs_perturbed = probs + np.random.normal(0, self.pert_variance, probs.shape)
         dist = np.mean(np.abs(probs - probs_perturbed))
         if dist > self.pert_threshold_dist:
             self.pert_variance /= self.pert_alpha
@@ -421,7 +416,7 @@ if __name__ == "__main__":
         # training
         while not done:
             rays = model.predict_perturbed(curr_state)
-            print(ray_string(rays))
+            # print(ray_string(rays))
             new_state, reward, done, _ = env.step({'rays': rays, 'map': curr_state[1]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
