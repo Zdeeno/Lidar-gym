@@ -10,7 +10,7 @@ from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Input, Lam
 from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape
 from tensorflow.contrib.keras.api.keras.regularizers import l2
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
-import tensorflow.contrib.keras.api.keras.backend as K
+import tensorflow.contrib.keras.api.keras as K
 import tensorflow as tf
 from lidar_gym.agent.supervised_agent import Supervised
 from lidar_gym.tools.sum_tree import Memory
@@ -41,8 +41,8 @@ class ActorCritic:
         self.buffer_size = 1000
         self.num_proto_actions = 5
 
-        self.pert_threshold_dist = 0.025
         self.pert_threshold_decay = 0.995
+        self.pert_threshold_dist = 0.025*self.pert_threshold_decay**75
         self.pert_alpha = 1.01
         self.pert_variance = self.pert_threshold_dist
 
@@ -313,12 +313,16 @@ class ActorCritic:
         return np.unravel_index(indices, arr.shape)
 
     def save_model(self, critic_path, actor_path):
-        self.critic_model.save_weights(filepath=critic_path)
-        self.actor_model.save_weights(filepath=actor_path)
+        self.critic_model.save(filepath=critic_path)
+        self.actor_model.save(filepath=actor_path)
 
-    def load_model(self, f_actor, f_critic):
+    def load_model_weights(self, f_actor, f_critic):
         self.actor_model.load_weights(filepath=f_actor)
         self.critic_model.load_weights(filepath=f_critic)
+
+    def load_models(self, f_actor, f_critic):
+        self.actor_model = K.models.load_model(filepath=f_actor)
+        self.critic_model = K.models.load_model(filepath=f_critic)
 
     def _TD_size(self, sample):
         cur_state, action, reward, new_state, done = sample
@@ -389,7 +393,7 @@ if __name__ == "__main__":
     env.seed(1)
 
     sess = tf.Session()
-    K.set_session(sess)
+    K.backend.set_session(sess)
 
     model = ActorCritic(env, sess)
     supervised = Supervised()
@@ -399,9 +403,9 @@ if __name__ == "__main__":
     supervised.load_weights(loaddir)
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
-    load_actor = os.path.join(home, 'Projekt/lidar-gym/trained_models/actor_-272.92755734050354.h5')
-    load_critic = os.path.join(home, 'Projekt/lidar-gym/trained_models/critic_-272.92755734050354.h5')
-    model.load_model(load_actor, load_critic)
+    load_actor = os.path.join(home, 'Projekt/lidar-gym/trained_models/actor_-270.8374477013234.h5')
+    load_critic = os.path.join(home, 'Projekt/lidar-gym/trained_models/critic_-270.8374477013234.h5')
+    model.load_model_weights(load_actor, load_critic)
     shape = model.map_shape
 
     episode = 0

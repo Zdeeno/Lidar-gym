@@ -11,6 +11,7 @@ from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
 from os.path import expanduser
 import os
 
+import tensorflow.contrib.keras.api.keras as K
 import tensorflow as tf
 from collections import deque
 import lidar_gym
@@ -174,9 +175,12 @@ class DQN:
     def save_model(self, f):
         self._model.save(f)
 
-    def load_model(self, f):
+    def load_model_weights(self, f):
         self._model.load_weights(filepath=f)
         self._target_model.load_weights(filepath=f)
+
+    def load_model(self, f):
+        self._model = K.models.load_model(f)
 
     def append_to_buffer(self, state, action, reward, new_state, done):
         sample = state, action, reward, new_state, done
@@ -250,7 +254,7 @@ if __name__ == "__main__":
     home = expanduser("~")
     loaddir = os.path.join(home, 'trained_models/supervised_small_model_-242.64441054044056.h5')
     supervised.load_weights(loaddir)
-    # dql_agent.load_model(os.path.join(home, 'trained_models/dqn_model_-250.39402455340868.h5'))
+    dql_agent.load_model(os.path.join(home, 'trained_models/dqn_model_-250.39402455340868.h5'))
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
     shape = dql_agent._map_shape
