@@ -92,7 +92,7 @@ class DQN:
         r2 = Reshape((360, 360, 1))(c3)
         p2 = MaxPool2D(pool_size=(3, 4))(r2)
         c5 = Conv2D(4, 4, padding='same', activation='relu')(p2)
-        c6 = Conv2D(8, 4, padding='same', activation='relu')(c5)
+        c6 = Conv2D(8, 4, padding='same', activation='linear')(c5)
         c7 = Conv2D(1, 4, padding='same', activation='linear')(c6)
         output = Lambda(lambda x: squeeze(x, 3))(c7)
 
