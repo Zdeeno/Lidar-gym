@@ -66,14 +66,14 @@ if __name__ == "__main__":
                     supervised.append_to_buffer(obv)
                     supervised.train_model()
                     if episode < 10:
-
-                    obv, reward, done, info = env.step(obv['X'])
+                        print('fail')
+                   #  obv, reward, done, info = env.step(obv['X'])
             else:
-                action_prob = model.act(curr_state)
-                new_state, reward, done, _ = env.step({'rays': model.probs_to_bools(action_prob), 'map': curr_state[0]})
+                # action_prob = model.act(curr_state)
+                # new_state, reward, done, _ = env.step({'rays': model.probs_to_bools(action_prob), 'map': curr_state[0]})
 
                 new_state = [new_state['X'], supervised.predict(new_state['X'])]
-                model.append_to_buffer(curr_state, action_prob, reward, new_state, done)
+                # model.append_to_buffer(curr_state, action_prob, reward, new_state, done)
 
                 model.train()
 

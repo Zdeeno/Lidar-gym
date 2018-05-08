@@ -7,10 +7,9 @@ import numpy as np
 from tensorflow.contrib.keras.api.keras.models import Model
 from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Input, Lambda, Conv3D, MaxPool3D, Conv2D,\
                                                       MaxPool2D, Reshape, Flatten, Layer, Add, Multiply
-from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape
 from tensorflow.contrib.keras.api.keras.regularizers import l2
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
-import tensorflow.contrib.keras.api.keras as K
+import tensorflow.contrib.keras.api.keras.backend as K
 import tensorflow as tf
 from lidar_gym.agent.supervised_agent import Supervised
 from lidar_gym.tools.sum_tree import Memory
@@ -36,7 +35,7 @@ class ActorCritic:
 
         self.learning_rate = 0.001
         self.gamma = .95
-        self.tau = .15
+        self.tau = .1
         self.batch_size = 7
         self.buffer_size = 1000
         self.num_proto_actions = 5
@@ -75,13 +74,13 @@ class ActorCritic:
     # Model Definitions
     def _create_actor_model(self):
         reconstructed_input = Input(shape=self.map_shape)
-        r11 = Lambda(lambda x: expand_dims(x, -1))(reconstructed_input)
+        r11 = Lambda(lambda x: K.expand_dims(x, -1))(reconstructed_input)
         c11 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r11)
         p11 = MaxPool3D(pool_size=2)(c11)
         c21 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p11)
 
         sparse_input = Input(shape=self.map_shape)
-        r12 = Lambda(lambda x: expand_dims(x, -1))(sparse_input)
+        r12 = Lambda(lambda x: K.expand_dims(x, -1))(sparse_input)
         c12 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r12)
         p12 = MaxPool3D(pool_size=2)(c12)
         c22 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p12)
@@ -102,7 +101,7 @@ class ActorCritic:
         # merge SMALL inputs
         a1 = Add()([c21, c22])
         c1 = Conv3D(1, 4, padding='same', activation='relu', kernel_regularizer='l2')(a1)
-        s1 = Lambda(lambda x: squeeze(x, 4))(c1)
+        s1 = Lambda(lambda x: K.squeeze(x, 4))(c1)
         c2 = Conv2D(8, 4, padding='same', activation='relu', kernel_regularizer='l2')(s1)
         p1 = MaxPool2D(pool_size=2)(c2)
         c3 = Conv2D(81, 4, padding='same', activation='relu', kernel_regularizer='l2')(p1)
@@ -114,7 +113,7 @@ class ActorCritic:
         sigmoid = Lambda(lambda x: x/(tf.abs(x)+50))(c7)
         bias = Lambda(lambda x: (x+1)/2)(sigmoid)
 
-        output = Lambda(lambda x: squeeze(x, 3))(bias)
+        output = Lambda(lambda x: K.squeeze(x, 3))(bias)
 
         # print(alpha.shape, adda.shape, const.shape, output.shape)
 
@@ -126,19 +125,19 @@ class ActorCritic:
     def _create_critic_model(self):
 
         reconstructed_input = Input(shape=self.map_shape)
-        r11 = Lambda(lambda x: expand_dims(x, -1))(reconstructed_input)
+        r11 = Lambda(lambda x: K.expand_dims(x, -1))(reconstructed_input)
         c11 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r11)
         p11 = MaxPool3D(pool_size=2)(c11)
         c21 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p11)
 
         sparse_input = Input(shape=self.map_shape)
-        r12 = Lambda(lambda x: expand_dims(x, -1))(sparse_input)
+        r12 = Lambda(lambda x: K.expand_dims(x, -1))(sparse_input)
         c12 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r12)
         p12 = MaxPool3D(pool_size=2)(c12)
         c22 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p12)
 
         action_input = Input(shape=self.lidar_shape)
-        r13 = Lambda(lambda x: expand_dims(x, -1))(action_input)
+        r13 = Lambda(lambda x: K.expand_dims(x, -1))(action_input)
         c13 = Conv2D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(r13)
         c23 = Conv2D(1, 4, padding='same', activation='relu', kernel_regularizer='l2')(c13)
 
@@ -163,7 +162,7 @@ class ActorCritic:
         # merge SMALL action inputs and output action Q value
         a1 = Add()([c21, c22])
         c1 = Conv3D(1, 4, padding='same', activation='relu', kernel_regularizer='l2')(a1)
-        s1 = Lambda(lambda x: squeeze(x, 4))(c1)
+        s1 = Lambda(lambda x: K.squeeze(x, 4))(c1)
         c2 = Conv2D(8, 4, padding='same', activation='relu', kernel_regularizer='l2')(s1)
         p1 = MaxPool2D(pool_size=2)(c2)
         c3 = Conv2D(81, 4, padding='same', activation='relu', kernel_regularizer='l2')(p1)
@@ -321,8 +320,8 @@ class ActorCritic:
         self.critic_model.load_weights(filepath=f_critic)
 
     def load_models(self, f_actor, f_critic):
-        self.actor_model = K.models.load_model(filepath=f_actor)
-        self.critic_model = K.models.load_model(filepath=f_critic)
+        self.actor_model = tf.keras.models.load_model(filepath=f_actor)
+        self.critic_model = tf.keras.models.load_model(filepath=f_critic)
 
     def _TD_size(self, sample):
         cur_state, action, reward, new_state, done = sample
@@ -393,7 +392,7 @@ if __name__ == "__main__":
     env.seed(1)
 
     sess = tf.Session()
-    K.backend.set_session(sess)
+    K.set_session(sess)
 
     model = ActorCritic(env, sess)
     supervised = Supervised()
@@ -405,7 +404,7 @@ if __name__ == "__main__":
 
     load_actor = os.path.join(home, 'Projekt/lidar-gym/trained_models/actor_-270.8374477013234.h5')
     load_critic = os.path.join(home, 'Projekt/lidar-gym/trained_models/critic_-270.8374477013234.h5')
-    model.load_model_weights(load_actor, load_critic)
+    # model.load_model_weights(load_actor, load_critic)
     shape = model.map_shape
 
     episode = 0

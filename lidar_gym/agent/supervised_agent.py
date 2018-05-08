@@ -6,11 +6,11 @@ import tensorflow as tf
 from os.path import expanduser
 import os
 from tensorflow.contrib.keras.api.keras.layers import Conv3D, MaxPool3D, Input, Lambda, Conv3DTranspose
-from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims
 from tensorflow.contrib.keras.api.keras.regularizers import l2
 from tensorflow.contrib.keras.api.keras.models import Model
 from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
+import tensorflow.contrib.keras.api.keras.backend as K
 
 
 def logistic_loss(y_true, y_pred):
@@ -64,7 +64,7 @@ class Supervised:
     def create_model(self):
         # 3D convolutional network building
         inputs = Input(shape=(self._map_shape[0], self._map_shape[1], self._map_shape[2]))
-        reshape = Lambda(lambda x: expand_dims(x, -1))(inputs)
+        reshape = Lambda(lambda x: K.expand_dims(x, -1))(inputs)
 
         c1 = Conv3D(2, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(reshape)
         c2 = Conv3D(4, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(c1)
@@ -76,7 +76,7 @@ class Supervised:
         c6 = Conv3D(1, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='linear')(c5)
         out = Conv3DTranspose(1, 4, strides=[4, 4, 4], padding='same', activation='linear',
                               kernel_regularizer=l2(self._l2reg))(c6)
-        outputs = Lambda(lambda x: squeeze(x, 4))(out)
+        outputs = Lambda(lambda x: K.squeeze(x, 4))(out)
         opt = Adam(lr=self._learning_rate)
         model = Model(inputs, outputs)
         model.compile(optimizer=opt, loss=logistic_loss)
@@ -92,7 +92,7 @@ class Supervised:
     def load_weights(self, weights_dir):
         self._model.load_weights(filepath=weights_dir)
 
-    def save_weights(self, save_dir):
+    def save(self, save_dir):
         self._model.save(filepath=save_dir)
 
     def predict(self, input_X):
@@ -124,7 +124,6 @@ if __name__ == "__main__":
     LOAD = False
     # Create model on GPU
     agent = Supervised()
-
     home = expanduser("~")
     savedir = os.path.join(home, 'trained_models/')
 
@@ -137,6 +136,7 @@ if __name__ == "__main__":
     episode = 0
     max_reward = -float('inf')
     env.seed(1)
+
 
     while True:
         done = False
@@ -156,4 +156,4 @@ if __name__ == "__main__":
                 print('new best agent - saving with reward:' + str(rew))
                 max_reward = rew
                 # agent.save_weights(savedir + 'supervised_model_' + str(max_reward) + '.h5')
-                agent.save_weights(savedir + 'supervised_small_model_' + str(max_reward) + '.h5')
+                agent.save(savedir + 'supervised_small_model_' + str(max_reward) + '.h5')

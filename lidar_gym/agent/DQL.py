@@ -7,11 +7,10 @@ from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Input, Lam
 from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape
 from tensorflow.contrib.keras.api.keras.optimizers import Adam
 from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
-
+import tensorflow.contrib.keras.api.keras.backend as K
 from os.path import expanduser
 import os
 
-import tensorflow.contrib.keras.api.keras as K
 import tensorflow as tf
 from collections import deque
 import lidar_gym
@@ -58,7 +57,7 @@ class DQN:
     def create_model(self):
         # reconstructed input
         reconstructed_input = Input(shape=self._map_shape)
-        r11 = Lambda(lambda x: expand_dims(x, -1))(reconstructed_input)
+        r11 = Lambda(lambda x: K.expand_dims(x, -1))(reconstructed_input)
         c11 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r11)
         p11 = MaxPool3D(pool_size=2)(c11)
         c21 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p11)
@@ -95,7 +94,7 @@ class DQN:
         c5 = Conv2D(4, 4, padding='same', activation='relu')(p2)
         c6 = Conv2D(8, 4, padding='same', activation='linear')(c5)
         c7 = Conv2D(1, 4, padding='same', activation='linear')(c6)
-        output = Lambda(lambda x: squeeze(x, 3))(c7)
+        output = Lambda(lambda x: K.squeeze(x, 3))(c7)
 
         model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
         adam = Adam(lr=0.001)
@@ -180,7 +179,10 @@ class DQN:
         self._target_model.load_weights(filepath=f)
 
     def load_model(self, f):
-        self._model = K.models.load_model(f)
+        self._model = None
+        self._target_model = None
+        self._model = tf.keras.models.load_model(f)
+        self._target_model = tf.keras.models.load_model(f)
 
     def append_to_buffer(self, state, action, reward, new_state, done):
         sample = state, action, reward, new_state, done
@@ -254,7 +256,7 @@ if __name__ == "__main__":
     home = expanduser("~")
     loaddir = os.path.join(home, 'trained_models/supervised_small_model_-242.64441054044056.h5')
     supervised.load_weights(loaddir)
-    dql_agent.load_model(os.path.join(home, 'trained_models/dqn_model_-250.39402455340868.h5'))
+    # dql_agent.load_model(os.path.join(home, 'trained_models/dqn_model_-250.39402455340868.h5'))
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
     shape = dql_agent._map_shape
