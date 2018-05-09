@@ -53,7 +53,7 @@ def evaluate(supervised, reinforce):
 if __name__ == "__main__":
     evalenv = gym.make('lidarsmalleval-v0')
 
-    # Create models on GPU
+    # Create trained_models on GPU
     agent = Supervised()
 
     sess = tf.Session()

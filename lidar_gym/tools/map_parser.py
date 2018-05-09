@@ -201,7 +201,7 @@ if __name__ == "__main__":
         print('\nIf testing doesnt end up with error - dataset is probably correctly downloaded!')
 
     if args['serialize']:
-        voxel_size = 0.4
+        voxel_size = 0.8
         print('\nSerializing with voxel size: ' + str(voxel_size))
         DatasetSerializer(voxel_size)
         print('Serialization done!')

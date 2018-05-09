@@ -16,6 +16,7 @@ from collections import deque
 import lidar_gym
 from lidar_gym.agent.supervised_agent import Supervised
 from lidar_gym.tools.sum_tree import Memory
+from lidar_gym.agent.models import create_toy_dqn_model
 
 
 class DQN:
@@ -25,17 +26,22 @@ class DQN:
         self._env = env
         # plus one in TD compute
         self._batch_size = 7
-        # self._map_shape = (320, 320, 32)
-        # self._max_rays = 200
-        # self._rays_shape = (160, 120)
-        self._map_shape = (160, 160, 16)
-        self._max_rays = 100
-        self._rays_shape = (120, 90)
+
+        '''
+        LARGE
+        self._map_shape = (320, 320, 32)
+        self._max_rays = 200
+        self._rays_shape = (160, 120)
+        '''
+
+        self._map_shape = (80, 80, 8)
+        self._max_rays = 15
+        self._rays_shape = (40, 30)
 
         # setup consts
         self._gamma = 0.9
         self._epsilon = 1.0
-        self._epsilon_min = 0.2
+        self._epsilon_min = 0.25
         self._epsilon_decay = 0.999
         self._learning_rate = 0.001
         self._tau = .1
@@ -46,60 +52,13 @@ class DQN:
         self._buffer = Memory(self._buffer_size)
 
         # double network
-        self._model = self.create_model()
-        self._target_model = self.create_model()
+        self._model = create_toy_dqn_model(self._learning_rate, self._map_shape)
+        self._target_model = create_toy_dqn_model(self._learning_rate, self._map_shape)
 
         # logger
         home = expanduser("~")
         logdir = os.path.join(home, 'DQN_logs/')
         self._tfboard = TensorBoard(log_dir=logdir, batch_size=self._batch_size, write_graph=False)
-
-    def create_model(self):
-        # reconstructed input
-        reconstructed_input = Input(shape=self._map_shape)
-        r11 = Lambda(lambda x: K.expand_dims(x, -1))(reconstructed_input)
-        c11 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r11)
-        p11 = MaxPool3D(pool_size=2)(c11)
-        c21 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p11)
-
-        # sparse input
-        sparse_input = Input(shape=self._map_shape)
-        r12 = Lambda(lambda x: expand_dims(x, -1))(sparse_input)
-        c12 = Conv3D(2, 4, padding='same', activation='relu', kernel_regularizer='l2')(r12)
-        p12 = MaxPool3D(pool_size=2)(c12)
-        c22 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(p12)
-
-        '''
-        # merge LARGE inputs
-        c2 = Add()([c21, c22])
-        c3 = Conv3D(1, 4, padding='same', activation='relu')(c2)
-        s1 = Lambda(lambda x: squeeze(x, 4))(c3)
-        c4 = Conv2D(9, 4, padding='same', activation='relu')(s1)
-        r2 = Reshape((480, 480, 1))(c4)
-        p2 = MaxPool2D(pool_size=(3, 4))(r2)
-        c5 = Conv2D(2, 4, padding='same', activation='relu')(p2)
-        c6 = Conv2D(1, 4, padding='same', activation='linear')(c5)
-        output = Lambda(lambda x: squeeze(x, 3))(c6)
-        '''
-
-        # merge SMALL inputs
-        a1 = Add()([c21, c22])
-        c1 = Conv3D(1, 4, padding='same', activation='relu', kernel_regularizer='l2')(a1)
-        s1 = Lambda(lambda x: squeeze(x, 4))(c1)
-        c2 = Conv2D(8, 4, padding='same', activation='relu', kernel_regularizer='l2')(s1)
-        p1 = MaxPool2D(pool_size=2)(c2)
-        c3 = Conv2D(81, 4, padding='same', activation='relu', kernel_regularizer='l2')(p1)
-        r2 = Reshape((360, 360, 1))(c3)
-        p2 = MaxPool2D(pool_size=(3, 4))(r2)
-        c5 = Conv2D(4, 4, padding='same', activation='relu')(p2)
-        c6 = Conv2D(8, 4, padding='same', activation='linear')(c5)
-        c7 = Conv2D(1, 4, padding='same', activation='linear')(c6)
-        output = Lambda(lambda x: K.squeeze(x, 3))(c7)
-
-        model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
-        adam = Adam(lr=0.001)
-        model.compile(loss='mean_squared_error', optimizer=adam)
-        return model
 
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
@@ -207,7 +166,8 @@ class DQN:
 
 def evaluate(supervised, dqn):
     # evalenv = gym.make('lidareval-v0')
-    evalenv = gym.make('lidarsmalleval-v0')
+    # evalenv = gym.make('lidarsmalleval-v0')
+    evalenv = gym.make('lidartoyeval-v0')
     done = False
     reward_overall = 0
     obv = evalenv.reset()
@@ -248,7 +208,8 @@ def ray_string(action_in):
 
 if __name__ == "__main__":
     # env = gym.make('lidar-v0')
-    env = gym.make('lidarsmall-v0')
+    # env = gym.make('lidarsmall-v0')
+    env = gym.make('lidartoy-v0')
 
     dql_agent = DQN(env=env)
     supervised = Supervised()

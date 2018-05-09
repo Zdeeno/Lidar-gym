@@ -41,3 +41,21 @@ register(
     entry_point='lidar_gym.envs:LidarSmallEval',
     timestep_limit=1000000,
 )
+
+register(
+    id='lidartoy-v0',
+    entry_point='lidar_gym.envs:LidarToyv0',
+    timestep_limit=1000000,
+)
+
+register(
+    id='lidartoy-v2',
+    entry_point='lidar_gym.envs:LidarToyv2',
+    timestep_limit=1000000,
+)
+
+register(
+    id='lidartoyeval-v0',
+    entry_point='lidar_gym.envs:LidarToyEval',
+    timestep_limit=1000000,
+)

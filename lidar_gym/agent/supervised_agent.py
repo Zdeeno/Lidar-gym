@@ -5,12 +5,9 @@ import lidar_gym
 import tensorflow as tf
 from os.path import expanduser
 import os
-from tensorflow.contrib.keras.api.keras.layers import Conv3D, MaxPool3D, Input, Lambda, Conv3DTranspose
-from tensorflow.contrib.keras.api.keras.regularizers import l2
-from tensorflow.contrib.keras.api.keras.models import Model
+
 from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
-from tensorflow.contrib.keras.api.keras.optimizers import Adam
-import tensorflow.contrib.keras.api.keras.backend as K
+from lidar_gym.agent.models import create_toy_supervised_model
 
 
 def logistic_loss(y_true, y_pred):
@@ -35,7 +32,8 @@ class Supervised:
     def __init__(self):
         # Constants
         # self._map_shape = (320, 320, 32)
-        self._map_shape = (160, 160, 16)
+        # self._map_shape = (160, 160, 16)
+        self._map_shape = (80, 80, 8)
         self._batch_size = 4
         self._epochs_per_batch = 1
         self._learning_rate = 0.001
@@ -45,7 +43,7 @@ class Supervised:
         self._buffer_X, self._buffer_Y, self._buffer_size = self.init_buffer()
 
         # model
-        self._model = self.create_model()
+        self._model = create_toy_supervised_model(self._learning_rate, self._map_shape)
         home = expanduser("~")
         logdir = os.path.join(home, 'supervised_logs/')
         self._tfboard = TensorBoard(log_dir=logdir, batch_size=self._batch_size, write_graph=False)
@@ -61,31 +59,10 @@ class Supervised:
         self._buffer_Y[self._buffer_size] = obs['Y']
         self._buffer_size += 1
 
-    def create_model(self):
-        # 3D convolutional network building
-        inputs = Input(shape=(self._map_shape[0], self._map_shape[1], self._map_shape[2]))
-        reshape = Lambda(lambda x: K.expand_dims(x, -1))(inputs)
-
-        c1 = Conv3D(2, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(reshape)
-        c2 = Conv3D(4, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(c1)
-        p1 = MaxPool3D(pool_size=2)(c2)
-        c3 = Conv3D(8, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(p1)
-        p2 = MaxPool3D(pool_size=2)(c3)
-        c4 = Conv3D(16, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(p2)
-        c5 = Conv3D(32, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='relu')(c4)
-        c6 = Conv3D(1, 4, padding='same', kernel_regularizer=l2(self._l2reg), activation='linear')(c5)
-        out = Conv3DTranspose(1, 4, strides=[4, 4, 4], padding='same', activation='linear',
-                              kernel_regularizer=l2(self._l2reg))(c6)
-        outputs = Lambda(lambda x: K.squeeze(x, 4))(out)
-        opt = Adam(lr=self._learning_rate)
-        model = Model(inputs, outputs)
-        model.compile(optimizer=opt, loss=logistic_loss)
-        return model
-
     def train_model(self):
         if self._buffer_size == self._batch_size:
             self._model.fit(x=self._buffer_X, y=self._buffer_Y, epochs=self._epochs_per_batch, shuffle=True,
-                            batch_size=self._batch_size, callbacks=[self._tfboard], verbose=1)
+                            batch_size=self._batch_size, callbacks=[self._tfboard], verbose=0)
             # clean buffer
             self._buffer_X, self._buffer_Y, self._buffer_size = self.init_buffer()
 
@@ -102,12 +79,13 @@ class Supervised:
 
 def evaluate(supervised):
     # evalenv = gym.make('lidareval-v0')
-    evalenv = gym.make('lidarsmalleval-v0')
+    # evalenv = gym.make('lidarsmalleval-v0')
+    evalenv = gym.make('lidartoyeval-v0')
     done = False
     reward_overall = 0
     _ = evalenv.reset()
     # map = np.zeros((320, 320, 32))
-    map = np.zeros((160, 160, 16))
+    map = np.zeros(shape=supervised._map_shape)
     evalenv.seed(1)
     print('Evaluation started!')
     while not done:
@@ -132,11 +110,10 @@ if __name__ == "__main__":
         loaddir = os.path.join(loaddir, 'trained_models/supervised_model_-205.62373544534486.h5')
         agent.load_weights(loaddir)
 
-    env = gym.make('lidarsmall-v2')
+    env = gym.make('lidartoy-v2')
     episode = 0
-    max_reward = -float('inf')
+    max_reward = -276.5
     env.seed(1)
-
 
     while True:
         done = False
@@ -147,8 +124,8 @@ if __name__ == "__main__":
             agent.append_to_buffer(obv)
             agent.train_model()
             obv, reward, done, info = env.step(obv['X'])
+            print('.', end='', flush=True)
 
-        episode += 1
         # Evaluate and save
         if episode % 10 == 0:
             rew = evaluate(agent)
@@ -156,4 +133,5 @@ if __name__ == "__main__":
                 print('new best agent - saving with reward:' + str(rew))
                 max_reward = rew
                 # agent.save_weights(savedir + 'supervised_model_' + str(max_reward) + '.h5')
-                agent.save(savedir + 'supervised_small_model_' + str(max_reward) + '.h5')
+                agent.save(savedir + 'supervised_toy_model_' + str(max_reward) + '.h5')
+        episode += 1

@@ -298,6 +298,12 @@ class LidarSmallv0(LidarTrain):
         super(LidarSmallv0, self).__init__((160, 160, 16), (120, 90), (120, 90), 100, 0.4, 48)
 
 
+class LidarToyv0(LidarTrain):
+
+    def __init__(self):
+        super(LidarToyv0, self).__init__((80, 80, 8), (120, 90), (40, 30), 15, 0.8, 48)
+
+
 class Lidarv1(LidarGym):
     """
     Inherited environment prepared for use, based on work in paper: https://arxiv.org/abs/1708.02074.
@@ -381,6 +387,25 @@ class LidarSmallv2(LidarSmallv0):
         return super(LidarSmallv2, self)._step({'map': action, 'rays': rand_rays})
 
 
+class LidarToyv2(LidarToyv0):
+    """
+    action space is only reconstructed map, rays are chosen randomly, suited for supervised learning
+    """
+    def __init__(self):
+        super(LidarToyv2, self).__init__()
+        self.action_space = spaces.Box(low=-100, high=100, shape=(80, 80, 8))
+        self._action_generator = LidarMultiBinary((40, 30), 15)
+
+    def _reset(self):
+        ret = super(LidarToyv2, self)._reset()
+        ret, _, _, _ = self._step(ret)
+        return ret
+
+    def _step(self, action):
+        rand_rays = self._action_generator.sample()
+        return super(LidarToyv2, self)._step({'map': action, 'rays': rand_rays})
+
+
 class LidarEval(Lidarv0):
     """
     one map only for agent evaluation
@@ -425,6 +450,44 @@ class LidarSmallEval(LidarSmallv0):
     """
     def __init__(self):
         super(LidarSmallEval, self).__init__()
+
+    def _reset(self):
+        self._obs_voxel_map = vm.VoxelMap()
+        self._obs_voxel_map.voxel_size = self._voxel_size
+        self._obs_voxel_map.free_update = - 1.0
+        self._obs_voxel_map.hit_update = 1.0
+        self._obs_voxel_map.occupancy_threshold = 0.0
+
+        # reset values
+        self._next_timestamp = 0
+        self._curr_position = None
+        self._curr_T = None
+        self._last_T = None
+        self._done = False
+        self._render_init = False
+        self._rays_endings = None
+        self._map_length = None
+        self._map = None
+        self._T_matrices = None
+
+        print('\nRESETING')
+        # parse new map
+        self._map, self._T_matrices = self._maps.get_validation_map()
+        self._reward_counter.reset(self._map)
+        self._map_length = len(self._T_matrices)
+        self._curr_T = self._T_matrices[0]
+        self._to_next()
+
+        self.curr_T = self._curr_T
+        return np.zeros(shape=self._input_map_shape)
+
+
+class LidarToyEval(LidarToyv0):
+    """
+    one map only for agent evaluation
+    """
+    def __init__(self):
+        super(LidarToyEval, self).__init__()
 
     def _reset(self):
         self._obs_voxel_map = vm.VoxelMap()

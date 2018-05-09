@@ -92,7 +92,7 @@ class RewardCounter:
         :param T: transform matrix 4x4 to local coordinate system
         :return: double reward (-inf, 0), higher is better
         """
-        assert np.array_equal(action_map.shape, self._a_s_size)
+        assert np.array_equal(action_map.shape, self._a_s_size), print(action_map.shape, self._a_s_size)
 
         self._last_action = action_map
         self._last_T = T
