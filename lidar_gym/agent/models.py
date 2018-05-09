@@ -138,7 +138,7 @@ def create_toy_dqn_model(lr, map_shape):
     s1 = Lambda(lambda x: K.squeeze(x, 4))(c1)
     c2 = Conv2D(8, 4, padding='same', activation='relu', kernel_regularizer='l2')(s1)
     p1 = MaxPool2D(pool_size=2)(c2)
-    c3 = Conv2D(12, 4, padding='same', activation='relu', kernel_regularizer='l2')(p1)
+    c3 = Conv2D(3, 4, padding='same', activation='relu', kernel_regularizer='l2')(p1)
     r1 = Reshape((40, 30, 1))(c3)
     c5 = Conv2D(4, 4, padding='same', activation='relu')(r1)
     c6 = Conv2D(8, 4, padding='same', activation='linear')(c5)
