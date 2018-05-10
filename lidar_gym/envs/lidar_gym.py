@@ -9,6 +9,7 @@ import voxel_map as vm
 from lidar_gym.tools import camera
 from lidar_gym.tools import map_parser
 from lidar_gym.tools import math_processing as processing
+from lidar_gym.visualiser.plot import ray_string
 
 const_min_value = -sys.maxsize - 1
 const_max_value = 0
@@ -107,14 +108,14 @@ class LidarGym(gym.Env):
         if not self._done:
             if mode == 'human':
                 if not self._render_init:
-                    from lidar_gym.visualiser import plot_map
-                    self.plotter = plot_map.Plotter()
+                    from lidar_gym.visualiser import plot
+                    self.plotter = plot.Plotter()
                     self._render_init = True
                 if self._next_timestamp > 1:
                     g_t, a_m, sensor = self._reward_counter.get_render_data()
                     self.plotter.plot_action(g_t, a_m, np.transpose(self._rays_endings), self._voxel_size, sensor)
             if mode == 'ASCII':
-                print(self._ray_string(self._last_rays))
+                print(ray_string(self._last_rays))
 
     def _seed(self, seed=None):
         map_parser.set_seed(seed)
@@ -180,23 +181,6 @@ class LidarGym(gym.Env):
             else:
                 ret = [None]
             return ret
-
-    def _ray_string(self, action_in):
-        # create string to visualise action in console
-        to_print = np.empty(action_in.shape, dtype=str)
-        divider = np.empty(action_in.shape[0] + 2, dtype=str)
-        divider[:] = '-'
-        to_print[:] = ' '
-        to_print[action_in] = '+'
-        ret = '\n'
-        ret += ''.join(divider)
-        ret += '\n'
-        for i in range(action_in.shape[1]):
-            ret += '|'
-            ret += ''.join(to_print[:, i])
-            ret += '|\n'
-        ret += ''.join(divider) + '\n\n'
-        return ret
 
 
 class LidarMultiBinary(spaces.MultiBinary):

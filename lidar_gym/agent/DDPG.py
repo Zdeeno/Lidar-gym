@@ -9,6 +9,7 @@ import tensorflow.contrib.keras.api.keras.backend as K
 import tensorflow as tf
 from lidar_gym.agent.supervised_agent import Supervised
 from lidar_gym.tools.sum_tree import Memory
+from lidar_gym.visualiser.plot import ray_string
 
 import random
 from collections import deque
@@ -340,24 +341,6 @@ def evaluate(supervised, reinforce):
         f.write(str(reward_overall))
     print('Evaluation ended with value: ' + str(reward_overall))
     return reward_overall
-
-
-def ray_string(action_in):
-    # create string to visualise action in console
-    to_print = np.empty(action_in.shape, dtype=str)
-    divider = np.empty(action_in.shape[0] + 2, dtype=str)
-    divider[:] = '-'
-    to_print[:] = ' '
-    to_print[action_in] = '+'
-    ret = '\n'
-    ret += ''.join(divider)
-    ret += '\n'
-    for i in range(action_in.shape[1]):
-        ret += '|'
-        ret += ''.join(to_print[:, i])
-        ret += '|\n'
-    ret += ''.join(divider) + '\n\n'
-    return ret
 
 
 if __name__ == "__main__":

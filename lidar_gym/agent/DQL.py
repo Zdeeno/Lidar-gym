@@ -1,11 +1,8 @@
 import gym
 import numpy as np
 import random
-from tensorflow.contrib.keras.api.keras.models import Model
-from tensorflow.contrib.keras.api.keras.layers import Dense, Dropout, Input, Lambda, Conv3D, MaxPool3D, Conv2D,\
-                                                      MaxPool2D, Reshape, Add, Multiply
-from tensorflow.contrib.keras.api.keras.backend import squeeze, expand_dims, reshape
-from tensorflow.contrib.keras.api.keras.optimizers import Adam
+from lidar_gym.visualiser.plot import ray_string
+
 from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
 import tensorflow.contrib.keras.api.keras.backend as K
 from os.path import expanduser
@@ -192,21 +189,6 @@ def evaluate(supervised, dqn):
         f.write(str(reward_overall))
     print('Evaluation ended with value: ' + str(reward_overall))
     return reward_overall
-
-
-def ray_string(action_in):
-    to_print = np.empty(action_in.shape, dtype=str)
-    to_print[:] = ' '
-    to_print[action_in] = '+'
-    ret = '\n--------------------------------------------------------' \
-          '----------------------------------------------------------------------------\n'
-    for i in range(action_in.shape[1]):
-        ret += '|'
-        ret += ''.join(to_print[:, i])
-        ret += '|\n'
-    ret += '----------------------------------------------------------' \
-           '--------------------------------------------------------------------------\n\n'
-    return ret
 
 
 if __name__ == "__main__":
