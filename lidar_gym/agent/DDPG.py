@@ -129,8 +129,7 @@ class ActorCritic:
                                            batch_size=self.batch_size)[:, 0]
         for i in range(self.batch_size):
             td = np.abs(pred_Q[i] - rewards[i])
-            print(idxs[i])
-            self.buffer.update(idxs[i], td)
+            self.buffer.update(idxs[0][i], td)
 
         '''
         print(samples[0][1][0])
