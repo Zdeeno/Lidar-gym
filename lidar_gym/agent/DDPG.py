@@ -129,6 +129,7 @@ class ActorCritic:
                                            batch_size=self.batch_size)[:, 0]
         for i in range(self.batch_size):
             td = np.abs(pred_Q[i] - rewards[i])
+            print(idxs[i])
             self.buffer.update(idxs[i], td)
 
         '''
@@ -293,12 +294,12 @@ class ActorCritic:
     def _get_batch(self):
         samples = self.buffer.sample(self.batch_size)
         # data holders
-        idxs = np.empty((self.batch_size, ), dtype=int)
+        idxs = np.empty(self.batch_size, dtype=int)
         cur_states = np.empty((self.batch_size, 2,) + self.map_shape)
         actions = np.empty((self.batch_size, ) + self.lidar_shape)
-        rewards = np.empty((self.batch_size, ))
+        rewards = np.empty(self.batch_size)
         new_states = np.empty((self.batch_size, 2,) + self.map_shape)
-        dones = np.empty((self.batch_size, ), dtype=bool)
+        dones = np.empty(self.batch_size, dtype=bool)
 
         # fill data holders
         for i, sample in enumerate(samples):
