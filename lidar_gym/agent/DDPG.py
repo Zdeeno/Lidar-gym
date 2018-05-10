@@ -108,7 +108,7 @@ class ActorCritic:
     def _train_critic(self, batch):
         idxs, cur_states, actions, rewards, new_states, dones = batch
 
-        probs = self.target_actor_model.predict(new_states, batch_size=self.batch_size)
+        probs = self.target_actor_model.predict([new_states[:][0], new_states[:][1]], batch_size=self.batch_size)
 
         for i in range(self.batch_size):
             if not dones[i]:
