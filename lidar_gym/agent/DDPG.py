@@ -129,7 +129,6 @@ class ActorCritic:
                                            batch_size=self.batch_size)[:, 0]
         for i in range(self.batch_size):
             td = np.abs(pred_Q[i] - rewards[i])
-            print('index: ' + str(idxs[i]))
             self.buffer.update(idxs[i], td)
 
         '''
@@ -406,8 +405,7 @@ if __name__ == "__main__":
             curr_state = new_state
             epoch += 1
             print('.', end='', flush=True)
-            # print(model.pert_variance)
-            # print(ray_string(rays))
+            env.render(mode='ASCII')
 
         episode += 1
         # evaluation and saving

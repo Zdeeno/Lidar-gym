@@ -29,7 +29,7 @@ class LidarGym(gym.Env):
     """
 
     metadata = {
-        "render.modes": ["human"],
+        "render.modes": ["human", "ASCII"],
     }
 
     def __init__(self, lidar_range, voxel_size, max_rays, density, fov, T_forecast, map_voxel_shape, T_cuboid):
@@ -57,6 +57,7 @@ class LidarGym(gym.Env):
 
     def _reset(self):
         # reset values
+        self._last_rays = 0
         self._next_timestamp = 0
         self._curr_position = None
         self._curr_T = None
@@ -84,6 +85,7 @@ class LidarGym(gym.Env):
     def _step(self, action):
         assert type(action["rays"]) == np.ndarray and type(action["map"]) == np.ndarray, "wrong input types"
 
+        self._last_rays = action["rays"]
         if not self._done:
             directions = self._camera.calculate_directions(action["rays"], self._curr_T)
             if directions is not None:
@@ -103,13 +105,16 @@ class LidarGym(gym.Env):
 
     def _render(self, mode='human', close=False):
         if not self._done:
-            if not self._render_init:
-                from lidar_gym.visualiser import plot_map
-                self.plotter = plot_map.Plotter()
-                self._render_init = True
-            if self._next_timestamp > 1:
-                g_t, a_m, sensor = self._reward_counter.get_render_data()
-                self.plotter.plot_action(g_t, a_m, np.transpose(self._rays_endings), self._voxel_size, sensor)
+            if mode == 'human':
+                if not self._render_init:
+                    from lidar_gym.visualiser import plot_map
+                    self.plotter = plot_map.Plotter()
+                    self._render_init = True
+                if self._next_timestamp > 1:
+                    g_t, a_m, sensor = self._reward_counter.get_render_data()
+                    self.plotter.plot_action(g_t, a_m, np.transpose(self._rays_endings), self._voxel_size, sensor)
+            if mode == 'ASCII':
+                print(self._ray_string(self._last_rays))
 
     def _seed(self, seed=None):
         map_parser.set_seed(seed)
@@ -175,6 +180,23 @@ class LidarGym(gym.Env):
             else:
                 ret = [None]
             return ret
+
+    def _ray_string(self, action_in):
+        # create string to visualise action in console
+        to_print = np.empty(action_in.shape, dtype=str)
+        divider = np.empty(action_in.shape[0] + 2, dtype=str)
+        divider[:] = '-'
+        to_print[:] = ' '
+        to_print[action_in] = '+'
+        ret = '\n'
+        ret += ''.join(divider)
+        ret += '\n'
+        for i in range(action_in.shape[1]):
+            ret += '|'
+            ret += ''.join(to_print[:, i])
+            ret += '|\n'
+        ret += ''.join(divider) + '\n\n'
+        return ret
 
 
 class LidarMultiBinary(spaces.MultiBinary):
