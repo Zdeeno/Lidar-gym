@@ -303,10 +303,10 @@ class ActorCritic:
             idx, data = sample
             cur_state, action, reward, new_state, done = data
             idxs[i] = idx
-            cur_states[i] = cur_state
+            cur_states[i] = np.asarray([cur_state[0], cur_state[1]])
             actions[i] = action
             rewards[i] = reward
-            new_states[i] = new_state
+            new_states[i] = np.asarray([new_state[0], new_state[1]])
             dones[i] = done
 
         return idxs, cur_states, actions, rewards, new_states, dones
