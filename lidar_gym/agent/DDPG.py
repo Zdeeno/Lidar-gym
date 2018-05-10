@@ -112,7 +112,8 @@ class ActorCritic:
 
         for i in range(self.batch_size):
             if not dones[i]:
-                target_action = self._probs_to_bestQ(probs[i], cur_states[i][0], cur_states[i][1])
+                target_action = self._probs_to_bestQ(np.expand_dims(probs[i], axis=0),
+                                                     cur_states[i][0], cur_states[i][1])
                 future_reward = self.target_critic_model.predict(
                     [np.expand_dims(new_states[i][0], axis=0),
                      np.expand_dims(new_states[i][1], axis=0),
