@@ -389,7 +389,7 @@ if __name__ == "__main__":
             curr_state = new_state
             epoch += 1
             print('.', end='', flush=True)
-            env.render(mode='ASCII')
+            # env.render(mode='ASCII')
 
         episode += 1
         # evaluation and saving
