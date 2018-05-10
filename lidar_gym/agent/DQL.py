@@ -93,36 +93,10 @@ class DQN:
                 online_max = self._largest_indices(online_predict[i], self._max_rays)
                 q_future = np.mean(self._target_model.predict([np.expand_dims(new_states[i, 0], axis=0),
                                                                np.expand_dims(new_states[i, 1], axis=0)])[0, online_max])
-                targets[i, action] = reward + q_future * self._gamma
+                targets[i, actions[i]] = reward + q_future * self._gamma
             self._buffer.update(idxs[i], np.abs(np.sum(Q[i] - targets[i])))
 
         self._model.fit([cur_states[:, 0], cur_states[:, 1]], targets, batch_size=self._batch_size, epochs=1, verbose=0)
-
-
-        '''
-        for idx, sample in enumerate(samples):
-            idx, data = sample
-            state, action, reward, new_state, done = data
-            state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
-            Q = self._target_model.predict(state)
-            target = np.copy(Q)
-            if done:
-                target[0, action] = reward
-            else:
-                new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
-                # Q learning:
-                # q_future = self._n_best_Q(self._target_model.predict(new_state), self._max_rays)
-                # target[0, action] = reward + q_future * self._gamma
-                # double Q learning
-                online_max = self._largest_indices(self._model.predict(new_state), self._max_rays)
-                q_future = np.sum(self._target_model.predict(new_state)[online_max])/self._max_rays
-                target[0, action] = reward + q_future * self._gamma
-
-            self._buffer.update(idx, np.abs(np.sum(Q - target)))
-            state_batch[idx] = state
-            target_batch[idx] = target
-        self._model.fit(state_batch, target_batch, batch_size=self._batch_size, epochs=1, verbose=0)
-        '''
 
     def TD_size(self, sample):
         # we already make a computation to fit nn here so why not to fit

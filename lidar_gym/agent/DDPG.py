@@ -195,15 +195,13 @@ class ActorCritic:
         return self._probs_to_bestQ(probs_perturbed[0], state[0], state[1])
 
     '''
+    # methods for perturbations
     def _update_perturbed(self):
-        # for parameter space perturbations
         perturbed_weights = self.actor_model.get_weights()
         for i in range(len(perturbed_weights)):
             perturbed_weights[i] += np.random.normal(0, self.pert_variance, perturbed_weights[i].shape)
         self.perturbed_actor_model.set_weights(perturbed_weights)
-    '''
 
-    '''
     def perturbation_decay(self):
         self.pert_threshold_dist *= self.pert_threshold_decay
     '''
