@@ -92,7 +92,7 @@ class DQN:
             else:
                 online_max = self._largest_indices(online_predict[i], self._max_rays)
                 q_future = np.mean(self._target_model.predict([np.expand_dims(new_states[i, 0], axis=0),
-                                                               np.expand_dims(new_states[i, 1], axis=0)])[online_max])
+                                                               np.expand_dims(new_states[i, 1], axis=0)])[0, online_max])
                 targets[i, action] = reward + q_future * self._gamma
             self._buffer.update(idxs[i], np.abs(np.sum(Q[i] - targets[i])))
 
