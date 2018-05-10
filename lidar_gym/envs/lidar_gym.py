@@ -115,7 +115,7 @@ class LidarGym(gym.Env):
                     g_t, a_m, sensor = self._reward_counter.get_render_data()
                     self.plotter.plot_action(g_t, a_m, np.transpose(self._rays_endings), self._voxel_size, sensor)
             if mode == 'ASCII':
-                print(ray_string(self._last_rays))
+                print(ray_string(self._last_rays.T))
 
     def _seed(self, seed=None):
         map_parser.set_seed(seed)
