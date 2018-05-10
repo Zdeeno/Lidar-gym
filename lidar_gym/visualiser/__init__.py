@@ -1,1 +1,1 @@
-from lidar_gym.visualiser.plot import *
+from lidar_gym.visualiser.plot3d import *

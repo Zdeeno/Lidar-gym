@@ -9,7 +9,7 @@ import tensorflow.contrib.keras.api.keras.backend as K
 import tensorflow as tf
 from lidar_gym.agent.supervised_agent import Supervised
 from lidar_gym.tools.sum_tree import Memory
-from lidar_gym.visualiser.plot import ray_string
+from lidar_gym.visualiser.printer import ray_string
 
 import random
 from collections import deque
@@ -315,6 +315,7 @@ class ActorCritic:
             dones[i] = done
 
         return idxs, cur_states, actions, rewards, new_states, dones
+
 
 def evaluate(supervised, reinforce):
     # evalenv = gym.make('lidareval-v0')

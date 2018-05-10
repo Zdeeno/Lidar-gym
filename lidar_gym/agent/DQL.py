@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 import random
-from lidar_gym.visualiser.plot import ray_string
+from lidar_gym.visualiser.plot3d import ray_string
 
 from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
 import tensorflow.contrib.keras.api.keras.backend as K
