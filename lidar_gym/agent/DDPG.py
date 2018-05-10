@@ -36,15 +36,25 @@ class ActorCritic:
         self.action_size = self.lidar_shape[0]*self.lidar_shape[1]
         self.learning_rate = 0.001
         self.gamma = .95
-        self.tau = .1
-        self.batch_size = 7
-        self.buffer_size = 1000
+        self.tau = .01
+        self.batch_size = 8
+        self.buffer_size = 1024
         self.num_proto_actions = 5
 
+        '''
+        # action space perturbation consts
         self.pert_threshold_decay = 0.995
         self.pert_threshold_dist = 0.025*self.pert_threshold_decay
         self.pert_alpha = 1.01
         self.pert_variance = self.pert_threshold_dist
+        '''
+
+        # OU consts
+        self.epsilon = 1
+        self.epsilon_decay = 1/(1000*200)
+        self.mean = 0.5
+        self.theta = 0.75
+        self.sigma = 0.1
 
         self.buffer = Memory(self.buffer_size)
         self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model =\
@@ -80,27 +90,61 @@ class ActorCritic:
         self.buffer.add(self._TD_size(sample), sample)
 
     def _train_actor(self, samples):
-        for sample in samples:
+        state_batch = np.asarray(samples[:][1][0])
+        action_batch = np.asarray(samples[:][1][1])
+
+        for i, sample in enumerate(samples):
             idx, data = sample
             state, action, reward, new_state, _ = data
             state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
             pred = self.predict(new_state)
             predicted_action = np.expand_dims(pred, axis=0)
-            grads = self.sess.run(self.critic_grads, feed_dict={
-                self.critic_sparse_input: state[0],
-                self.critic_reconstructed_input: state[1],
-                self.critic_action_input: predicted_action
-            })[0]
+            state_batch[i] = state
+            action_batch[i] = predicted_action
 
-            self.sess.run(self.optimize, feed_dict={
-                self.actor_sparse_input: state[0],
-                self.actor_reconstructed_input: state[1],
-                self.actor_critic_grad: grads
-            })
-        # self._soft_update(self.actor_model, self.target_actor_model, self.tau)
+        grads = self.sess.run(self.critic_grads, feed_dict={
+            self.critic_sparse_input: state_batch[:][0],
+            self.critic_reconstructed_input: state_batch[:][1],
+            self.critic_action_input: action_batch
+        })[0]
+
+        self.sess.run(self.optimize, feed_dict={
+            self.actor_sparse_input: state_batch[:][0],
+            self.actor_reconstructed_input: state_batch[:][1],
+            self.actor_critic_grad: grads
+        })
 
     def _train_critic(self, samples):
-        for sample in samples:
+        samples = np.asarray(samples)
+        state_batch = samples[:][1][0]
+        action_batch = samples[:][1][1]
+        reward_batch = samples[:][1][2]
+        new_state_batch = samples[:][1][3]
+        done_batch = samples[:][1][4]
+
+        probs = self.target_actor_model.predict(new_state_batch, batch_size=self.batch_size)
+
+        for i in range(self.batch_size):
+            if not done_batch[i]:
+                target_action = np.expand_dims(self._probs_to_bestQ(probs[i], state_batch[i][0], state_batch[i][1]), axis=0)
+                future_reward = self.target_critic_model.predict(
+                    [np.expand_dims(new_state_batch[i][0], axis=0),
+                     np.expand_dims(new_state_batch[i][1], axis=0), target_action])[0][0]
+                reward_batch[i] += self.gamma * future_reward
+        TDs = np.abs(self.critic_model.predict([state_batch[:][0], state_batch[:][1], action_batch],
+                                               batch_size=self.batch_size)[0][0] - reward_batch)
+        for i, td in enumerate(TDs):
+            self.buffer.update(samples[i][1], td)
+        self.critic_model.fit([state_batch[:][0], state_batch[:][1], action_batch], reward_batch,
+                              verbose=0, batch_size=self.batch_size)
+
+        '''
+        print(samples[0][1][0])
+        state_batch = np.empty((self.batch_size,) + np.shape(samples[0][1][0]))
+        action_batch = np.empty((self.batch_size,) + samples[0][1][1].shape)
+        reward_batch = np.empty((self.batch_size, ))
+
+        for i, sample in enumerate(samples):
             idx, data = sample
             cur_state, action, reward, new_state, done = data
             cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
@@ -117,7 +161,13 @@ class ActorCritic:
             reward = np.expand_dims(reward, axis=0)
             TD = np.abs(self.critic_model.predict([cur_state[0], cur_state[1], action])[0][0] - reward[0])
             self.buffer.update(idx, TD)
-            self.critic_model.fit([cur_state[0], cur_state[1], action], reward, verbose=0)
+            state_batch[i] = np.asarray([np.squeeze(cur_state[0], 0), np.squeeze(cur_state[1], 0)])
+            action_batch[i] = action
+            reward_batch[i] = reward
+
+        self.critic_model.fit([state_batch[:][0], state_batch[:][1], action_batch], reward_batch,
+                              verbose=0, batch_size=self.batch_size)
+        '''
 
     def train(self):
         if self.buffer.length < self.batch_size:
@@ -133,12 +183,6 @@ class ActorCritic:
         for i in range(len(target_weights)):
             target_weights[i] = model_weights[i] * tau + target_weights[i] * (1 - tau)
         target.set_weights(target_weights)
-
-    def _update_perturbed(self):
-        perturbed_weights = self.actor_model.get_weights()
-        for i in range(len(perturbed_weights)):
-            perturbed_weights[i] += np.random.normal(0, self.pert_variance, perturbed_weights[i].shape)
-        self.perturbed_actor_model.set_weights(perturbed_weights)
 
     def update_target(self):
         self._soft_update(self.critic_model, self.target_critic_model, self.tau)
@@ -166,6 +210,7 @@ class ActorCritic:
             # print(dist)
         '''
 
+        '''
         # action space perturbation
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         probs = self.actor_model.predict(state)
@@ -176,10 +221,30 @@ class ActorCritic:
             self.pert_variance /= self.pert_alpha
         else:
             self.pert_variance *= self.pert_alpha
+        '''
+
+        # Ornstein-Uhlenbeck policy
+        state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
+        probs = self.actor_model.predict(state)
+        noise = self.theta * (self.mean - probs) + self.sigma * np.random.standard_normal(probs.shape)
+        probs_perturbed = probs + self.epsilon * noise
+        self.epsilon -= self.epsilon_decay
+
         return self._probs_to_bestQ(probs_perturbed[0], state[0], state[1])
 
+    '''
+    def _update_perturbed(self):
+        # for parameter space perturbations
+        perturbed_weights = self.actor_model.get_weights()
+        for i in range(len(perturbed_weights)):
+            perturbed_weights[i] += np.random.normal(0, self.pert_variance, perturbed_weights[i].shape)
+        self.perturbed_actor_model.set_weights(perturbed_weights)
+    '''
+
+    '''
     def perturbation_decay(self):
         self.pert_threshold_dist *= self.pert_threshold_decay
+    '''
 
     def _probs_to_bestQ(self, probs, sparse_state, reconstructed_state):
         # pseudo - wolpetinger policy
@@ -222,7 +287,6 @@ class ActorCritic:
 
         if not done:
             new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
-
             probs = self.target_actor_model.predict(new_state)
             target_action = np.expand_dims(self._probs_to_bestQ(probs[0], cur_state[0], cur_state[1]), axis=0)
 
@@ -232,7 +296,6 @@ class ActorCritic:
 
         reward = np.expand_dims(reward, axis=0)
         TD = np.abs(self.critic_model.predict([cur_state[0], cur_state[1], action])[0][0] - reward[0])
-        self.critic_model.fit([cur_state[0], cur_state[1], action], reward, verbose=0)
         return TD
 
 
@@ -333,7 +396,7 @@ if __name__ == "__main__":
         # evaluation and saving
         print('\nend of episode')
         if episode % 25 == 0:
-            model.perturbation_decay()
+            # model.perturbation_decay()
             rew = evaluate(supervised, model)
             if rew > max_reward:
                 print('new best agent - saving with reward:' + str(rew))

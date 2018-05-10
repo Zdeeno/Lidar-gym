@@ -24,8 +24,7 @@ class DQN:
     def __init__(self, env):
         # setup environment
         self._env = env
-        # plus one in TD compute
-        self._batch_size = 7
+        self._batch_size = 8
 
         '''
         LARGE
@@ -44,11 +43,11 @@ class DQN:
         self._epsilon_min = 0.25
         self._epsilon_decay = 0.999
         self._learning_rate = 0.001
-        self._tau = .1
+        self._tau = .025
 
         # setup buffer
         # self._buffer_size = 200
-        self._buffer_size = 512
+        self._buffer_size = 1024
         self._buffer = Memory(self._buffer_size)
 
         # double network
@@ -86,7 +85,9 @@ class DQN:
             return
 
         samples = self._buffer.sample(self._batch_size)
-        for sample in samples:
+        state_batch = np.empty((self._buffer_size, ) + samples[0][1][0].shape)
+        target_batch = np.empty((self._buffer_size, ) + samples[0][1][1].shape)
+        for idx, sample in enumerate(samples):
             idx, data = sample
             state, action, reward, new_state, done = data
             state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
@@ -105,7 +106,10 @@ class DQN:
                 target[0, action] = reward + q_future * self._gamma
 
             self._buffer.update(idx, np.abs(np.sum(Q - target)))
-            self._model.fit(state, target, epochs=1, verbose=0)
+            state_batch[idx] = state
+            target_batch[idx] = target
+
+        self._model.fit(state_batch, target_batch, batch_size=self._batch_size, epochs=1, verbose=0)
 
     def TD_size(self, sample):
         # we already make a computation to fit nn here so why not to fit
@@ -120,7 +124,6 @@ class DQN:
             online_max = self._largest_indices(self._model.predict(new_state), self._max_rays)
             q_future = np.sum(self._target_model.predict(new_state)[online_max]) / self._max_rays
             target[0, action] = reward + q_future * self._gamma
-        self._model.fit(state, target, epochs=1, verbose=0)
         ret = np.abs(np.sum(Q - target))
         return ret
 
