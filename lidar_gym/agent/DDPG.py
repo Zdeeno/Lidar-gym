@@ -91,7 +91,7 @@ class ActorCritic:
 
     def _train_actor(self, batch):
         idxs, cur_states, actions, rewards, new_states, dones = batch
-        predicted_action = self.actor_model.predict(cur_states)
+        predicted_action = self.actor_model.predict([cur_states[:, 0], cur_states[:, 1]], batch_size=self.batch_size)
 
         grads = self.sess.run(self.critic_grads, feed_dict={
             self.critic_sparse_input: cur_states[:, 0],
@@ -130,7 +130,7 @@ class ActorCritic:
         for i in range(self.batch_size):
             td = np.abs(pred_Q[i] - rewards[i])
             print('index: ' + str(idxs[i]))
-            self.buffer.update(idxs[0], td)
+            self.buffer.update(idxs[i], td)
 
         '''
         print(samples[0][1][0])
