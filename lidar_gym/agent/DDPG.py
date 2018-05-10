@@ -293,7 +293,7 @@ class ActorCritic:
     def _get_batch(self):
         samples = self.buffer.sample(self.batch_size)
         # data holders
-        idxs = np.empty((self.batch_size, ))
+        idxs = np.empty((self.batch_size, ), dtype=int)
         cur_states = np.empty((self.batch_size, 2,) + self.map_shape)
         actions = np.empty((self.batch_size, ) + self.lidar_shape)
         rewards = np.empty((self.batch_size, ))
