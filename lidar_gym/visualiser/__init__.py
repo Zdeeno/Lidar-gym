@@ -1,1 +1,1 @@
-from lidar_gym.visualiser.plot3d import *
+from lidar_gym.visualiser import plot3d, printer
