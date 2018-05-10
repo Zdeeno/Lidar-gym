@@ -158,7 +158,7 @@ class DQN:
         # data holders
         idxs = np.empty(self._batch_size, dtype=int)
         cur_states = np.empty((self._batch_size, 2,) + self._map_shape)
-        actions = np.empty((self._batch_size, ) + self._lidar_shape)
+        actions = np.empty((self._batch_size, ) + self._lidar_shape, dtype=bool)
         rewards = np.empty(self._batch_size)
         new_states = np.empty((self._batch_size, 2,) + self._map_shape)
         dones = np.empty(self._batch_size, dtype=bool)
