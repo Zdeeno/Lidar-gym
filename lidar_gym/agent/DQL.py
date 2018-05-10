@@ -96,7 +96,7 @@ class DQN:
                 targets[i, action] = reward + q_future * self._gamma
             self._buffer.update(idxs[i], np.abs(np.sum(Q[i] - targets[i])))
 
-        self._model.fit(cur_states, targets, batch_size=self._batch_size, epochs=1, verbose=0)
+        self._model.fit([cur_states[:, 0], cur_states[:, 1]], targets, batch_size=self._batch_size, epochs=1, verbose=0)
 
 
         '''
