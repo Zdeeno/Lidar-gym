@@ -54,7 +54,7 @@ class ActorCritic:
         self.epsilon = 1
         self.epsilon_decay = 1/(1000*200)
         self.mean = 0.5
-        self.theta = 0.75
+        self.theta = 0.9
         self.sigma = 0.1
 
         self.buffer = Memory(self.buffer_size)
@@ -188,6 +188,7 @@ class ActorCritic:
         # Ornstein-Uhlenbeck policy
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         probs = self.actor_model.predict(state)
+        # print(probs)
         noise = self.theta * (self.mean - probs) + self.sigma * np.random.standard_normal(probs.shape)
         probs_perturbed = probs + self.epsilon * noise
         self.epsilon -= self.epsilon_decay
