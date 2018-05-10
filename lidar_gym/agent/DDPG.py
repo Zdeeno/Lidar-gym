@@ -109,7 +109,7 @@ class ActorCritic:
         idxs, cur_states, actions, rewards, new_states, dones = batch
 
         probs = self.target_actor_model.predict([new_states[:][0], new_states[:][1]], batch_size=self.batch_size)
-        print(np.shape(new_states[:][0]))
+        print(np.shape(new_states))
         print(np.shape(probs))
 
         for i in range(self.batch_size):
