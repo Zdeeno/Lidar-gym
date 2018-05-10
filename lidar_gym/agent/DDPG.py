@@ -89,54 +89,45 @@ class ActorCritic:
         sample = state, action, reward, new_state, done
         self.buffer.add(self._TD_size(sample), sample)
 
-    def _train_actor(self, samples):
-        state_batch = np.asarray(samples[:][1][0])
-        action_batch = np.asarray(samples[:][1][1])
-
-        for i, sample in enumerate(samples):
-            idx, data = sample
-            state, action, reward, new_state, _ = data
-            state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
-            pred = self.predict(new_state)
-            predicted_action = np.expand_dims(pred, axis=0)
-            state_batch[i] = state
-            action_batch[i] = predicted_action
+    def _train_actor(self, batch):
+        idxs, cur_states, actions, rewards, new_states, dones = batch
+        predicted_action = self.actor_model.predict(cur_states)
 
         grads = self.sess.run(self.critic_grads, feed_dict={
-            self.critic_sparse_input: state_batch[:][0],
-            self.critic_reconstructed_input: state_batch[:][1],
-            self.critic_action_input: action_batch
+            self.critic_sparse_input: cur_states[:][0],
+            self.critic_reconstructed_input: cur_states[:][1],
+            self.critic_action_input: predicted_action
         })[0]
 
         self.sess.run(self.optimize, feed_dict={
-            self.actor_sparse_input: state_batch[:][0],
-            self.actor_reconstructed_input: state_batch[:][1],
+            self.actor_sparse_input: cur_states[:][0],
+            self.actor_reconstructed_input: cur_states[:][1],
             self.actor_critic_grad: grads
         })
 
-    def _train_critic(self, samples):
-        samples = np.asarray(samples)
-        state_batch = samples[:][1][0]
-        action_batch = samples[:][1][1]
-        reward_batch = samples[:][1][2]
-        new_state_batch = samples[:][1][3]
-        done_batch = samples[:][1][4]
+    def _train_critic(self, batch):
+        idxs, cur_states, actions, rewards, new_states, dones = batch
 
-        probs = self.target_actor_model.predict(new_state_batch, batch_size=self.batch_size)
+        probs = self.target_actor_model.predict(new_states, batch_size=self.batch_size)
 
         for i in range(self.batch_size):
-            if not done_batch[i]:
-                target_action = np.expand_dims(self._probs_to_bestQ(probs[i], state_batch[i][0], state_batch[i][1]), axis=0)
+            if not dones[i]:
+                target_action = self._probs_to_bestQ(probs[i], cur_states[i][0], cur_states[i][1])
                 future_reward = self.target_critic_model.predict(
-                    [np.expand_dims(new_state_batch[i][0], axis=0),
-                     np.expand_dims(new_state_batch[i][1], axis=0), target_action])[0][0]
-                reward_batch[i] += self.gamma * future_reward
-        TDs = np.abs(self.critic_model.predict([state_batch[:][0], state_batch[:][1], action_batch],
-                                               batch_size=self.batch_size)[0][0] - reward_batch)
-        for i, td in enumerate(TDs):
-            self.buffer.update(samples[i][1], td)
-        self.critic_model.fit([state_batch[:][0], state_batch[:][1], action_batch], reward_batch,
+                    [np.expand_dims(new_states[i][0], axis=0),
+                     np.expand_dims(new_states[i][1], axis=0),
+                     np.expand_dims(target_action, axis=0)])[0][0]
+                rewards[i] += self.gamma * future_reward
+
+        self.critic_model.fit([cur_states[:][0], cur_states[:][1], actions], rewards,
                               verbose=0, batch_size=self.batch_size)
+
+        # count TDs and update sum tree
+        pred_Q = self.critic_model.predict([cur_states[:][0], cur_states[:][1], actions],
+                                           batch_size=self.batch_size)[:][0]
+        for i in range(self.batch_size):
+            td = np.abs(pred_Q[i] - rewards[i])
+            self.buffer.update(idxs[i], td)
 
         '''
         print(samples[0][1][0])
@@ -173,9 +164,8 @@ class ActorCritic:
         if self.buffer.length < self.batch_size:
             return
 
-        samples = self.buffer.sample(self.batch_size)
-        self._train_critic(samples)
-        self._train_actor(samples)
+        self._train_critic(self._get_batch())
+        self._train_actor(self._get_batch())
 
     def _soft_update(self, target, model, tau):
         model_weights = model.get_weights()
@@ -298,6 +288,28 @@ class ActorCritic:
         TD = np.abs(self.critic_model.predict([cur_state[0], cur_state[1], action])[0][0] - reward[0])
         return TD
 
+    def _get_batch(self):
+        samples = self.buffer.sample(self.batch_size)
+        # data holders
+        idxs = np.empty((self.batch_size, ))
+        cur_states = np.empty((self.batch_size, 2,) + self.map_shape)
+        actions = np.empty((self.batch_size, ) + self.lidar_shape)
+        rewards = np.empty((self.batch_size, ))
+        new_states = np.empty((self.batch_size, 2,) + self.map_shape)
+        dones = np.empty((self.batch_size, ), dtype=bool)
+
+        # fill data holders
+        for i, sample in enumerate(samples):
+            idx, data = sample
+            cur_state, action, reward, new_state, done = data
+            idxs[i] = idx
+            cur_states[i] = cur_state
+            actions[i] = action
+            rewards[i] = reward
+            new_states[i] = new_state
+            dones[i] = done
+
+        return idxs, cur_states, actions, rewards, new_states, dones
 
 def evaluate(supervised, reinforce):
     # evalenv = gym.make('lidareval-v0')
