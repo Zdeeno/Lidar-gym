@@ -87,7 +87,7 @@ class DQN:
         targets = np.copy(Q)
 
         for i in range(self._batch_size):
-            if done[i]:
+            if dones[i]:
                 targets[i, actions[i]] = rewards[i]
             else:
                 online_max = self._largest_indices(online_predict[i], self._max_rays)
