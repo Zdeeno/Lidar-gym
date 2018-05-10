@@ -94,41 +94,39 @@ class ActorCritic:
         predicted_action = self.actor_model.predict(cur_states)
 
         grads = self.sess.run(self.critic_grads, feed_dict={
-            self.critic_sparse_input: cur_states[:][0],
-            self.critic_reconstructed_input: cur_states[:][1],
+            self.critic_sparse_input: cur_states[:, 0],
+            self.critic_reconstructed_input: cur_states[:, 1],
             self.critic_action_input: predicted_action
         })[0]
 
         self.sess.run(self.optimize, feed_dict={
-            self.actor_sparse_input: cur_states[:][0],
-            self.actor_reconstructed_input: cur_states[:][1],
+            self.actor_sparse_input: cur_states[:, 0],
+            self.actor_reconstructed_input: cur_states[:, 1],
             self.actor_critic_grad: grads
         })
 
     def _train_critic(self, batch):
         idxs, cur_states, actions, rewards, new_states, dones = batch
 
-        probs = self.target_actor_model.predict([new_states[:][0], new_states[:][1]], batch_size=self.batch_size)
-        print(np.shape(new_states[:, 0]))
-        print(np.shape(probs))
+        probs = self.target_actor_model.predict([new_states[:, 0], new_states[:, 1]], batch_size=self.batch_size)
 
         for i in range(self.batch_size):
             if not dones[i]:
                 target_action = self._probs_to_bestQ(probs[i],
-                                                     np.expand_dims(cur_states[i][0], axis=0),
-                                                     np.expand_dims(cur_states[i][1], axis=0))
+                                                     np.expand_dims(cur_states[i, 0], axis=0),
+                                                     np.expand_dims(cur_states[i, 1], axis=0))
                 future_reward = self.target_critic_model.predict(
-                    [np.expand_dims(new_states[i][0], axis=0),
-                     np.expand_dims(new_states[i][1], axis=0),
+                    [np.expand_dims(new_states[i, 0], axis=0),
+                     np.expand_dims(new_states[i, 1], axis=0),
                      np.expand_dims(target_action, axis=0)])[0][0]
                 rewards[i] += self.gamma * future_reward
 
-        self.critic_model.fit([cur_states[:][0], cur_states[:][1], actions], rewards,
+        self.critic_model.fit([cur_states[:, 0], cur_states[:, 1], actions], rewards,
                               verbose=0, batch_size=self.batch_size)
 
         # count TDs and update sum tree
-        pred_Q = self.critic_model.predict([cur_states[:][0], cur_states[:][1], actions],
-                                           batch_size=self.batch_size)[:][0]
+        pred_Q = self.critic_model.predict([cur_states[:, 0], cur_states[:, 1], actions],
+                                           batch_size=self.batch_size)[:, 0]
         for i in range(self.batch_size):
             td = np.abs(pred_Q[i] - rewards[i])
             self.buffer.update(idxs[i], td)
