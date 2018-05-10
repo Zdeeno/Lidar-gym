@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 import random
-from lidar_gym.visualiser.plot3d import ray_string
+from lidar_gym.visualiser.printer import ray_string
 
 from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
 import tensorflow.contrib.keras.api.keras.backend as K
@@ -32,7 +32,7 @@ class DQN:
 
         self._map_shape = (80, 80, 8)
         self._max_rays = 15
-        self._rays_shape = (40, 30)
+        self._lidar_shape = (40, 30)
 
         # setup consts
         self._gamma = 0.9
@@ -59,7 +59,7 @@ class DQN:
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         rays = self._model.predict(state)[0]
-        ret = np.zeros(shape=self._rays_shape, dtype=bool)
+        ret = np.zeros(shape=self._lidar_shape, dtype=bool)
         ret[self._largest_indices(rays, self._max_rays)] = True
         return ret
 
@@ -71,19 +71,34 @@ class DQN:
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         rays = self._model.predict(state)[0]
         # Q values to top n bools
-        ret = np.zeros(shape=self._rays_shape, dtype=bool)
+        ret = np.zeros(shape=self._lidar_shape, dtype=bool)
         ret[self._largest_indices(rays, self._max_rays)] = True
         return ret
 
     def replay(self):
         self._epsilon *= self._epsilon_decay
-
         if self._buffer.length < self._batch_size:
             return
 
-        samples = self._buffer.sample(self._batch_size)
-        state_batch = np.empty((self._buffer_size, ) + samples[0][1][0].shape)
-        target_batch = np.empty((self._buffer_size, ) + samples[0][1][1].shape)
+        idxs, cur_states, actions, rewards, new_states, dones = self._get_batch()
+
+        Q = self._target_model.predict([cur_states[:, 0], cur_states[:, 1]])
+        online_predict = self._model.predict([new_states[:, 0], new_states[:, 1]])
+        targets = np.copy(Q)
+
+        for i in range(self._batch_size):
+            if done[i]:
+                targets[i, actions[i]] = rewards[i]
+            else:
+                online_max = self._largest_indices(online_predict[i], self._max_rays)
+                q_future = np.mean(self._target_model.predict(np.expand_dims(new_states[i], axis=0))[online_max])
+                targets[i, action] = reward + q_future * self._gamma
+            self._buffer.update(idxs[i], np.abs(np.sum(Q[i] - targets[i])))
+
+        self._model.fit(cur_states, targets, batch_size=self._batch_size, epochs=1, verbose=0)
+
+
+        '''
         for idx, sample in enumerate(samples):
             idx, data = sample
             state, action, reward, new_state, done = data
@@ -105,8 +120,8 @@ class DQN:
             self._buffer.update(idx, np.abs(np.sum(Q - target)))
             state_batch[idx] = state
             target_batch[idx] = target
-
         self._model.fit(state_batch, target_batch, batch_size=self._batch_size, epochs=1, verbose=0)
+        '''
 
     def TD_size(self, sample):
         # we already make a computation to fit nn here so why not to fit
@@ -162,6 +177,31 @@ class DQN:
         indices = np.argpartition(flat, -n)[-n:]
         indices = indices[np.argsort(-flat[indices])]
         return np.unravel_index(indices, arr.shape)
+
+    def _get_batch(self):
+        samples = self._buffer.sample(self._batch_size)
+        # data holders
+        idxs = np.empty(self._batch_size, dtype=int)
+        cur_states = np.empty((self._batch_size, 2,) + self._map_shape)
+        actions = np.empty((self._batch_size, ) + self._lidar_shape)
+        rewards = np.empty(self._batch_size)
+        new_states = np.empty((self._batch_size, 2,) + self._map_shape)
+        dones = np.empty(self._batch_size, dtype=bool)
+
+        # fill data holders
+        for i, sample in enumerate(samples):
+            idx, data = sample
+            cur_state, action, reward, new_state, done = data
+            idxs[i] = idx
+            cur_states[i][0] = cur_state[0]
+            cur_states[i][1] = cur_state[1]
+            actions[i] = action
+            rewards[i] = reward
+            new_states[i][0] = new_state[0]
+            new_states[i][1] = new_state[1]
+            dones[i] = done
+
+        return idxs, cur_states, actions, rewards, new_states, dones
 
 
 def evaluate(supervised, dqn):

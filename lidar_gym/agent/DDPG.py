@@ -132,37 +132,6 @@ class ActorCritic:
             td = np.abs(pred_Q[i] - rewards[i])
             self.buffer.update(idxs[i], td)
 
-        '''
-        print(samples[0][1][0])
-        state_batch = np.empty((self.batch_size,) + np.shape(samples[0][1][0]))
-        action_batch = np.empty((self.batch_size,) + samples[0][1][1].shape)
-        reward_batch = np.empty((self.batch_size, ))
-
-        for i, sample in enumerate(samples):
-            idx, data = sample
-            cur_state, action, reward, new_state, done = data
-            cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
-            action = np.expand_dims(action, axis=0)
-
-            if not done:
-                new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
-                probs = self.target_actor_model.predict(new_state)
-                target_action = np.expand_dims(self._probs_to_bestQ(probs[0], cur_state[0], cur_state[1]), axis=0)
-                future_reward = self.target_critic_model.predict(
-                    [new_state[0], new_state[1], target_action])[0][0]
-                reward += self.gamma * future_reward
-
-            reward = np.expand_dims(reward, axis=0)
-            TD = np.abs(self.critic_model.predict([cur_state[0], cur_state[1], action])[0][0] - reward[0])
-            self.buffer.update(idx, TD)
-            state_batch[i] = np.asarray([np.squeeze(cur_state[0], 0), np.squeeze(cur_state[1], 0)])
-            action_batch[i] = action
-            reward_batch[i] = reward
-
-        self.critic_model.fit([state_batch[:][0], state_batch[:][1], action_batch], reward_batch,
-                              verbose=0, batch_size=self.batch_size)
-        '''
-
     def train(self):
         if self.buffer.length < self.batch_size:
             return
