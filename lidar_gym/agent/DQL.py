@@ -200,7 +200,7 @@ def evaluate(supervised, dqn):
         if step % 10 == 0:
             evalenv.render(mode='ASCII')
     with open('train_log', 'a+') as f:
-        f.write(str(reward_overall))
+        f.write('after episode' + str(episode) + ' reward: ' + str(reward_overall) + '\n')
     print('Evaluation ended with value: ' + str(reward_overall))
     return reward_overall
 

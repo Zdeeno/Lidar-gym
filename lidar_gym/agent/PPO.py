@@ -233,7 +233,7 @@ def evaluate(supervised, reinforce):
         reconstucted = supervised.predict(sparse)
         step += 1
         evalenv.render(mode='ASCII')
-    with open('train_log_DDPG', 'a+') as f:
+    with open('train_log_PPO', 'a+') as f:
         f.write(str(reward_overall) + '@' + str(episode))
     print('Evaluation after episode ' + str(episode) + ' ended with value: ' + str(reward_overall))
     return reward_overall
@@ -296,6 +296,6 @@ if __name__ == "__main__":
             if rew > max_reward:
                 print('new best agent - saving with reward:' + str(rew))
                 max_reward = rew
-                critic_name = 'critic_' + str(max_reward) + '.h5'
-                actor_name = 'actor_' + str(max_reward) + '.h5'
+                critic_name = 'critic_PPO' + str(max_reward) + '.h5'
+                actor_name = 'actor_PPO' + str(max_reward) + '.h5'
                 model.save_model(savedir + critic_name, savedir + actor_name)
