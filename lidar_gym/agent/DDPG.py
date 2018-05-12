@@ -1,5 +1,5 @@
 """
-solving pendulum using actor-critic model
+solving pendulum using continuous actor-critic model and mapping to discrete action space
 """
 
 import gym
@@ -167,8 +167,6 @@ class ActorCritic:
             self.pert_variance *= self.pert_alpha
             # print(dist)
 
-
-
         # action space perturbation
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         probs = self.actor_model.predict(state)
@@ -181,7 +179,7 @@ class ActorCritic:
             self.pert_variance *= self.pert_alpha
 
         '''
-        # Ornstein-Uhlenbeck policy
+        # Ornstein-Uhlenbeck perturbations
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         probs = self.actor_model.predict(state)
         noise = self.theta * (self.mean - probs) + self.sigma * np.random.standard_normal(probs.shape)
@@ -209,10 +207,8 @@ class ActorCritic:
         azimuth = np.asarray(input[0, :] * half_shape[0] + half_shape[0], dtype=int)
         elevation = np.asarray(input[1, :] * half_shape[1] + half_shape[1], dtype=int)
         # avoid err outputs
-        azimuth = np.minimum(azimuth, self.output_shape[0] - 1)
-        azimuth = np.maximum(azimuth, 0)
-        elevation = np.minimum(elevation, self.output_shape[1] - 1)
-        elevation = np.maximum(elevation, 0)
+        azimuth = np.clip(azimuth, 0, self.output_shape[0] - 1)
+        elevation = np.clip(elevation, 0, self.output_shape[1] - 1)
 
         ret = np.zeros(self.output_shape, dtype=bool)
         ret[azimuth, elevation] = True
@@ -292,7 +288,8 @@ def evaluate(supervised, reinforce):
         sparse = obv['X']
         reconstucted = supervised.predict(sparse)
         step += 1
-        evalenv.render(mode='ASCII')
+        if step % 10 == 0:
+            evalenv.render(mode='ASCII')
     with open('train_log_DDPG', 'a+') as f:
         f.write(str(reward_overall) + '@' + str(episode))
     print('Evaluation after episode ' + str(episode) + ' ended with value: ' + str(reward_overall))

@@ -102,7 +102,7 @@ class RewardCounter:
             # suppress warning for NaN / NaN
             warnings.simplefilter("ignore")
             values_g_t = np.asarray(values_g_t // np.abs(values_g_t))
-        values_g_t[np.isnan(values_g_t)] = 0
+        values_g_t = np.nan_to_num(values_g_t)
 
         # obtain action space local map values
         points = points / self._voxel_size
