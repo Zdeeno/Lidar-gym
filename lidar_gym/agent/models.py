@@ -145,7 +145,7 @@ def create_ppo_toy_actor_model(lr, map_shape):
     c32 = Conv3D(16, 4, padding='same', activation='linear')(c22)
 
     # merge SMALL inputs
-    a1 = Add()([c31, c32])
+    a1 = Multiply()([c31, c32])
     c1 = Conv3D(4, 4, padding='same', activation='relu')(a1)
     p1 = MaxPool3D(pool_size=2)(c1)
     c2 = Conv3D(8, 2, padding='same', activation='relu')(p1)
@@ -183,7 +183,7 @@ def create_c_toy_actor_model(lr, map_shape):
     c32 = Conv3D(16, 4, padding='same', activation='linear')(c22)
 
     # merge SMALL inputs
-    a1 = Add()([c31, c32])
+    a1 = Multiply()([c31, c32])
     c1 = Conv3D(4, 4, padding='same', activation='relu')(a1)
     p1 = MaxPool3D(pool_size=2)(c1)
     c2 = Conv3D(8, 2, padding='same', activation='relu')(p1)
@@ -224,14 +224,14 @@ def create_c_toy_critic_model(lr, map_shape, lidar_shape):
     d33 = Dense(30, activation='linear')(d23)
 
     # merge SMALL action inputs and output action Q value
-    a1 = Add()([c31, c32])
+    a1 = Multiply()([c31, c32])
     c1 = Conv3D(8, 4, padding='same', activation='relu')(a1)
     p1 = MaxPool3D(pool_size=2)(c1)
     c2 = Conv3D(16, 2, padding='same', activation='relu')(p1)
     p2 = MaxPool3D(pool_size=2)(c2)
     f1 = Flatten()(p2)
     d1 = Dense(30, activation='linear')(f1)
-    a2 = Add()([d1, d33])
+    a2 = Multiply()([d1, d33])
     d2 = Dense(30, activation='relu')(a2)
     d3 = Dense(20, activation='relu')(d2)
     d4 = Dense(10, activation='relu')(d3)
