@@ -197,9 +197,8 @@ def evaluate(supervised, dqn):
         sparse = obv['X']
         reconstucted = supervised.predict(sparse)
         step += 1
-        if step == 100:
-            with open('train_log', 'a+') as f:
-                f.write(ray_string(rays))
+        if step % 10 == 0:
+            evalenv.render(mode='ASCII')
     with open('train_log', 'a+') as f:
         f.write(str(reward_overall))
     print('Evaluation ended with value: ' + str(reward_overall))

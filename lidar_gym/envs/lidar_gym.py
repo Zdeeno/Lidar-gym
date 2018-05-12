@@ -38,7 +38,7 @@ class LidarGym(gym.Env):
         self._lidar_range = lidar_range
         self._voxel_size = voxel_size
         self._max_rays = max_rays
-        self._density = np.asarray(density, dtype=np.float)
+        self._density = np.asarray(density)
         self._fov = np.asarray(fov)
         self._map_shape = np.asarray(map_voxel_shape) * voxel_size  # sth like (80, 80, 4)
         self._initial_position = np.zeros((1, 3))
@@ -58,7 +58,7 @@ class LidarGym(gym.Env):
 
     def _reset(self):
         # reset values
-        self._last_rays = 0
+        self._last_rays = np.zeros(shape=self._density, dtype=bool)
         self._next_timestamp = 0
         self._curr_position = None
         self._curr_T = None

@@ -2,7 +2,7 @@ import gym
 import numpy as np
 from tensorflow.contrib.keras.api.keras.models import Model
 from lidar_gym.agent.DQL import DQN
-from lidar_gym.agent.DDPG import ActorCritic
+from lidar_gym.agent.dDDPG import ActorCritic
 from lidar_gym.agent.supervised_agent import Supervised
 from lidar_gym.agent.DQL import DQN
 import tensorflow.contrib.keras.api.keras.backend as K
