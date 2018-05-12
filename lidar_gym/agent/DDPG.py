@@ -184,7 +184,6 @@ class ActorCritic:
         # Ornstein-Uhlenbeck policy
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         probs = self.actor_model.predict(state)
-        # print(probs)
         noise = self.theta * (self.mean - probs) + self.sigma * np.random.standard_normal(probs.shape)
         probs_perturbed = probs + self.epsilon * noise
         self.epsilon -= self.epsilon_decay
@@ -295,7 +294,7 @@ def evaluate(supervised, reinforce):
         step += 1
         evalenv.render(mode='ASCII')
     with open('train_log_DDPG', 'a+') as f:
-        f.write(str(reward_overall))
+        f.write(str(reward_overall) + '@' + str(episode))
     print('Evaluation after episode ' + str(episode) + ' ended with value: ' + str(reward_overall))
     return reward_overall
 
