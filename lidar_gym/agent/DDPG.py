@@ -35,12 +35,11 @@ class ActorCritic:
         self.sess = sess
 
         self.action_size = self.lidar_shape[0]*self.lidar_shape[1]
-        self.learning_rate = 0.0001
+        self.learning_rate = 0.0005
         self.gamma = .99
         self.tau = .01
         self.batch_size = 8
         self.buffer_size = 1024
-        self.num_proto_actions = 5
 
         '''
         # action space perturbation consts
