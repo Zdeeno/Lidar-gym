@@ -4,7 +4,7 @@ solving pendulum using actor-critic model with PPO optimization
 
 import gym
 import numpy as np
-from lidar_gym.agent.models import create_ppo_toy_actor_model, create_c_toy_critic_model
+from lidar_gym.agent.models import create_ppo_toy_actor_model, create_ppo_toy_critic_model
 import tensorflow.contrib.keras.api.keras.backend as K
 import tensorflow as tf
 from lidar_gym.agent.supervised_agent import Supervised
@@ -34,29 +34,22 @@ class ActorCritic:
 
         self.action_size = self.lidar_shape[0]*self.lidar_shape[1]
         self.learning_rate = 0.001
-        self.gamma = .95
-        self.tau = .01
         self.batch_size = 8
         self.buffer_size = 1024
-        self.num_proto_actions = 5
 
         # OU consts
         self.epsilon = 1
-        self.epsilon_decay = 1/(2000*200)
+        self.epsilon_decay = 1/(1000*200)
         self.mean = 0
-        self.theta = 0.8
-        self.sigma = 0.35
+        self.theta = 0
+        self.sigma = 0.2
 
         self.buffer = Memory(self.buffer_size)
         self.actor_model = create_ppo_toy_actor_model(self.learning_rate, self.map_shape)
-        self.target_actor_model = create_ppo_toy_actor_model(self.learning_rate, self.map_shape)
 
         # critic model
-        self.critic_sparse_input, self.critic_reconstructed_input,\
-            self.critic_action_input, self.critic_model = create_c_toy_critic_model(self.learning_rate, self.map_shape,
-                                                                                    self.lidar_shape)
-        _, _, _, self.target_critic_model = create_c_toy_critic_model(self.learning_rate, self.map_shape,
-                                                                      self.lidar_shape)
+        self.critic_model = create_ppo_toy_critic_model(self.learning_rate, self.map_shape,
+                                                        self.lidar_shape)
 
     def append_to_buffer(self, state, action, reward, new_state, done):
         sample = state, action, reward, new_state, done
@@ -69,8 +62,7 @@ class ActorCritic:
                                                      np.zeros((self.batch_size, )),
                                                      np.zeros((self.batch_size, 2, self.max_rays))],
                                                      batch_size=self.batch_size)
-        predicted_values = self.critic_model.predict([cur_states[:, 0], cur_states[:, 1],
-                                                     predicted_actions])
+        predicted_values = self.critic_model.predict([cur_states[:, 0], cur_states[:, 1]])
 
         self.actor_model.fit(x=[cur_states[:, 0], cur_states[:, 1], rewards, predicted_values, actions],
                              y=[predicted_actions], verbose=0)
@@ -78,26 +70,11 @@ class ActorCritic:
     def _train_critic(self, batch):
         idxs, cur_states, actions, rewards, new_states, dones = batch
 
-        probs = self.target_actor_model.predict([new_states[:, 0], new_states[:, 1],
-                                                np.zeros((self.batch_size, )),
-                                                np.zeros((self.batch_size, )),
-                                                np.zeros((self.batch_size, 2, self.max_rays))],
-                                                batch_size=self.batch_size)
-
-        for i in range(self.batch_size):
-            if not dones[i]:
-                target_action = probs[i]
-                future_reward = self.target_critic_model.predict(
-                    [np.expand_dims(new_states[i, 0], axis=0),
-                     np.expand_dims(new_states[i, 1], axis=0),
-                     np.expand_dims(target_action, axis=0)])[0][0]
-                rewards[i] += self.gamma * future_reward
-
-        self.critic_model.fit([cur_states[:, 0], cur_states[:, 1], actions], rewards,
+        self.critic_model.fit([cur_states[:, 0], cur_states[:, 1]], rewards,
                               verbose=0, batch_size=self.batch_size)
 
         # count TDs and update sum tree
-        pred_Q = self.critic_model.predict([cur_states[:, 0], cur_states[:, 1], actions],
+        pred_Q = self.critic_model.predict([cur_states[:, 0], cur_states[:, 1]],
                                            batch_size=self.batch_size)[:, 0]
         for i in range(self.batch_size):
             td = np.abs(pred_Q[i] - rewards[i])
@@ -110,17 +87,6 @@ class ActorCritic:
         self._train_critic(self._get_batch())
         self._train_actor(self._get_batch())
 
-    def _soft_update(self, target, model, tau):
-        model_weights = model.get_weights()
-        target_weights = target.get_weights()
-        for i in range(len(target_weights)):
-            target_weights[i] = model_weights[i] * tau + target_weights[i] * (1 - tau)
-        target.set_weights(target_weights)
-
-    def update_target(self):
-        self._soft_update(self.critic_model, self.target_critic_model, self.tau)
-        self._soft_update(self.actor_model, self.target_actor_model, self.tau)
-
     # predictions
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
@@ -130,7 +96,6 @@ class ActorCritic:
                                         np.zeros((1, 2, self.max_rays))])
 
     def predict_perturbed(self, state):
-
         # Ornstein-Uhlenbeck perturbations
         probs = self.predict(state)
         print(probs)
@@ -139,7 +104,6 @@ class ActorCritic:
         self.epsilon -= self.epsilon_decay
 
         return probs_perturbed[0]
-
 
     def c2d(self, input):
         # continous action to 2D discrete array
@@ -170,21 +134,8 @@ class ActorCritic:
     def _TD_size(self, sample):
         cur_state, action, reward, new_state, done = sample
         cur_state = [np.expand_dims(cur_state[0], axis=0), np.expand_dims(cur_state[1], axis=0)]
-        action = np.expand_dims(action, axis=0)
 
-        if not done:
-            new_state = [np.expand_dims(new_state[0], axis=0), np.expand_dims(new_state[1], axis=0)]
-            target_action = self.target_actor_model.predict([new_state[0], new_state[1],
-                                                np.zeros((1, )),
-                                                np.zeros((1, )),
-                                                np.zeros((1, 2, self.max_rays))])
-
-            future_reward = self.target_critic_model.predict(
-                [new_state[0], new_state[1], target_action])[0][0]
-            reward += self.gamma * future_reward
-
-        reward = np.expand_dims(reward, axis=0)
-        TD = np.abs(self.critic_model.predict([cur_state[0], cur_state[1], action])[0][0] - reward[0])
+        TD = np.abs(self.critic_model.predict([cur_state[0], cur_state[1]])[0][0] - reward)
         return TD
 
     def _get_batch(self):
@@ -234,7 +185,7 @@ def evaluate(supervised, reinforce):
         step += 1
         evalenv.render(mode='ASCII')
     with open('train_log_PPO', 'a+') as f:
-        f.write(str(reward_overall) + '@' + str(episode))
+        f.write(str(reward_overall) + '@' + str(episode) + '\n')
     print('Evaluation after episode ' + str(episode) + ' ended with value: ' + str(reward_overall))
     return reward_overall
 
@@ -280,12 +231,11 @@ if __name__ == "__main__":
             model.append_to_buffer(curr_state, rays, reward, new_state, done)
 
             model.train()
-            model.update_target()
 
             curr_state = new_state
             epoch += 1
             print('.', end='', flush=True)
-            # env.render(mode='ASCII')
+            env.render(mode='ASCII')
 
         episode += 1
         # evaluation and saving
