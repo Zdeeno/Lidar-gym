@@ -42,7 +42,7 @@ class ActorCritic:
         self.epsilon_decay = 1/(1000*200)
         self.mean = 0
         self.theta = 0
-        self.sigma = 0.2
+        self.sigma = 0
 
         self.buffer = Memory(self.buffer_size)
         self.actor_model = create_ppo_toy_actor_model(self.learning_rate, self.map_shape)
@@ -225,6 +225,8 @@ if __name__ == "__main__":
         while not done:
             rays = model.predict_perturbed(curr_state)
             action = model.c2d(rays)
+            if np.random.random() < model.epsilon:
+                action = env.action_space.sample()['rays']
             new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state[1]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]

@@ -35,7 +35,7 @@ class ActorCritic:
         self.sess = sess
 
         self.action_size = self.lidar_shape[0]*self.lidar_shape[1]
-        self.learning_rate = 0.001
+        self.learning_rate = 0.0001
         self.gamma = .95
         self.tau = .01
         self.batch_size = 8
