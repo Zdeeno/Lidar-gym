@@ -221,6 +221,10 @@ if __name__ == "__main__":
 
     shape = dql_agent._map_shape
 
+    with open('train_log', 'a+') as f:
+        f.write('training started with hyperparameters:\n gamma ' + str(dql_agent._gamma) + '\n tau: ' +
+                str(dql_agent._tau) + '\n lr: ' + str(dql_agent._learning_rate))
+
     episode = 0
     max_reward = -float('inf')
 

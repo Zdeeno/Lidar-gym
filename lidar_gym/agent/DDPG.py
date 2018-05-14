@@ -36,7 +36,7 @@ class ActorCritic:
 
         self.action_size = self.lidar_shape[0]*self.lidar_shape[1]
         self.learning_rate = 0.0025
-        self.gamma = .99
+        self.gamma = .9
         self.tau = .02
         self.batch_size = 8
         self.buffer_size = 1024
@@ -46,7 +46,7 @@ class ActorCritic:
         self.epsilon_decay = 1/(2000*200)
         self.mean = 0
         self.theta = 0.5
-        self.sigma = 0.35
+        self.sigma = 0.4
 
         self.buffer = Memory(self.buffer_size)
         self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model =\
@@ -309,6 +309,10 @@ if __name__ == "__main__":
     load_critic = os.path.join(home, 'Projekt/lidar-gym/trained_models/critic_-260.2020874046176.h5')
     # model.load_model_weights(load_actor, load_critic)
     shape = model.map_shape
+
+    with open('train_log_DDPG', 'a+') as f:
+        f.write('training started with hyperparameters:\n gamma ' + str(model.gamma) + '\n tau: ' +
+                str(model.tau) + '\n lr: ' + str(model.learning_rate))
 
     episode = 0
     max_reward = -float('inf')
