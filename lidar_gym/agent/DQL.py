@@ -39,8 +39,8 @@ class DQN:
         self._epsilon = 1.0
         self._epsilon_min = 0.25
         self._epsilon_decay = 0.999
-        self._learning_rate = 0.002
-        self._tau = .05
+        self._learning_rate = 0.001
+        self._tau = .025
 
         # setup buffer
         # self._buffer_size = 200
@@ -201,7 +201,7 @@ def evaluate(supervised, dqn):
             evalenv.render(mode='ASCII')
     with open('train_log', 'a+') as f:
         f.write('after episode' + str(episode) + ' reward: ' + str(reward_overall) + '\n')
-    print('Evaluation ended with value: ' + str(reward_overall))
+    print('Evaluation ended with value: ' + str(reward_overall) + '\n')
     return reward_overall
 
 

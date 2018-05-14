@@ -35,9 +35,9 @@ class ActorCritic:
         self.sess = sess
 
         self.action_size = self.lidar_shape[0]*self.lidar_shape[1]
-        self.learning_rate = 0.0025
-        self.gamma = .9
-        self.tau = .02
+        self.learning_rate = 0.001
+        self.gamma = .95
+        self.tau = .01
         self.batch_size = 8
         self.buffer_size = 1024
 
@@ -312,7 +312,7 @@ if __name__ == "__main__":
 
     with open('train_log_DDPG', 'a+') as f:
         f.write('training started with hyperparameters:\n gamma ' + str(model.gamma) + '\n tau: ' +
-                str(model.tau) + '\n lr: ' + str(model.learning_rate))
+                str(model.tau) + '\n lr: ' + str(model.learning_rate) + '\n')
 
     episode = 0
     max_reward = -float('inf')
