@@ -36,8 +36,9 @@ class ActorCritic:
 
         self.action_size = self.lidar_shape[0]*self.lidar_shape[1]
         self.learning_rate = 0.001
-        self.gamma = .95
-        self.tau = .01
+        self.learning_rate_actor = 0.00001
+        self.gamma = .975
+        self.tau = .025
         self.batch_size = 8
         self.buffer_size = 1024
 
@@ -46,7 +47,7 @@ class ActorCritic:
         self.epsilon_decay = 1/(2000*200)
         self.mean = 0
         self.theta = 0.5
-        self.sigma = 0.4
+        self.sigma = 0.35
 
         self.buffer = Memory(self.buffer_size)
         self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model =\
@@ -62,7 +63,7 @@ class ActorCritic:
                                         -self.actor_critic_grad)
 
         grads = zip(self.actor_grads, self.actor_model.trainable_weights)
-        self.optimize = tf.train.AdamOptimizer(0.0001).apply_gradients(grads)
+        self.optimize = tf.train.AdamOptimizer(self.learning_rate_actor).apply_gradients(grads)
 
         # critic model
         self.critic_sparse_input, self.critic_reconstructed_input,\
@@ -312,7 +313,8 @@ if __name__ == "__main__":
 
     with open('train_log_DDPG', 'a+') as f:
         f.write('training started with hyperparameters:\n gamma ' + str(model.gamma) + '\n tau: ' +
-                str(model.tau) + '\n lr: ' + str(model.learning_rate) + '\n')
+                str(model.tau) + '\n lr: ' + str(model.learning_rate) + '\n lrA ' +
+                str(model.learning_rate_actor) + '\n')
 
     episode = 0
     max_reward = -float('inf')
