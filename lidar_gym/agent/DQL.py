@@ -35,7 +35,7 @@ class DQN:
         self._lidar_shape = (40, 30)
 
         # setup consts
-        self._gamma = 0.99
+        self._gamma = 0.9
         self._epsilon = 1.0
         self._epsilon_min = 0.25
         self._epsilon_decay = 0.999

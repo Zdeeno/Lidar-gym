@@ -41,13 +41,6 @@ class ActorCritic:
         self.batch_size = 8
         self.buffer_size = 1024
 
-        '''
-        # action space perturbation consts
-        self.pert_threshold_decay = 0.995
-        self.pert_threshold_dist = 0.025*self.pert_threshold_decay
-        self.pert_alpha = 1.01
-        self.pert_variance = self.pert_threshold_dist
-        '''
         # OU consts
         self.epsilon = 1
         self.epsilon_decay = 1/(2000*200)
