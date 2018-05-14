@@ -52,7 +52,7 @@ class ActorCritic:
         self.epsilon = 1
         self.epsilon_decay = 1/(2000*200)
         self.mean = 0
-        self.theta = 0.8
+        self.theta = 0.5
         self.sigma = 0.35
 
         self.buffer = Memory(self.buffer_size)
