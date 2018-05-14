@@ -39,8 +39,8 @@ class DQN:
         self._epsilon = 1.0
         self._epsilon_min = 0.25
         self._epsilon_decay = 0.999
-        self._learning_rate = 0.00025
-        self._tau = .01
+        self._learning_rate = 0.002
+        self._tau = .05
 
         # setup buffer
         # self._buffer_size = 200
