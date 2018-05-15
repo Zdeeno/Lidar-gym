@@ -29,7 +29,7 @@ def _iterate_map(dataset, size, voxel_size):
     m = vm.VoxelMap()
     m.voxel_size = voxel_size
     m.free_update = - 1.0
-    m.hit_update = 1.0
+    m.hit_update = 2.0
     m.occupancy_threshold = 0.0
 
     T_matrixes = []

@@ -37,8 +37,8 @@ class ActorCritic:
         self.action_size = self.lidar_shape[0]*self.lidar_shape[1]
         self.learning_rate = 0.001
         self.learning_rate_actor = 0.00001
-        self.gamma = .975
-        self.tau = .025
+        self.gamma = .99
+        self.tau = .0001
         self.batch_size = 8
         self.buffer_size = 1024
 
@@ -46,7 +46,7 @@ class ActorCritic:
         self.epsilon = 1
         self.epsilon_decay = 1/(2000*200)
         self.mean = 0
-        self.theta = 0.5
+        self.theta = 0.7
         self.sigma = 0.35
 
         self.buffer = Memory(self.buffer_size)
@@ -101,7 +101,7 @@ class ActorCritic:
     def _train_critic(self, batch):
         idxs, cur_states, actions, rewards, new_states, dones = batch
 
-        probs = self.target_actor_model.predict([new_states[:, 0], new_states[:, 1]], batch_size=self.batch_size)
+        probs = self.actor_model.predict([new_states[:, 0], new_states[:, 1]], batch_size=self.batch_size)
 
         for i in range(self.batch_size):
             if not dones[i]:
@@ -276,13 +276,16 @@ def evaluate(supervised, reinforce):
     while not done:
         a = reinforce.predict([reconstucted, sparse])[0]
         rays = reinforce.c2d(a)
+        if step == 0:
+            rays = evalenv.action_space.sample()['rays']
         obv, reward, done, _ = evalenv.step({'map': reconstucted, 'rays': rays})
         reward_overall += reward
         sparse = obv['X']
         reconstucted = supervised.predict(sparse)
-        step += 1
         if step % 10 == 0:
             evalenv.render(mode='ASCII')
+        step += 1
+
     with open('train_log_DDPG', 'a+') as f:
         f.write(str(reward_overall) + '@' + str(episode) + '\n')
     print('Evaluation after episode ' + str(episode) + ' ended with value: ' + str(reward_overall))
@@ -340,7 +343,7 @@ if __name__ == "__main__":
             curr_state = new_state
             epoch += 1
             print('.', end='', flush=True)
-            # env.render(mode='ASCII')
+            # env.render(mode='human')
 
         episode += 1
         # evaluation and saving

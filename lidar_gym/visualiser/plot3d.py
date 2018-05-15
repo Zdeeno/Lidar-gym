@@ -68,5 +68,6 @@ class Plotter:
                 line_width=5.0,  # Scale of the line, if any
                 figure=self.fig,
             )
-
+        mlab.view(-60, 60, 75, [sensor[0, 0] + 5, sensor[0, 1], sensor[0, 2] + 5], figure=self.fig)
         mlab.show()
+

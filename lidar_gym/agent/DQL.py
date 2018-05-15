@@ -1,16 +1,11 @@
 import gym
 import numpy as np
-import random
-from lidar_gym.visualiser.printer import ray_string
 
 from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
-import tensorflow.contrib.keras.api.keras.backend as K
 from os.path import expanduser
 import os
 
 import tensorflow as tf
-from collections import deque
-import lidar_gym
 from lidar_gym.agent.supervised_agent import Supervised
 from lidar_gym.tools.sum_tree import Memory
 from lidar_gym.agent.models import create_toy_dqn_model

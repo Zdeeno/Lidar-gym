@@ -9,7 +9,7 @@ import voxel_map as vm
 from lidar_gym.tools import camera
 from lidar_gym.tools import map_parser
 from lidar_gym.tools import math_processing as processing
-from lidar_gym.visualiser.printer import ray_string
+from lidar_gym.tools.printer import ray_string
 
 const_min_value = -sys.maxsize - 1
 const_max_value = 0
@@ -108,8 +108,8 @@ class LidarGym(gym.Env):
         if not self._done:
             if mode == 'human':
                 if not self._render_init:
-                    from lidar_gym.visualiser import plot3d
-                    self.plotter = plot3d.Plotter()
+                    from lidar_gym.visualiser.plot3d import Plotter
+                    self.plotter = Plotter()
                     self._render_init = True
                 if self._next_timestamp > 1:
                     g_t, a_m, sensor = self._reward_counter.get_render_data()
