@@ -40,10 +40,10 @@ def _iterate_map(dataset, size, voxel_size):
     T_imu_to_velo = np.linalg.inv(dataset.calib.T_velo_imu)
 
     # next line depends on lidar-car setup in metersW
-    car_x = np.mgrid[-0.8:0.8:voxel_size, -1.2:1.2:voxel_size, -1.6:0:voxel_size]
+    car_x = np.mgrid[-0.8:0.8:voxel_size/2, -1.2:1.2:voxel_size/2, -1.6:0:voxel_size/2]
     car_x = car_x.reshape(3, -1).T
     car_x = np.asmatrix(car_x)
-    car_v = -np.ones((len(car_x), ))
+    car_v = -10*np.ones((len(car_x), ))
     car_l = np.zeros((len(car_x), ))
 
     # Grab some data

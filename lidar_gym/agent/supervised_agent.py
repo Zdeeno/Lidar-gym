@@ -112,7 +112,7 @@ if __name__ == "__main__":
 
     env = gym.make('lidartoy-v2')
     episode = 0
-    max_reward = -276.5
+    max_reward = -260
     env.seed(1)
 
     while True:
@@ -127,7 +127,7 @@ if __name__ == "__main__":
             print('.', end='', flush=True)
 
         # Evaluate and save
-        if episode % 10 == 0:
+        if episode % 5 == 0:
             rew = evaluate(agent)
             if rew > max_reward:
                 print('new best agent - saving with reward:' + str(rew))

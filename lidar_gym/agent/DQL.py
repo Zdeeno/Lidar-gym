@@ -34,7 +34,7 @@ class DQN:
         self._epsilon = 1.0
         self._epsilon_min = 0.25
         self._epsilon_decay = 0.999
-        self._learning_rate = 0.00025
+        self._learning_rate = 0.001
         self._tau = .01
 
         # setup buffer
@@ -209,7 +209,7 @@ if __name__ == "__main__":
     supervised = Supervised()
 
     home = expanduser("~")
-    loaddir = os.path.join(home, 'trained_models/supervised_toy_model_-255.41430450850987.h5')
+    loaddir = os.path.join(home, 'Projekt/lidar-gym/lidar_gym/agent/trained_models/supervised_toy_model.h5')
     supervised.load_weights(loaddir)
     # dql_agent.load_model(os.path.join(home, 'trained_models/dqn_model_-250.39402455340868.h5'))
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')

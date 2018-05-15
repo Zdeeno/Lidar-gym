@@ -36,15 +36,15 @@ class ActorCritic:
 
         self.action_size = self.lidar_shape[0]*self.lidar_shape[1]
         self.learning_rate = 0.001
-        self.learning_rate_actor = 0.00001
+        self.learning_rate_actor = 0.0001
         self.gamma = .99
-        self.tau = .0001
+        self.tau = .005
         self.batch_size = 8
         self.buffer_size = 1024
 
         # OU consts
         self.epsilon = 1
-        self.epsilon_decay = 1/(2000*200)
+        self.epsilon_decay = 1/(1000*200)
         self.mean = 0
         self.theta = 0.7
         self.sigma = 0.35
@@ -305,7 +305,7 @@ if __name__ == "__main__":
     supervised = Supervised()
 
     home = expanduser("~")
-    loaddir = os.path.join(home, 'trained_models/supervised_toy_model_-255.41430450850987.h5')
+    loaddir = os.path.join(home, 'Projekt/lidar-gym/lidar_gym/agent/trained_models/supervised_toy_model.h5')
     supervised.load_weights(loaddir)
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
