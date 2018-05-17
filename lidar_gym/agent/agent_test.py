@@ -5,7 +5,7 @@ import lidar_gym
 import os
 from os.path import expanduser
 from lidar_gym.agent.supervised_agent import Supervised
-from lidar_gym.agent.dDDPG import ActorCritic
+from lidar_gym.agent.discreteDDPG import ActorCritic
 import tensorflow as tf
 import tensorflow.contrib.keras.api.keras.backend as K
 

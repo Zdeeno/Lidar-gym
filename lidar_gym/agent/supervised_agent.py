@@ -1,13 +1,13 @@
 from __future__ import division, print_function, absolute_import
 import numpy as np
 import gym
-import lidar_gym
 import tensorflow as tf
 from os.path import expanduser
 import os
 
 from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
 from lidar_gym.agent.models import create_toy_supervised_model
+import lidar_gym.agent.DDPG as ddpg
 
 
 def logistic_loss(y_true, y_pred):
@@ -100,15 +100,21 @@ def evaluate(supervised):
 if __name__ == "__main__":
 
     LOAD = False
+    PLANNER = True
     # Create model on GPU
     agent = Supervised()
     home = expanduser("~")
     savedir = os.path.join(home, 'trained_models/')
 
     if LOAD:
-        loaddir = expanduser("~")
-        loaddir = os.path.join(loaddir, 'trained_models/supervised_model_-205.62373544534486.h5')
+        loaddir = os.path.join(home, 'trained_models/supervised_model_-205.62373544534486.h5')
         agent.load_weights(loaddir)
+
+    if PLANNER:
+        actor_f = '/home/zdeeno/Projekt/lidar-gym/trained_models/actor_DDPG-257.23102184210796.h5'
+        critic_f = '/home/zdeeno/Projekt/lidar-gym/trained_models/actor_DDPG-257.23102184210796.h5'
+        planner = ddpg.ActorCritic()
+        planner.load_models(actor_f, critic_f)
 
     env = gym.make('lidartoy-v2')
     episode = 0
@@ -123,7 +129,11 @@ if __name__ == "__main__":
         while not done:
             agent.append_to_buffer(obv)
             agent.train_model()
-            obv, reward, done, info = env.step(obv['X'])
+            if PLANNER:
+                rays = planner.predict([obv['X'], agent.predict(obv['X'])])
+            else:
+                rays = env.action_space.sample()
+            obv, reward, done, info = env.step({'map': obv['X'], 'rays': rays})
             print('.', end='', flush=True)
 
         # Evaluate and save

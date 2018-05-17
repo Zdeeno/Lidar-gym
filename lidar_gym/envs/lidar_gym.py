@@ -104,7 +104,7 @@ class LidarGym(gym.Env):
         else:
             return None, None, True, None
 
-    def _render(self, mode='human', close=False):
+    def _render(self, mode='ASCII', close=False):
         if not self._done:
             if mode == 'human':
                 if not self._render_init:
@@ -357,59 +357,53 @@ class Lidarv1(LidarGym):
 
 class Lidarv2(Lidarv0):
     """
-    action space is only reconstructed map, rays are chosen randomly, suited for supervised learning
+    observation space suited for supervised learning
     """
     def __init__(self):
         super(Lidarv2, self).__init__()
-        self.action_space = spaces.Box(low=-100, high=100, shape=(320, 320, 32))
-        self._action_generator = LidarMultiBinary((160, 120), 200)
 
     def _reset(self):
         ret = super(Lidarv2, self)._reset()
-        ret, _, _, _ = self._step(ret)
+        ray = self.action_space.sample()['rays']
+        ret, _, _, _ = self._step({'map': ret, 'rays': ray})
         return ret
 
     def _step(self, action):
-        rand_rays = self._action_generator.sample()
-        return super(Lidarv2, self)._step({'map': action, 'rays': rand_rays})
+        return super(Lidarv2, self)._step({'map': action['map'], 'rays': action['rays']})
 
 
 class LidarSmallv2(LidarSmallv0):
     """
-    action space is only reconstructed map, rays are chosen randomly, suited for supervised learning
+    observation space suited for supervised learning
     """
     def __init__(self):
         super(LidarSmallv2, self).__init__()
-        self.action_space = spaces.Box(low=-100, high=100, shape=(160, 160, 16))
-        self._action_generator = LidarMultiBinary((120, 90), 100)
 
     def _reset(self):
         ret = super(LidarSmallv2, self)._reset()
-        ret, _, _, _ = self._step(ret)
+        ray = self.action_space.sample()['rays']
+        ret, _, _, _ = self._step({'map': ret, 'rays': ray})
         return ret
 
     def _step(self, action):
-        rand_rays = self._action_generator.sample()
-        return super(LidarSmallv2, self)._step({'map': action, 'rays': rand_rays})
+        return super(LidarSmallv2, self)._step({'map': action['map'], 'rays': action['rays']})
 
 
 class LidarToyv2(LidarToyv0):
     """
-    action space is only reconstructed map, rays are chosen randomly, suited for supervised learning
+    observation space suited for supervised learning
     """
     def __init__(self):
         super(LidarToyv2, self).__init__()
-        self.action_space = spaces.Box(low=-100, high=100, shape=(80, 80, 8))
-        self._action_generator = LidarMultiBinary((40, 30), 15)
 
     def _reset(self):
         ret = super(LidarToyv2, self)._reset()
-        ret, _, _, _ = self._step(ret)
+        ray = self.action_space.sample()['rays']
+        ret, _, _, _ = self._step({'map': ret, 'rays': ray})
         return ret
 
     def _step(self, action):
-        rand_rays = self._action_generator.sample()
-        return super(LidarToyv2, self)._step({'map': action, 'rays': rand_rays})
+        return super(LidarToyv2, self)._step({'map': action['map'], 'rays': action['rays']})
 
 
 class LidarEval(Lidarv0):
@@ -524,3 +518,56 @@ class LidarToyEval(LidarToyv0):
 
         self.curr_T = self._curr_T
         return np.zeros(shape=self._input_map_shape)
+
+
+class LidarToyROC(LidarToyv0):
+
+    def __init__(self):
+        super(LidarToyROC, self).__init__()
+        self.helpEnv = LidarTrain((80, 80, 8), (120, 90), (40, 30), 15, 0.8, 40*30)
+        self.all_rays = np.ones((40, 30), dtype=bool)
+        self.dummy_map = np.zeros((80, 80, 8))
+
+    def _reset(self):
+        self._obs_voxel_map = vm.VoxelMap()
+        self._obs_voxel_map.voxel_size = self._voxel_size
+        self._obs_voxel_map.free_update = - 1.0
+        self._obs_voxel_map.hit_update = 1.0
+        self._obs_voxel_map.occupancy_threshold = 0.0
+
+        self._rec_voxel_map = vm.VoxelMap()
+        self._rec_voxel_map.voxel_size = self._voxel_size
+        self._rec_voxel_map.free_update = - 1.0
+        self._rec_voxel_map.hit_update = 1.0
+        self._rec_voxel_map.occupancy_threshold = 0.0
+
+        # reset values
+        self._next_timestamp = 0
+        self._curr_position = None
+        self._curr_T = None
+        self._last_T = None
+        self._done = False
+        self._render_init = False
+        self._rays_endings = None
+        self._map_length = None
+        self._map = None
+        self._T_matrices = None
+
+        print('RESETING')
+        # parse new map
+        self._map, self._T_matrices = self._maps.get_validation_map()
+        self._reward_counter.reset(self._map)
+        self._map_length = len(self._T_matrices)
+        self._curr_T = self._T_matrices[0]
+        self._to_next()
+        self.helpEnv.reset()
+
+        self.curr_T = self._curr_T
+        return np.zeros(shape=self._input_map_shape)
+
+    def _step(self, action):
+        _, _, _, _ = self.helpEnv.step({'map': self.dummy_map, 'rays': self.all_rays})
+        self._cuboid_getter.update_map_cuboid(self._rec_voxel_map, action['map'], self._curr_T, self._shift_T)
+        obv, reward, done, _ = super(LidarToyROC, self).step(action)
+
+

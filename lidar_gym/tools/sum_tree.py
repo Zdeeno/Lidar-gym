@@ -64,7 +64,7 @@ class Memory:
 
         # constants
         self.e = 0.01
-        self.a = 1.5
+        self.a = 1.1
         self.tree = SumTree(capacity)
 
     def _getPriority(self, error):

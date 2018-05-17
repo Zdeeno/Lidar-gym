@@ -46,7 +46,7 @@ class CuboidGetter:
         num_pts = int(getter_size[0] * getter_size[1] * getter_size[2])
 
         self.l = np.zeros((num_pts,), dtype=np.float64)
-
+        self.voxel_size = voxel_size
         tmp = zip(tuple(mins[0].astype(int)), tuple(maxs.astype(int)), (1, 1, 1))
         self._cuboid_points = list(product(*(range(*x) for x in tmp)))
         self._cuboid_points = np.asarray(self._cuboid_points)*voxel_size + voxel_size/2
@@ -63,6 +63,15 @@ class CuboidGetter:
         points = transform_points(self._cuboid_points, T)
         values = voxel_map.get_voxels(np.transpose(points), self.l)
         return self._cuboid_points, values
+
+    def update_map_cuboid(self, voxel_map, map_action, T_pos, T_shift):
+        T = np.dot(T_pos, T_shift)
+        points = transform_points(self._cuboid_points, T)
+        values_old = voxel_map.get_voxels(np.transpose(points), self.l)
+        voxel_cuboid = np.round(self._cuboid_points*self.voxel_size)
+        values_update = map_action[voxel_cuboid]
+        values_new = values_old + values_update
+        voxel_map.set_voxels(points, self.l, values_new)
 
 
 class RewardCounter:

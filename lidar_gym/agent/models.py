@@ -202,6 +202,103 @@ def create_ppo_toy_critic_model(lr, map_shape, lidar_shape):
     return ret_model
 
 
+def create_stoch_toy_actor_model(lr, map_shape):
+    reconstructed_input = Input(shape=map_shape)
+    r11 = Lambda(lambda x: K.expand_dims(x, -1))(reconstructed_input)
+    c11 = Conv3D(4, 4, padding='same', activation='relu')(r11)
+    p11 = MaxPool3D(pool_size=2)(c11)
+    c21 = Conv3D(8, 4, padding='same', activation='relu')(p11)
+    c31 = Conv3D(16, 4, padding='same', activation='linear')(c21)
+
+    sparse_input = Input(shape=map_shape)
+    r12 = Lambda(lambda x: K.expand_dims(x, -1))(sparse_input)
+    c12 = Conv3D(4, 4, padding='same', activation='relu')(r12)
+    p12 = MaxPool3D(pool_size=2)(c12)
+    c22 = Conv3D(8, 4, padding='same', activation='relu')(p12)
+    c32 = Conv3D(16, 4, padding='same', activation='linear')(c22)
+
+    # merge SMALL inputs
+    a1 = Multiply()([c31, c32])
+    c1 = Conv3D(4, 4, padding='same', activation='relu')(a1)
+    p1 = MaxPool3D(pool_size=2)(c1)
+    c2 = Conv3D(8, 2, padding='same', activation='relu')(p1)
+    c3 = Conv3D(16, 2, padding='same', activation='relu')(c2)
+    p2 = MaxPool3D(pool_size=2)(c3)
+    f1 = Flatten()(p2)
+    d11 = Dense(100, activation='relu')(f1)
+    d21 = Dense(100, activation='relu')(d11)
+    d31 = Dense(30, activation='linear')(d21)
+    d41 = Dense(30, activation='softplus')(d31)
+    adda = Lambda(lambda x: x + 1)(d41)
+    alpha = Reshape((2, 15))(adda)
+
+    d12 = Dense(100, activation='relu')(f1)
+    d22 = Dense(100, activation='relu')(d12)
+    d32 = Dense(30, activation='linear')(d22)
+    d42 = Dense(30, activation='softplus')(d32)
+    addb = Lambda(lambda x: x + 1)(d42)
+    beta = Reshape((2, 15))(addb)
+
+    ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=[alpha, beta])
+
+    adam = Adam(lr=lr)
+    ret_model.compile(loss='mse', optimizer=adam)
+
+    return sparse_input, reconstructed_input, ret_model
+
+
+def create_stoch_toy_critic_model(lr, map_shape, lidar_shape):
+    reconstructed_input = Input(shape=map_shape)
+    r11 = Lambda(lambda x: K.expand_dims(x, -1))(reconstructed_input)
+    c11 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(r11)
+    p11 = MaxPool3D(pool_size=2)(c11)
+    c21 = Conv3D(8, 4, padding='same', activation='relu', kernel_regularizer='l2')(p11)
+    c31 = Conv3D(16, 4, padding='same', activation='linear', kernel_regularizer='l2')(c21)
+
+    sparse_input = Input(shape=map_shape)
+    r12 = Lambda(lambda x: K.expand_dims(x, -1))(sparse_input)
+    c12 = Conv3D(4, 4, padding='same', activation='relu', kernel_regularizer='l2')(r12)
+    p12 = MaxPool3D(pool_size=2)(c12)
+    c22 = Conv3D(8, 4, padding='same', activation='relu', kernel_regularizer='l2')(p12)
+    c32 = Conv3D(16, 4, padding='same', activation='linear', kernel_regularizer='l2')(c22)
+
+    alpha = Input(shape=lidar_shape)
+    r13 = Lambda(lambda x: K.expand_dims(x, -1))(alpha)
+    f13 = Flatten()(r13)
+    d13 = Dense(100, activation='relu', kernel_regularizer='l2')(f13)
+    d23 = Dense(100, activation='relu', kernel_regularizer='l2')(d13)
+    d33 = Dense(30, activation='linear', kernel_regularizer='l2')(d23)
+
+    beta = Input(shape=lidar_shape)
+    r14 = Lambda(lambda x: K.expand_dims(x, -1))(beta)
+    f14 = Flatten()(r14)
+    d14 = Dense(100, activation='relu', kernel_regularizer='l2')(f14)
+    d24 = Dense(100, activation='relu', kernel_regularizer='l2')(d14)
+    d34 = Dense(30, activation='linear', kernel_regularizer='l2')(d24)
+
+    d = Add()([d33, d34])
+
+    # merge SMALL action inputs and output action Q value
+    a1 = Multiply()([c31, c32])
+    c1 = Conv3D(8, 4, padding='same', activation='relu', kernel_regularizer='l2')(a1)
+    p1 = MaxPool3D(pool_size=2)(c1)
+    c2 = Conv3D(16, 2, padding='same', activation='relu', kernel_regularizer='l2')(p1)
+    p2 = MaxPool3D(pool_size=2)(c2)
+    f1 = Flatten()(p2)
+    d1 = Dense(30, activation='linear', kernel_regularizer='l2')(f1)
+    a2 = Multiply()([d1, d])
+    d2 = Dense(30, activation='relu', kernel_regularizer='l2')(a2)
+    d3 = Dense(30, activation='relu', kernel_regularizer='l2')(d2)
+    d4 = Dense(30, activation='relu', kernel_regularizer='l2')(d3)
+    output = Dense(1, activation='linear', kernel_regularizer='l2')(d4)
+
+    ret_model = Model(inputs=[sparse_input, reconstructed_input, alpha, beta], outputs=output)
+
+    adam = Adam(lr=lr)
+    ret_model.compile(loss="mse", optimizer=adam)
+    return sparse_input, reconstructed_input, alpha, beta, ret_model
+
+
 def create_c_toy_actor_model(lr, map_shape):
     reconstructed_input = Input(shape=map_shape)
     r11 = Lambda(lambda x: K.expand_dims(x, -1))(reconstructed_input)
