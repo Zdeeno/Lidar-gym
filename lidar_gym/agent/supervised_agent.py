@@ -7,7 +7,7 @@ import os
 
 from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
 from lidar_gym.agent.models import create_toy_supervised_model
-import lidar_gym.agent.DDPG as ddpg
+# import lidar_gym.agent.DDPG as ddpg
 
 
 def logistic_loss(y_true, y_pred):
