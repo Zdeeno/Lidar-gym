@@ -6,7 +6,6 @@ from os.path import expanduser
 import os
 
 import tensorflow as tf
-from lidar_gym.agent.supervised_agent import Supervised
 from lidar_gym.tools.sum_tree import Memory
 from lidar_gym.agent.models import create_toy_dqn_model
 
@@ -39,7 +38,7 @@ class DQN:
 
         # setup buffer
         # self._buffer_size = 200
-        self._buffer_size = 1024
+        self._buffer_size = 4096
         self._buffer = Memory(self._buffer_size)
 
         # double network
@@ -201,6 +200,7 @@ def evaluate(supervised, dqn):
 
 
 if __name__ == "__main__":
+    from lidar_gym.agent.supervised_agent import Supervised
     # env = gym.make('lidar-v0')
     # env = gym.make('lidarsmall-v0')
     env = gym.make('lidartoy-v0')

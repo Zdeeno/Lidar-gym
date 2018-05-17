@@ -1,4 +1,5 @@
-import numpy, random
+import numpy
+import random
 
 
 class SumTree:

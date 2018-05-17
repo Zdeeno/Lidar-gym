@@ -7,7 +7,6 @@ import numpy as np
 from lidar_gym.agent.models import create_stoch_toy_actor_model, create_stoch_toy_critic_model
 import tensorflow.contrib.keras.api.keras.backend as K
 import tensorflow as tf
-from lidar_gym.agent.supervised_agent import Supervised
 from lidar_gym.tools.sum_tree import Memory
 
 from os.path import expanduser
@@ -38,7 +37,7 @@ class ActorCritic:
         self.gamma = .975
         self.tau = .01
         self.batch_size = 8
-        self.buffer_size = 1024
+        self.buffer_size = 4096
 
         self.buffer = Memory(self.buffer_size)
         self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model =\
@@ -72,8 +71,8 @@ class ActorCritic:
         # Initialize for later gradient calculations
         self.sess.run(tf.initialize_all_variables())
 
-        self.perturb_variance = 5
-        self.perturb_decay = 5 / (200*1500)
+        self.perturb_variance = 10
+        self.perturb_decay = self.perturb_variance / (200*1500)
 
     def append_to_buffer(self, state, action, reward, new_state, done):
         sample = state, action, reward, new_state, done
@@ -254,6 +253,7 @@ def evaluate(supervised, reinforce):
 
 
 if __name__ == "__main__":
+    from lidar_gym.agent.supervised_agent import Supervised
     # env = gym.make('lidar-v0')
     # env = gym.make('lidarsmall-v0')
     env = gym.make('lidartoy-v0')

@@ -7,7 +7,6 @@ import numpy as np
 from lidar_gym.agent.models import create_c_toy_actor_model, create_c_toy_critic_model
 import tensorflow.contrib.keras.api.keras.backend as K
 import tensorflow as tf
-from lidar_gym.agent.supervised_agent import Supervised
 from lidar_gym.tools.sum_tree import Memory
 from os.path import expanduser
 import os
@@ -37,7 +36,7 @@ class ActorCritic:
         self.gamma = .975
         self.tau = .001
         self.batch_size = 8
-        self.buffer_size = 1024
+        self.buffer_size = 4096
 
         # OU consts
         self.epsilon = 1
@@ -273,9 +272,9 @@ def evaluate(supervised, reinforce):
     sparse = np.zeros(reinforce.map_shape)
     step = 0
     while not done:
-        a = reinforce.predict([reconstucted, sparse])[0]
+        a = reinforce.predict([reconstucted, sparse])
         if step == 0:
-            rays = evalenv.action_space.sample()['rays']
+            a = evalenv.action_space.sample()['rays']
         obv, reward, done, _ = evalenv.step({'map': reconstucted, 'rays': a})
         reward_overall += reward
         sparse = obv['X']
@@ -291,6 +290,7 @@ def evaluate(supervised, reinforce):
 
 
 if __name__ == "__main__":
+    from lidar_gym.agent.supervised_agent import Supervised
     # env = gym.make('lidar-v0')
     # env = gym.make('lidarsmall-v0')
     env = gym.make('lidartoy-v0')
