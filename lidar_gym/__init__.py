@@ -1,5 +1,5 @@
 from gym.envs.registration import register
-from lidar_gym import tools, visualiser, agent, envs
+from lidar_gym import tools, agent, envs
 
 register(
     id='lidareval-v0',
