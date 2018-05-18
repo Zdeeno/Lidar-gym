@@ -34,7 +34,7 @@ class ActorCritic:
         self.learning_rate = 0.001
         self.learning_rate_actor = 0.0001
         self.gamma = .975
-        self.tau = .001
+        self.tau = .01
         self.batch_size = 8
         self.buffer_size = 4096
 
@@ -307,8 +307,8 @@ if __name__ == "__main__":
     supervised.load_weights(loaddir)
     savedir = os.path.join(home, 'Projekt/lidar-gym/trained_models/')
 
-    load_actor = os.path.join(home, 'Projekt/lidar-gym/trained_models/actor_-260.2020874046176.h5')
-    load_critic = os.path.join(home, 'Projekt/lidar-gym/trained_models/critic_-260.2020874046176.h5')
+    # load_actor = os.path.join(home, 'Projekt/lidar-gym/trained_models/actor_-260.2020874046176.h5')
+    # load_critic = os.path.join(home, 'Projekt/lidar-gym/trained_models/critic_-260.2020874046176.h5')
     # model.load_model_weights(load_actor, load_critic)
     shape = model.map_shape
 

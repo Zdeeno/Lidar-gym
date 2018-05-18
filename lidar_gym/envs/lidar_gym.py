@@ -559,9 +559,6 @@ class LidarToyROC(LidarToyv0):
 
     def __init__(self):
         super(LidarToyROC, self).__init__()
-        self.helpEnv = LidarROCHelper()
-        self.all_rays = np.ones((40, 30), dtype=bool)
-        self.dummy_map = np.zeros((80, 80, 8))
 
     def _reset(self):
         self._obs_voxel_map = vm.VoxelMap()
@@ -595,14 +592,12 @@ class LidarToyROC(LidarToyv0):
         self._map_length = len(self._T_matrices)
         self._curr_T = self._T_matrices[0]
         self._to_next()
-        self.helpEnv._reset()
 
         self.curr_T = self._curr_T
         return np.zeros(shape=self._input_map_shape)
 
     def _step(self, action):
-        _, _, _, _ = self.helpEnv._step({'map': self.dummy_map, 'rays': self.all_rays})
         self._cuboid_getter.update_map_cuboid(self._rec_voxel_map, action['map'], self._curr_T, self._shift_T)
-        obv, reward, done, _ = super(LidarToyROC, self)._step(action)
+        return super(LidarToyROC, self)._step(action)
 
 
