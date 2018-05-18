@@ -60,3 +60,9 @@ register(
     entry_point='lidar_gym.envs:LidarToyEval',
     timestep_limit=1000000,
 )
+
+register(
+    id='lidartoyroc-v0',
+    entry_point='lidar_gym.envs:LidarToyROC',
+    timestep_limit=1000000,
+)

@@ -520,11 +520,46 @@ class LidarToyEval(LidarToyv0):
         return np.zeros(shape=self._input_map_shape)
 
 
+class LidarROCHelper(LidarTrain):
+    def __init__(self):
+        super(LidarROCHelper, self).__init__((80, 80, 8), (120, 90), (40, 30), 40*30, 0.8, 48)
+
+    def _reset(self):
+        self._obs_voxel_map = vm.VoxelMap()
+        self._obs_voxel_map.voxel_size = self._voxel_size
+        self._obs_voxel_map.free_update = - 1.0
+        self._obs_voxel_map.hit_update = 1.0
+        self._obs_voxel_map.occupancy_threshold = 0.0
+
+        # reset values
+        self._next_timestamp = 0
+        self._curr_position = None
+        self._curr_T = None
+        self._last_T = None
+        self._done = False
+        self._render_init = False
+        self._rays_endings = None
+        self._map_length = None
+        self._map = None
+        self._T_matrices = None
+
+        print('RESETING')
+        # parse new map
+        self._map, self._T_matrices = self._maps.get_validation_map()
+        self._reward_counter.reset(self._map)
+        self._map_length = len(self._T_matrices)
+        self._curr_T = self._T_matrices[0]
+        self._to_next()
+
+        self.curr_T = self._curr_T
+        return np.zeros(shape=self._input_map_shape)
+
+
 class LidarToyROC(LidarToyv0):
 
     def __init__(self):
         super(LidarToyROC, self).__init__()
-        self.helpEnv = LidarTrain((80, 80, 8), (120, 90), (40, 30), 15, 0.8, 40*30)
+        self.helpEnv = LidarROCHelper()
         self.all_rays = np.ones((40, 30), dtype=bool)
         self.dummy_map = np.zeros((80, 80, 8))
 
@@ -560,14 +595,14 @@ class LidarToyROC(LidarToyv0):
         self._map_length = len(self._T_matrices)
         self._curr_T = self._T_matrices[0]
         self._to_next()
-        self.helpEnv.reset()
+        self.helpEnv._reset()
 
         self.curr_T = self._curr_T
         return np.zeros(shape=self._input_map_shape)
 
     def _step(self, action):
-        _, _, _, _ = self.helpEnv.step({'map': self.dummy_map, 'rays': self.all_rays})
+        _, _, _, _ = self.helpEnv._step({'map': self.dummy_map, 'rays': self.all_rays})
         self._cuboid_getter.update_map_cuboid(self._rec_voxel_map, action['map'], self._curr_T, self._shift_T)
-        obv, reward, done, _ = super(LidarToyROC, self).step(action)
+        obv, reward, done, _ = super(LidarToyROC, self)._step(action)
 
 
