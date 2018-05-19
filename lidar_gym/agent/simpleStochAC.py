@@ -203,7 +203,7 @@ class ActorCritic:
         # data holders
         idxs = np.empty(self.batch_size, dtype=int)
         cur_states = np.empty((self.batch_size, 2,) + self.map_shape)
-        actions = np.empty((self.batch_size, 2, ) + (1, 2))
+        actions = np.empty((self.batch_size, 2, 2))
         rewards = np.empty(self.batch_size)
         new_states = np.empty((self.batch_size, 2,) + self.map_shape)
         dones = np.empty(self.batch_size, dtype=bool)
@@ -215,7 +215,7 @@ class ActorCritic:
             idxs[i] = idx
             cur_states[i][0] = cur_state[0]
             cur_states[i][1] = cur_state[1]
-            actions[i] = action
+            actions[i] = action[:, 0]
             rewards[i] = reward
             new_states[i][0] = new_state[0]
             new_states[i][1] = new_state[1]
