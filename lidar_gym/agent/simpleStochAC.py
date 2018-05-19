@@ -215,7 +215,7 @@ class ActorCritic:
             idxs[i] = idx
             cur_states[i][0] = cur_state[0]
             cur_states[i][1] = cur_state[1]
-            actions[i] = action[:, 0]
+            actions[i] = action[:][0]
             rewards[i] = reward
             new_states[i][0] = new_state[0]
             new_states[i][1] = new_state[1]
