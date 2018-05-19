@@ -357,14 +357,14 @@ def create_simplestoch_toy_critic_model(lr, map_shape):
     c22 = Conv3D(8, 4, padding='same', activation='relu')(p12)
     c32 = Conv3D(16, 4, padding='same', activation='linear')(c22)
 
-    alpha = Input(shape=2)
+    alpha = Input(shape=(2,))
     r13 = Lambda(lambda x: K.expand_dims(x, -1))(alpha)
     f13 = Flatten()(r13)
     d13 = Dense(100, activation='relu')(f13)
     d23 = Dense(100, activation='relu')(d13)
     d33 = Dense(30, activation='linear')(d23)
 
-    beta = Input(shape=2)
+    beta = Input(shape=(2,))
     r14 = Lambda(lambda x: K.expand_dims(x, -1))(beta)
     f14 = Flatten()(r14)
     d14 = Dense(100, activation='relu')(f14)
