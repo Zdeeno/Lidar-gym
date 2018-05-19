@@ -147,6 +147,7 @@ class ActorCritic:
     def predict_perturbed(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         ret = self.actor_model.predict(state)
+        print(ret)
         if self.perturb_variance > 0:
             ret += np.random.normal(0, self.perturb_variance, np.shape(ret))
         return np.clip(ret, a_min=1, a_max=100000)
@@ -154,10 +155,8 @@ class ActorCritic:
     def c2d(self, alpha, beta):
         # continous action to 2D discrete array
         inp = np.empty(self.lidar_shape)
-        print(alpha)
-        print(beta)
-        inp[0] = np.random.beta(alpha[0], beta[0], size=self.lidar_shape[1])[0]
-        inp[0] = np.random.beta(alpha[1], beta[1], size=self.lidar_shape[1])[0]
+        inp[0] = np.random.beta(alpha[0, 0], beta[0, 0], size=self.lidar_shape[1])
+        inp[1] = np.random.beta(alpha[0, 1], beta[0, 1], size=self.lidar_shape[1])
         inp = (inp * 2) - 1
         assert inp.ndim == 2, 'has shape: ' + str(inp.shape)
         half_shape = np.asarray(self.output_shape)/2
