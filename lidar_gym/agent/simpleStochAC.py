@@ -4,7 +4,7 @@ solving pendulum using continuous actor-critic model and mapping to discrete act
 
 import gym
 import numpy as np
-from lidar_gym.agent.models import create_stoch_toy_actor_model, create_stoch_toy_critic_model
+from lidar_gym.agent.models import create_simplestoch_toy_actor_model, create_simplestoch_toy_critic_model
 import tensorflow.contrib.keras.api.keras.backend as K
 import tensorflow as tf
 from lidar_gym.tools.sum_tree import Memory
@@ -39,17 +39,17 @@ class ActorCritic:
         self.batch_size = 8
         self.buffer_size = 4096
 
-        self.perturb_variance = 3
-        self.perturb_decay = self.perturb_variance / (200*500)
+        self.perturb_variance = 10
+        self.perturb_decay = self.perturb_variance / (200*1000)
 
         self.buffer = Memory(self.buffer_size)
         self.actor_sparse_input, self.actor_reconstructed_input, self.actor_model =\
-            create_stoch_toy_actor_model(self.learning_rate_actor, self.map_shape)
-        _, _, self.target_actor_model = create_stoch_toy_actor_model(self.learning_rate_actor, self.map_shape)
+            create_simplestoch_toy_actor_model(self.learning_rate_actor, self.map_shape)
+        _, _, self.target_actor_model = create_simplestoch_toy_actor_model(self.learning_rate_actor, self.map_shape)
 
         # where we will feed de/dC (from critic)
-        self.critic_grad_alpha = tf.placeholder(tf.float32, [None, self.lidar_shape[0], self.lidar_shape[1]])
-        self.critic_grad_beta = tf.placeholder(tf.float32, [None, self.lidar_shape[0], self.lidar_shape[1]])
+        self.critic_grad_alpha = tf.placeholder(tf.float32, [None, 2])
+        self.critic_grad_beta = tf.placeholder(tf.float32, [None, 2])
 
         # dC/dA (from actor)
         self.actor_grads = tf.gradients([self.actor_model.output[0], self.actor_model.output[1]],
@@ -62,10 +62,8 @@ class ActorCritic:
         # critic model
         self.critic_sparse_input, self.critic_reconstructed_input,\
             self.critic_action_input_alpha, self.critic_action_input_beta,\
-            self.critic_model = create_stoch_toy_critic_model(self.learning_rate, self.map_shape,
-                                                              self.lidar_shape)
-        _, _, _, _, self.target_critic_model = create_stoch_toy_critic_model(self.learning_rate, self.map_shape,
-                                                                             self.lidar_shape)
+            self.critic_model = create_simplestoch_toy_critic_model(self.learning_rate, self.map_shape)
+        _, _, _, _, self.target_critic_model = create_simplestoch_toy_critic_model(self.learning_rate, self.map_shape)
 
         # dQ/dA
         self.critic_grads = tf.gradients(self.critic_model.output, [self.critic_action_input_alpha,
@@ -159,7 +157,7 @@ class ActorCritic:
 
     def c2d(self, alpha, beta):
         # continous action to 2D discrete array
-        inp = np.random.beta(alpha, beta)[0]
+        inp = np.random.beta(alpha, beta, size=self.lidar_shape)[0]
         inp = (inp * 2) - 1
         assert inp.ndim == 2, 'has shape: ' + str(inp.shape)
         half_shape = np.asarray(self.output_shape)/2
@@ -248,7 +246,7 @@ def evaluate(supervised, reinforce):
             evalenv.render(mode='ASCII')
         step += 1
 
-    with open('train_log_stoch', 'a+') as f:
+    with open('train_log_simplestoch', 'a+') as f:
         f.write(str(reward_overall) + '@' + str(episode) + '\n')
     print('Evaluation after episode ' + str(episode) + ' ended with value: ' + str(reward_overall))
     return reward_overall
@@ -277,7 +275,7 @@ if __name__ == "__main__":
     model.load_models(load_actor, load_critic)
     shape = model.map_shape
 
-    with open('train_log_stoch', 'a+') as f:
+    with open('train_log_simplestoch', 'a+') as f:
         f.write('training started with hyperparameters:\n gamma ' + str(model.gamma) + '\n tau: ' +
                 str(model.tau) + '\n lr: ' + str(model.learning_rate) + '\n lrA ' +
                 str(model.learning_rate_actor) + '\n')
@@ -318,6 +316,6 @@ if __name__ == "__main__":
             if rew > max_reward:
                 print('new best agent - saving with reward:' + str(rew))
                 max_reward = rew
-                critic_name = 'critic_stoch' + str(max_reward) + '.h5'
-                actor_name = 'actor_stoch' + str(max_reward) + '.h5'
+                critic_name = 'critic_simplestoch' + str(max_reward) + '.h5'
+                actor_name = 'actor_simplestoch' + str(max_reward) + '.h5'
                 model.save_model(savedir + critic_name, savedir + actor_name)
