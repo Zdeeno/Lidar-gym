@@ -203,7 +203,7 @@ class ActorCritic:
         # data holders
         idxs = np.empty(self.batch_size, dtype=int)
         cur_states = np.empty((self.batch_size, 2,) + self.map_shape)
-        actions = np.empty((self.batch_size, 2, ) + self.lidar_shape)
+        actions = np.empty((self.batch_size, 2, ) + (1, 2))
         rewards = np.empty(self.batch_size)
         new_states = np.empty((self.batch_size, 2,) + self.map_shape)
         dones = np.empty(self.batch_size, dtype=bool)
