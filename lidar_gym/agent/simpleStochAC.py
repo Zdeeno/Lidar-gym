@@ -272,7 +272,7 @@ if __name__ == "__main__":
 
     load_actor = os.path.join(home, 'Projekt/lidar-gym/trained_models/actor_stoch-246.16109518307275.h5')
     load_critic = os.path.join(home, 'Projekt/lidar-gym/trained_models/critic_stoch-246.16109518307275.h5')
-    model.load_models(load_actor, load_critic)
+    # model.load_models(load_actor, load_critic)
     shape = model.map_shape
 
     with open('train_log_simplestoch', 'a+') as f:
