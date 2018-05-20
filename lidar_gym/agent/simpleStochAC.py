@@ -34,12 +34,12 @@ class ActorCritic:
         self.action_size = self.lidar_shape[0]*self.lidar_shape[1]
         self.learning_rate = 0.001
         self.learning_rate_actor = 0.0001
-        self.gamma = .975
+        self.gamma = .9
         self.tau = .0025
         self.batch_size = 8
         self.buffer_size = 4096
 
-        self.perturb_variance = 10
+        self.perturb_variance = 2
         self.perturb_decay = self.perturb_variance / (200*1000)
 
         self.buffer = Memory(self.buffer_size)
@@ -48,26 +48,26 @@ class ActorCritic:
         _, _, self.target_actor_model = create_simplestoch_toy_actor_model(self.learning_rate_actor, self.map_shape)
 
         # where we will feed de/dC (from critic)
-        self.critic_grad_alpha = tf.placeholder(tf.float32, [None, 2])
-        self.critic_grad_beta = tf.placeholder(tf.float32, [None, 2])
+        self.critic_grad_azimuth = tf.placeholder(tf.float32, [None, 2])
+        self.critic_grad_elevation = tf.placeholder(tf.float32, [None, 2])
 
         # dC/dA (from actor)
         self.actor_grads = tf.gradients([self.actor_model.output[0], self.actor_model.output[1]],
-                                        self.actor_model.trainable_weights, [-self.critic_grad_alpha,
-                                                                             -self.critic_grad_beta])
+                                        self.actor_model.trainable_weights, [-self.critic_grad_azimuth,
+                                                                             -self.critic_grad_elevation])
 
         grads = zip(self.actor_grads, self.actor_model.trainable_weights)
         self.optimize = tf.train.AdamOptimizer(self.learning_rate_actor).apply_gradients(grads)
 
         # critic model
         self.critic_sparse_input, self.critic_reconstructed_input,\
-            self.critic_action_input_alpha, self.critic_action_input_beta,\
+            self.critic_action_input_az, self.critic_action_input_el,\
             self.critic_model = create_simplestoch_toy_critic_model(self.learning_rate, self.map_shape)
         _, _, _, _, self.target_critic_model = create_simplestoch_toy_critic_model(self.learning_rate, self.map_shape)
 
         # dQ/dA
-        self.critic_grads = tf.gradients(self.critic_model.output, [self.critic_action_input_alpha,
-                                                                    self.critic_action_input_beta])
+        self.critic_grads = tf.gradients(self.critic_model.output, [self.critic_action_input_az,
+                                                                    self.critic_action_input_el])
 
         # Initialize for later gradient calculations
         self.sess.run(tf.initialize_all_variables())
@@ -78,34 +78,34 @@ class ActorCritic:
 
     def _train_actor(self, batch):
         idxs, cur_states, actions, rewards, new_states, dones = batch
-        alpha, beta = self.actor_model.predict([cur_states[:, 0], cur_states[:, 1]], batch_size=self.batch_size)
+        azimuth, elevation = self.actor_model.predict([cur_states[:, 0], cur_states[:, 1]], batch_size=self.batch_size)
 
         grads = self.sess.run(self.critic_grads, feed_dict={
             self.critic_sparse_input: cur_states[:, 0],
             self.critic_reconstructed_input: cur_states[:, 1],
-            self.critic_action_input_alpha: alpha,
-            self.critic_action_input_beta: beta
+            self.critic_action_input_az: azimuth,
+            self.critic_action_input_el: elevation
         })
 
         self.sess.run(self.optimize, feed_dict={
             self.actor_sparse_input: cur_states[:, 0],
             self.actor_reconstructed_input: cur_states[:, 1],
-            self.critic_grad_alpha: grads[0],
-            self.critic_grad_beta: grads[1]
+            self.critic_grad_azimuth: grads[0],
+            self.critic_grad_elevation: grads[1]
         })
 
     def _train_critic(self, batch):
         idxs, cur_states, actions, rewards, new_states, dones = batch
-        alpha, beta = self.target_actor_model.predict([new_states[:, 0], new_states[:, 1]], batch_size=self.batch_size)
+        azimuth, elevation = self.target_actor_model.predict([new_states[:, 0], new_states[:, 1]], batch_size=self.batch_size)
 
         for i in range(self.batch_size):
             if not dones[i]:
-                target_alpha = np.expand_dims(alpha[i], axis=0)
-                target_beta = np.expand_dims(beta[i], axis=0)
+                target_az = np.expand_dims(azimuth[i], axis=0)
+                target_el = np.expand_dims(elevation[i], axis=0)
                 future_reward = self.target_critic_model.predict(
                     [np.expand_dims(new_states[i, 0], axis=0),
                      np.expand_dims(new_states[i, 1], axis=0),
-                     target_alpha, target_beta])[0][0]
+                     target_az, target_el])[0][0]
                 rewards[i] += self.gamma * future_reward
 
         self.critic_model.fit([cur_states[:, 0], cur_states[:, 1], actions[:, 0], actions[:, 1]], rewards,
@@ -141,22 +141,20 @@ class ActorCritic:
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         action = self.actor_model.predict(state)
-        print(action)
         return self.c2d(action[0], action[1])
 
     def predict_perturbed(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         ret = self.actor_model.predict(state)
-        print(ret)
         if self.perturb_variance > 0:
             ret += np.random.normal(0, self.perturb_variance, np.shape(ret))
-        return np.clip(ret, a_min=1, a_max=100000)
+        return np.clip(ret, a_min=0.5, a_max=100000)
 
-    def c2d(self, alpha, beta):
+    def c2d(self, az, el):
         # continous action to 2D discrete array
         inp = np.empty(self.lidar_shape)
-        inp[0] = np.random.beta(alpha[0, 0], beta[0, 0], size=self.lidar_shape[1])
-        inp[1] = np.random.beta(alpha[0, 1], beta[0, 1], size=self.lidar_shape[1])
+        inp[0] = np.random.beta(az[0, 0], az[0, 1], size=self.lidar_shape[1])
+        inp[1] = np.random.beta(el[0, 0], el[0, 1], size=self.lidar_shape[1])
         inp = (inp * 2) - 1
         assert inp.ndim == 2, 'has shape: ' + str(inp.shape)
         half_shape = np.asarray(self.output_shape)/2
@@ -290,12 +288,12 @@ if __name__ == "__main__":
         print('\n------------------- Drive number', episode, '-------------------------')
         # training
         while not done:
-            alpha, beta = model.predict_perturbed(curr_state)
-            action = model.c2d(alpha, beta)
+            az, el = model.predict_perturbed(curr_state)
+            action = model.c2d(az, el)
             new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state[1]})
 
             new_state = [new_state['X'], supervised.predict(new_state['X'])]
-            model.append_to_buffer(curr_state, [alpha, beta], reward, new_state, done)
+            model.append_to_buffer(curr_state, [az, el], reward + 1, new_state, done)
 
             model.train()
             model.update_target()
