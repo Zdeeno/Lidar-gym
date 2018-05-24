@@ -25,7 +25,16 @@ Package can be easily installed in terminal by command:
 `python setup.py install`<br />
 Before running your code, you must download the Kitti dataset.
 There is script [download_dataset.sh](download_dataset.sh) which will download the dataset. 
-Do **not** change the destination folder of the dataset.
+Do **not** change the destination folder of the dataset. Lidar-gym is looking for the dataset in home directory.
+There is also possibility to serialize the dataset using **Pickle**. If you want to check that the dataset was correctly downloaded you can run:
+```
+python -m lidar_gym.tools.map_parser -t
+```
+To improve training speed and serialize the dataset run:
+```
+python -m lidar_gym.tools.map_parser -s
+```
+
 
 ## Action space
 We define action space as a following dictionary:<br />
@@ -51,7 +60,7 @@ value == 0 - unknown occupancy
 value > 0 - occupied voxel
 ```
 For rest of the environments is observation space ONLY a 3D numpy array with occupancies filled by sparse measurements. Sparse measurements directions are given by actions.
-
+If you want to do supervised learning on dataset, the ground truth map is available in `info`.
 
 ## Rendering
 Environment offers visualisation for debugging. Use method `render()`. It is available in mode "human" and "ASCII". In following picture is an example of the visualisation of the reconstructed map.

@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
     if args['serialize']:
         voxel_size = 0.8
-        print('\nSerializing with voxel size: ' + str(voxel_size))
+        print('\nSerializing with voxel size: ' + str(voxel_size) + ' ... voxel size can be adjusted in map_parser')
         DatasetSerializer(voxel_size)
         print('Serialization done!')
 
