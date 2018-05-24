@@ -277,7 +277,7 @@ def evaluate(supervised, reinforce):
             a = evalenv.action_space.sample()['rays']
         obv, reward, done, _ = evalenv.step({'map': reconstucted, 'rays': a})
         reward_overall += reward
-        sparse = obv['X']
+        sparse = obv
         reconstucted = supervised.predict(sparse)
         if step % 10 == 0:
             evalenv.render(mode='ASCII')
@@ -332,7 +332,7 @@ if __name__ == "__main__":
             action = model.c2d(rays)
             new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state[1]})
 
-            new_state = [new_state['X'], supervised.predict(new_state['X'])]
+            new_state = [new_state, supervised.predict(new_state)]
             model.append_to_buffer(curr_state, rays, reward, new_state, done)
 
             model.train()

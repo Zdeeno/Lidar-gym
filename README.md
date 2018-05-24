@@ -1,5 +1,5 @@
 # Lidar gym
-OpenAI gym training environment for agents controlling solid-state lidars based on Kitti dataset.
+OpenAI gym training environment for agents controlling solid-state lidars based on KITTI dataset.
 ## Dependencies
 Environment is written in python 3 using following libraries:
 ### Required:
@@ -17,6 +17,9 @@ https://bitbucket.org/tpetricek/voxel_map
 ##### 1. Mayavi with VTK
 https://github.com/enthought/mayavi (used for visualisation)
 
+##### 2. Tensorflow
+https://github.com/tensorflow/tensorflow (used for agents)
+
 ## Installation 
 Package can be easily installed in terminal by command:
 `python setup.py install`<br />
@@ -30,11 +33,10 @@ We define action space as a following dictionary:<br />
 where <br />`rays` is 2D binary (numpy.ndarray) matrix representing directions of lidar beams. <br />
 `map` is 3D (numpy.ndarray) matrix of map reconstructed by agent.
 Environment must receive only local cutout of global map. 
-Actually it needs only cuboid of local coordinates `[-16:48, -32:32, -3.2:3.2]` with respect to sensor position in meters.
-Shape of your input map should be `(320, 320, 32)`. 
+Actually it needs only cuboid of local coordinates `[-16:48, -32:32, -3.2:3.2]` with respect to sensor position in meters. 
 
 ## Observation space
-We define observation space as following dictionary:<br />
+We define observation space for `lidar-v1` as following dictionary:<br />
 `observation = {"T", "points", "values"}`
 where <br />
 `T` is 3D (numpy.ndarray) array of transformation matrices to the next positions of the sensor.
@@ -48,24 +50,19 @@ value < 0 - empty voxel
 value == 0 - unknown occupancy
 value > 0 - occupied voxel
 ```
+For rest of the environments is observation space ONLY a 3D numpy array with occupancies filled by sparse measurements. Sparse measurements directions are given by actions.
+
 
 ## Rendering
-Environment offers visualisation for debugging. Use method `render()`. It is available 
-only in mode "human".
+Environment offers visualisation for debugging. Use method `render()`. It is available in mode "human" and "ASCII". In following picture is an example of the visualisation of the reconstructed map.
 
-![Imgur](https://i.imgur.com/5B3L3Ck.png)
-
-```
-red - sensor position and rays
-green - ground thruth map
-blue - reconstructed map
-```
+![Visualisation](https://raw.githubusercontent.com/Zdeeno/Bachelor-thesis/master/fig/reconstructed.png)
 
 ## Notes
-There is a lot of parameters available. That's documented in [lidar_gym](lidar_gym/envs/lidar_gym.py) file.
-Reward is in range `(-inf, 0)`. See [example file](example.py) with initialisation and random action. Currently there
-is only one environment:
-##### lidar-v1
+There is a lot of environments available. That's documented in [lidar_gym](lidar_gym/envs/lidar_gym.py) file.
+Reward is in range `(-1, 0)`. See [example file](example.py) with initialisation and random action. Currently there
+are environments with following parameters:
+##### LARGE:
 ```
 fov = (120, 90)
 ray density = (160, 120)
@@ -74,3 +71,25 @@ action map size in voxels = (320, 320, 32)
 maximum number of rays = 200
 lidar range = 48
 ```
+
+##### SMALL:
+```
+fov = (120, 90)
+ray density = (120, 90)
+voxel size = 0.4
+action map size in voxels = (160, 160, 16)
+maximum number of rays = 50
+lidar range = 48
+```
+
+##### TOY:
+```
+fov = (120, 90)
+ray density = (40, 30)
+voxel size = 0.8
+action map size in voxels = (80, 80, 8)
+maximum number of rays = 15
+lidar range = 48
+```
+
+This repository was created for the purpose of this [bachelor thesis](https://github.com/Zdeeno/Bachelor-thesis).

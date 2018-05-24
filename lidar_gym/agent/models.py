@@ -28,6 +28,7 @@ def logistic_loss(y_true, y_pred):
     return tf.reduce_sum(weights * t)
 
 
+# this doesn't really work
 def proximal_policy_optimization_loss(actual_value, predicted_value, old_prediction):
     advantage = actual_value - predicted_value
 
@@ -123,83 +124,6 @@ def create_toy_critic_model(lr, map_shape, lidar_shape):
     adam = Adam(lr=lr)
     ret_model.compile(loss="mse", optimizer=adam)
     return sparse_input, reconstructed_input, action_input, ret_model
-
-
-def create_ppo_toy_actor_model(lr, map_shape):
-    actual_value = Input(shape=(1,))
-    predicted_value = Input(shape=(1,))
-    old_prediction = Input(shape=(2, 15))
-
-    reconstructed_input = Input(shape=map_shape)
-    r11 = Lambda(lambda x: K.expand_dims(x, -1))(reconstructed_input)
-    c11 = Conv3D(4, 4, padding='same', activation='relu')(r11)
-    p11 = MaxPool3D(pool_size=2)(c11)
-    c21 = Conv3D(8, 4, padding='same', activation='relu')(p11)
-    c31 = Conv3D(16, 4, padding='same', activation='linear')(c21)
-
-    sparse_input = Input(shape=map_shape)
-    r12 = Lambda(lambda x: K.expand_dims(x, -1))(sparse_input)
-    c12 = Conv3D(4, 4, padding='same', activation='relu')(r12)
-    p12 = MaxPool3D(pool_size=2)(c12)
-    c22 = Conv3D(8, 4, padding='same', activation='relu')(p12)
-    c32 = Conv3D(16, 4, padding='same', activation='linear')(c22)
-
-    # merge SMALL inputs
-    a1 = Multiply()([c31, c32])
-    c1 = Conv3D(4, 4, padding='same', activation='relu')(a1)
-    p1 = MaxPool3D(pool_size=2)(c1)
-    c2 = Conv3D(8, 2, padding='same', activation='relu')(p1)
-    c3 = Conv3D(16, 2, padding='same', activation='relu')(c2)
-    p2 = MaxPool3D(pool_size=2)(c3)
-    f1 = Flatten()(p2)
-    d1 = Dense(30, activation='relu')(f1)
-    d2 = Dense(30, activation='linear')(d1)
-    d3 = Dense(30, activation='tanh')(d2)
-    output = Reshape((2, 15))(d3)
-
-    model = Model(inputs=[sparse_input, reconstructed_input,
-                          actual_value, predicted_value, old_prediction], outputs=output)
-    model.compile(optimizer=Adam(lr=10e-4),
-                  loss=[proximal_policy_optimization_loss(
-                      actual_value=actual_value,
-                      old_prediction=old_prediction,
-                      predicted_value=predicted_value)])
-    return model
-
-
-def create_ppo_toy_critic_model(lr, map_shape, lidar_shape):
-    reconstructed_input = Input(shape=map_shape)
-    r11 = Lambda(lambda x: K.expand_dims(x, -1))(reconstructed_input)
-    c11 = Conv3D(4, 4, padding='same', activation='relu')(r11)
-    p11 = MaxPool3D(pool_size=2)(c11)
-    c21 = Conv3D(8, 4, padding='same', activation='relu')(p11)
-    c31 = Conv3D(16, 4, padding='same', activation='linear')(c21)
-
-    sparse_input = Input(shape=map_shape)
-    r12 = Lambda(lambda x: K.expand_dims(x, -1))(sparse_input)
-    c12 = Conv3D(4, 4, padding='same', activation='relu')(r12)
-    p12 = MaxPool3D(pool_size=2)(c12)
-    c22 = Conv3D(8, 4, padding='same', activation='relu')(p12)
-    c32 = Conv3D(16, 4, padding='same', activation='linear')(c22)
-
-    # merge SMALL action inputs and output action Q value
-    a1 = Multiply()([c31, c32])
-    c1 = Conv3D(8, 4, padding='same', activation='relu')(a1)
-    p1 = MaxPool3D(pool_size=2)(c1)
-    c2 = Conv3D(16, 2, padding='same', activation='relu')(p1)
-    p2 = MaxPool3D(pool_size=2)(c2)
-    f1 = Flatten()(p2)
-    d1 = Dense(50, activation='relu')(f1)
-    d2 = Dense(100, activation='relu')(d1)
-    d3 = Dense(100, activation='relu')(d2)
-    d4 = Dense(10, activation='relu')(d3)
-    output = Dense(1, activation='linear')(d4)
-
-    ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=output)
-
-    adam = Adam(lr=lr)
-    ret_model.compile(loss="mse", optimizer=adam)
-    return ret_model
 
 
 def create_stoch_toy_actor_model(lr, map_shape):

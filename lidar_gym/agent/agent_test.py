@@ -33,7 +33,7 @@ def evaluate(supervised, reinforce, eval, help):
         _, _, _, _ = help._step({'map': dummy_map, 'rays': all_rays})
         print(reward - 1)
         reward_overall += (reward - 1)
-        sparse = obv['X']
+        sparse = obv
         recon = supervised.predict(sparse)
         episode += 1
     print('Evaluation ended with value: ' + str(reward_overall))

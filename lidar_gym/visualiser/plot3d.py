@@ -13,7 +13,7 @@ class Plotter:
         self.fig = mlab.figure(size=(1280, 720))
         # plot ground truth
 
-        # delete this to set ground truth visible
+        # here set what should be invisible
         ground_truth = None
 
         if ground_truth is not None:

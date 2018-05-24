@@ -254,7 +254,7 @@ class LidarTrain(LidarGym):
         assert action['rays'].dtype is np.dtype('bool')
         obs, rew, done, info = super(LidarTrain, self)._step({'rays': action['rays'].T, 'map': action['map']})
         obs = self._preprocess_obs(obs)
-        return obs, rew + 1, done, info
+        return obs['X'], rew + 1, done, obs['Y']
 
     def _preprocess_obs(self, obs):
         new_points = np.transpose(obs['points'])
@@ -350,8 +350,8 @@ class Lidarv1(LidarGym):
     def _reset(self):
         # first obs should not be zeros
         first_action = np.zeros(shape=self._input_map_shape)
-        obs, _, _, _ = self._step(first_action)
         super(Lidarv1, self)._reset()
+        obs, _, _, _ = self._step({'map': first_action, 'rays': self.action_space.sample()['rays']})
         return obs
 
 
@@ -365,8 +365,8 @@ class Lidarv2(Lidarv0):
     def _reset(self):
         ret = super(Lidarv2, self)._reset()
         ray = self.action_space.sample()['rays']
-        ret, _, _, _ = self._step({'map': ret, 'rays': ray})
-        return ret
+        ret, _, _, info = self._step({'map': ret, 'rays': ray})
+        return ret, info
 
     def _step(self, action):
         return super(Lidarv2, self)._step({'map': action['map'], 'rays': action['rays']})
@@ -382,8 +382,8 @@ class LidarSmallv2(LidarSmallv0):
     def _reset(self):
         ret = super(LidarSmallv2, self)._reset()
         ray = self.action_space.sample()['rays']
-        ret, _, _, _ = self._step({'map': ret, 'rays': ray})
-        return ret
+        ret, _, _, info = self._step({'map': ret, 'rays': ray})
+        return ret, info
 
     def _step(self, action):
         return super(LidarSmallv2, self)._step({'map': action['map'], 'rays': action['rays']})
@@ -399,8 +399,8 @@ class LidarToyv2(LidarToyv0):
     def _reset(self):
         ret = super(LidarToyv2, self)._reset()
         ray = self.action_space.sample()['rays']
-        ret, _, _, _ = self._step({'map': ret, 'rays': ray})
-        return ret
+        ret, _, _, info = self._step({'map': ret, 'rays': ray})
+        return ret, info
 
     def _step(self, action):
         return super(LidarToyv2, self)._step({'map': action['map'], 'rays': action['rays']})

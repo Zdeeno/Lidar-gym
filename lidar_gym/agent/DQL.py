@@ -190,7 +190,7 @@ def evaluate(supervised, dqn):
         rays = dqn.predict([reconstucted, sparse])
         obv, reward, done, _ = evalenv.step({'map': reconstucted, 'rays': rays})
         reward_overall += reward
-        sparse = obv['X']
+        sparse = obv
         reconstucted = supervised.predict(sparse)
         step += 1
         if step % 10 == 0:
@@ -235,7 +235,7 @@ if __name__ == "__main__":
             action = dql_agent.act(curr_state)
             new_state, reward, done, _ = env.step({'rays': action, 'map': curr_state[1]})
 
-            new_state = [new_state['X'], supervised.predict(new_state['X'])]
+            new_state = [new_state, supervised.predict(new_state)]
             dql_agent.append_to_buffer(curr_state, action, reward, new_state, done)
 
             dql_agent.replay()        # internally iterates inside (prediction) model

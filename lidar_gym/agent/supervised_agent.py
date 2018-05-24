@@ -31,9 +31,9 @@ def logistic_loss(y_true, y_pred):
 class Supervised:
     def __init__(self):
         # Constants
-        self._map_shape = (320, 320, 32)
+        # self._map_shape = (320, 320, 32)
         # self._map_shape = (160, 160, 16)
-        # self._map_shape = (80, 80, 8)
+        self._map_shape = (80, 80, 8)
         self._batch_size = 4
         self._epochs_per_batch = 1
         self._learning_rate = 0.001
@@ -43,8 +43,8 @@ class Supervised:
         self._buffer_X, self._buffer_Y, self._buffer_size = self.init_buffer()
 
         # model
-        # self._model = create_toy_supervised_model(self._learning_rate, self._map_shape)
-        self._model = create_supervised_model(self._learning_rate, self._map_shape)
+        self._model = create_toy_supervised_model(self._learning_rate, self._map_shape)
+        # self._model = create_supervised_model(self._learning_rate, self._map_shape)
         home = expanduser("~")
         logdir = os.path.join(home, 'supervised_logs/')
         self._tfboard = TensorBoard(log_dir=logdir, batch_size=self._batch_size, write_graph=False)
@@ -55,9 +55,9 @@ class Supervised:
         buffer_size = 0
         return buffer_X, buffer_Y, buffer_size
 
-    def append_to_buffer(self, obs):
-        self._buffer_X[self._buffer_size] = obs['X']
-        self._buffer_Y[self._buffer_size] = obs['Y']
+    def append_to_buffer(self, X, Y):
+        self._buffer_X[self._buffer_size] = X
+        self._buffer_Y[self._buffer_size] = Y
         self._buffer_size += 1
 
     def train_model(self):
@@ -79,12 +79,12 @@ class Supervised:
 
 
 def evaluate(supervised):
-    evalenv = gym.make('lidareval-v0')
+    # evalenv = gym.make('lidareval-v0')
     # evalenv = gym.make('lidarsmalleval-v0')
-    # evalenv = gym.make('lidartoyeval-v0')
+    evalenv = gym.make('lidartoyeval-v0')
     done = False
     reward_overall = 0
-    obv = {'X': evalenv.reset()}
+    obv, _ = evalenv.reset()
     # map = np.zeros((320, 320, 32))
     map = np.zeros(shape=supervised._map_shape)
     evalenv.seed(1)
@@ -92,12 +92,12 @@ def evaluate(supervised):
     epoch = 0
     while not done:
         if PLANNER:
-            rays = planner.predict([obv['X'], agent.predict(obv['X'])])
+            rays = planner.predict([obv, agent.predict(obv)])
         else:
             rays = evalenv.action_space.sample()['rays']
         obv, reward, done, _ = evalenv.step({'map': map, 'rays': rays})
         reward_overall += reward
-        map = supervised.predict(obv['X'])
+        map = supervised.predict(obv)
         epoch += 1
         if epoch % 10 == 0:
             evalenv.render(mode='human')
@@ -120,8 +120,8 @@ if __name__ == "__main__":
     env.seed(1)
 
     if LOAD:
-        # loaddir = os.path.join(home, 'trained_models/supervised_toy_model_-247.39524819961397.h5')
-        loaddir = os.path.join(home, 'trained_models/supervised_model_-196.40097353881725.h5')
+        loaddir = os.path.join(home, 'trained_models/supervised_toy_model_-247.39524819961397.h5')
+        # loaddir = os.path.join(home, 'trained_models/supervised_model_-196.40097353881725.h5')
         agent.load_weights(loaddir)
 
     if PLANNER:
@@ -132,20 +132,19 @@ if __name__ == "__main__":
 
     while True:
         done = False
-        obv = env.reset()
+        obv, info = env.reset()
         print('\n------------------- Drive number', episode, '-------------------------')
 
-        evaluate(agent)
-
         while not done:
-            agent.append_to_buffer(obv)
+            agent.append_to_buffer(obv, info)
             agent.train_model()
             if PLANNER:
-                rays = planner.predict([obv['X'], agent.predict(obv['X'])])
+                rays = planner.predict([obv, agent.predict(obv)])
             else:
-                rays = env.action_space.sample()
-            obv, reward, done, info = env.step({'map': obv['X'], 'rays': rays})
+                rays = env.action_space.sample()['rays']
+            obv, reward, done, info = env.step({'map': obv, 'rays': rays})
             print('.', end='', flush=True)
+            env.render('ASCII')
 
         # Evaluate and save
         if episode % 5 == 0:
