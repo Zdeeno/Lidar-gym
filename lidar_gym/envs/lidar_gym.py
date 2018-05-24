@@ -254,7 +254,7 @@ class LidarTrain(LidarGym):
         assert action['rays'].dtype is np.dtype('bool')
         obs, rew, done, info = super(LidarTrain, self)._step({'rays': action['rays'].T, 'map': action['map']})
         obs = self._preprocess_obs(obs)
-        return obs, rew, done, info
+        return obs, rew + 1, done, info
 
     def _preprocess_obs(self, obs):
         new_points = np.transpose(obs['points'])

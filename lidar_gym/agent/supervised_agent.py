@@ -6,8 +6,8 @@ from os.path import expanduser
 import os
 
 from tensorflow.contrib.keras.api.keras.callbacks import TensorBoard
-from lidar_gym.agent.models import create_toy_supervised_model
-# import lidar_gym.agent.DDPG as ddpg
+from lidar_gym.agent.models import create_toy_supervised_model, create_supervised_model
+import lidar_gym.agent.simpleStochAC as stoch
 
 
 def logistic_loss(y_true, y_pred):
@@ -31,9 +31,9 @@ def logistic_loss(y_true, y_pred):
 class Supervised:
     def __init__(self):
         # Constants
-        # self._map_shape = (320, 320, 32)
+        self._map_shape = (320, 320, 32)
         # self._map_shape = (160, 160, 16)
-        self._map_shape = (80, 80, 8)
+        # self._map_shape = (80, 80, 8)
         self._batch_size = 4
         self._epochs_per_batch = 1
         self._learning_rate = 0.001
@@ -43,7 +43,8 @@ class Supervised:
         self._buffer_X, self._buffer_Y, self._buffer_size = self.init_buffer()
 
         # model
-        self._model = create_toy_supervised_model(self._learning_rate, self._map_shape)
+        # self._model = create_toy_supervised_model(self._learning_rate, self._map_shape)
+        self._model = create_supervised_model(self._learning_rate, self._map_shape)
         home = expanduser("~")
         logdir = os.path.join(home, 'supervised_logs/')
         self._tfboard = TensorBoard(log_dir=logdir, batch_size=self._batch_size, write_graph=False)
@@ -78,53 +79,63 @@ class Supervised:
 
 
 def evaluate(supervised):
-    # evalenv = gym.make('lidareval-v0')
+    evalenv = gym.make('lidareval-v0')
     # evalenv = gym.make('lidarsmalleval-v0')
-    evalenv = gym.make('lidartoyeval-v0')
+    # evalenv = gym.make('lidartoyeval-v0')
     done = False
     reward_overall = 0
-    _ = evalenv.reset()
+    obv = {'X': evalenv.reset()}
     # map = np.zeros((320, 320, 32))
     map = np.zeros(shape=supervised._map_shape)
     evalenv.seed(1)
     print('Evaluation started!')
+    epoch = 0
     while not done:
-        a = evalenv.action_space.sample()
-        obv, reward, done, _ = evalenv.step({'map': map, 'rays': a['rays']})
+        if PLANNER:
+            rays = planner.predict([obv['X'], agent.predict(obv['X'])])
+        else:
+            rays = evalenv.action_space.sample()['rays']
+        obv, reward, done, _ = evalenv.step({'map': map, 'rays': rays})
         reward_overall += reward
         map = supervised.predict(obv['X'])
+        epoch += 1
+        if epoch % 10 == 0:
+            evalenv.render(mode='human')
     print('Evaluation done with reward - ' + str(reward_overall))
     return reward_overall
 
 
 if __name__ == "__main__":
 
-    LOAD = False
-    PLANNER = True
+    LOAD = True
+    PLANNER = False
     # Create model on GPU
     agent = Supervised()
     home = expanduser("~")
     savedir = os.path.join(home, 'trained_models/')
-
-    if LOAD:
-        loaddir = os.path.join(home, 'trained_models/supervised_model_-205.62373544534486.h5')
-        agent.load_weights(loaddir)
-
-    if PLANNER:
-        actor_f = '/home/zdeeno/Projekt/lidar-gym/trained_models/actor_DDPG-257.23102184210796.h5'
-        critic_f = '/home/zdeeno/Projekt/lidar-gym/trained_models/actor_DDPG-257.23102184210796.h5'
-        planner = ddpg.ActorCritic()
-        planner.load_models(actor_f, critic_f)
 
     env = gym.make('lidartoy-v2')
     episode = 0
     max_reward = -260
     env.seed(1)
 
+    if LOAD:
+        # loaddir = os.path.join(home, 'trained_models/supervised_toy_model_-247.39524819961397.h5')
+        loaddir = os.path.join(home, 'trained_models/supervised_model_-196.40097353881725.h5')
+        agent.load_weights(loaddir)
+
+    if PLANNER:
+        actor_f = '/home/zdeeno/Projekt/lidar-gym/trained_models/actor_simplestoch-244.94296241390163.h5'
+        critic_f = '/home/zdeeno/Projekt/lidar-gym/trained_models/critic_simplestoch-244.94296241390163.h5'
+        planner = stoch.ActorCritic(env)
+        planner.load_model_weights(actor_f, critic_f)
+
     while True:
         done = False
         obv = env.reset()
         print('\n------------------- Drive number', episode, '-------------------------')
+
+        evaluate(agent)
 
         while not done:
             agent.append_to_buffer(obv)

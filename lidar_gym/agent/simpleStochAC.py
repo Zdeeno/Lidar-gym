@@ -15,7 +15,7 @@ import os
 
 class ActorCritic:
 
-    def __init__(self, env, sess):
+    def __init__(self, env, sess=None):
         '''
         # large map
         self.map_shape = (320, 320, 32)
@@ -69,8 +69,9 @@ class ActorCritic:
         self.critic_grads = tf.gradients(self.critic_model.output, [self.critic_action_input_az,
                                                                     self.critic_action_input_el])
 
-        # Initialize for later gradient calculations
-        self.sess.run(tf.initialize_all_variables())
+        if sess is not None:
+            # Initialize for later gradient calculations
+            self.sess.run(tf.initialize_all_variables())
 
     def append_to_buffer(self, state, action, reward, new_state, done):
         sample = state, action, reward, new_state, done
@@ -141,6 +142,7 @@ class ActorCritic:
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         action = self.actor_model.predict(state)
+        print(action)
         return self.c2d(action[0], action[1])
 
     def predict_perturbed(self, state):
@@ -153,8 +155,8 @@ class ActorCritic:
     def c2d(self, az, el):
         # continous action to 2D discrete array
         inp = np.empty(self.lidar_shape)
-        inp[0] = np.random.beta(az[0, 0], az[0, 1], size=self.lidar_shape[1])
-        inp[1] = np.random.beta(el[0, 0], el[0, 1], size=self.lidar_shape[1])
+        inp[0] = np.random.beta(az[0, 0], el[0, 0], size=self.lidar_shape[1])
+        inp[1] = np.random.beta(az[0, 1], el[0, 1], size=self.lidar_shape[1])
         inp = (inp * 2) - 1
         assert inp.ndim == 2, 'has shape: ' + str(inp.shape)
         half_shape = np.asarray(self.output_shape)/2

@@ -24,6 +24,7 @@ class DQN:
         self._rays_shape = (160, 120)
         '''
 
+        self.map_shape = (80, 80, 8)
         self._map_shape = (80, 80, 8)
         self._max_rays = 15
         self._lidar_shape = (40, 30)
@@ -124,8 +125,9 @@ class DQN:
     def load_model(self, f):
         self._model = None
         self._target_model = None
-        self._model = tf.keras.models.load_model(f)
-        self._target_model = tf.keras.models.load_model(f)
+        self._model = tf.keras.models.load_model(f, {'expand_dims': tf.keras.backend.expand_dims,
+                                                     'squeeze': tf.keras.backend.squeeze})
+        # self._target_model = tf.keras.models.load_model(f)
 
     def append_to_buffer(self, state, action, reward, new_state, done):
         sample = state, action, reward, new_state, done

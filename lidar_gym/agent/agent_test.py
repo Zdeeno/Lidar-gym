@@ -5,7 +5,7 @@ import lidar_gym
 import os
 from os.path import expanduser
 from lidar_gym.agent.supervised_agent import Supervised
-from lidar_gym.agent.stochAC import ActorCritic
+from lidar_gym.agent.simpleStochAC import ActorCritic
 from lidar_gym.envs.lidar_gym import LidarROCHelper, LidarToyROC
 import tensorflow as tf
 import tensorflow.contrib.keras.api.keras.backend as K
@@ -31,8 +31,8 @@ def evaluate(supervised, reinforce, eval, help):
         # rays = eval.action_space.sample()['rays']
         obv, reward, done, _ = eval._step({'map': recon, 'rays': rays})
         _, _, _, _ = help._step({'map': dummy_map, 'rays': all_rays})
-        print(reward)
-        reward_overall += reward
+        print(reward - 1)
+        reward_overall += (reward - 1)
         sparse = obv['X']
         recon = supervised.predict(sparse)
         episode += 1
@@ -50,18 +50,21 @@ if __name__ == "__main__":
     sess = tf.Session()
     K.set_session(sess)
     agent_rays = ActorCritic(evalenv, sess)
+    # agent_rays = DQN(evalenv)
 
     home = expanduser("~")
-    loaddir = os.path.join(home, 'Projekt/lidar-gym/lidar_gym/agent/trained_models/supervised_toy_model.h5')
+    loaddir = os.path.join(home, 'trained_models/supervised_model_-196.40097353881725.h5')
     agent_map.load_weights(loaddir)
 
-    actor = os.path.join(home, 'Projekt/lidar-gym/trained_models/actor_stoch-246.18530478702408.h5')
-    critic = os.path.join(home, 'Projekt/lidar-gym/trained_models/critic_stoch-246.18530478702408.h5')
-    agent_rays.load_models(actor, critic)
+    actor = os.path.join(home, 'Projekt/lidar-gym/trained_models/actor_simplestoch-244.94296241390163.h5')
+    critic = os.path.join(home, 'Projekt/lidar-gym/trained_models/critic_simplestoch-244.94296241390163.h5')
+    agent_rays.load_model_weights(actor, critic)
+    # agent_rays.load_model_weights(actor)
+
 
     export = []
     DENSITY = 1000
-    LENGTH = 1
+    LENGTH = 5
 
     for i in range(LENGTH):
         evaluate(agent_map, agent_rays, evalenv, helpenv)
@@ -97,5 +100,4 @@ if __name__ == "__main__":
 
         export.append(true_positive)
         export.append(false_positive)
-    np.shape(export)
-    np.savetxt('ROC.csv', export, delimiter=',')
+    np.savetxt('ROC.csv', export, delimiter=' ')

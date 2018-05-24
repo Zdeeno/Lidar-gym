@@ -326,13 +326,13 @@ def create_simplestoch_toy_actor_model(lr, map_shape):
     d21 = Dense(100, activation='relu')(d11)
     d31 = Dense(30, activation='linear')(d21)
     d41 = Dense(2, activation='softplus')(d31)
-    alpha = Lambda(lambda x: x + 0.5)(d41)
+    alpha = Lambda(lambda x: x + 1)(d41)
 
     d12 = Dense(100, activation='relu')(f1)
     d22 = Dense(100, activation='relu')(d12)
     d32 = Dense(30, activation='linear')(d22)
     d42 = Dense(2, activation='softplus')(d32)
-    beta = Lambda(lambda x: x + 0.5)(d42)
+    beta = Lambda(lambda x: x + 1)(d42)
 
     ret_model = Model(inputs=[sparse_input, reconstructed_input], outputs=[alpha, beta])
 
