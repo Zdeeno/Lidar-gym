@@ -44,5 +44,5 @@ s = setup(
     ],
     keywords=['gym', 'lidar', 'environment', 'openai'],
     install_requires=['numpy', 'pykitti', 'voxel_map', 'gym'],
-    extras_require={'rendering': ['mayavi', 'vtk', 'qt']},
+    extras_require={'rendering': ['mayavi', 'vtk', 'qt'], 'agents': ['tensorforce']},
 )

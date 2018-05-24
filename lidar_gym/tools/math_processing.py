@@ -39,13 +39,14 @@ def transform_points(points, transform_mat):
 class CuboidGetter:
 
     def __init__(self, voxel_size, map_size):
+        map_size = np.asarray(map_size)
         mins = np.zeros((1, 3))
         maxs = map_size/voxel_size
         getter_size = map_size/voxel_size
         num_pts = int(getter_size[0] * getter_size[1] * getter_size[2])
 
         self.l = np.zeros((num_pts,), dtype=np.float64)
-
+        self.voxel_size = voxel_size
         tmp = zip(tuple(mins[0].astype(int)), tuple(maxs.astype(int)), (1, 1, 1))
         self._cuboid_points = list(product(*(range(*x) for x in tmp)))
         self._cuboid_points = np.asarray(self._cuboid_points)*voxel_size + voxel_size/2
@@ -63,10 +64,19 @@ class CuboidGetter:
         values = voxel_map.get_voxels(np.transpose(points), self.l)
         return self._cuboid_points, values
 
+    def update_map_cuboid(self, voxel_map, map_action, T_pos, T_shift):
+        T = np.dot(T_pos, T_shift)
+        points = transform_points(self._cuboid_points, T)
+        values_old = voxel_map.get_voxels(np.transpose(points), self.l)
+        voxel_cuboid = np.floor(self._cuboid_points/self.voxel_size).astype(dtype=int)
+        values_update = map_action[voxel_cuboid[:, 0], voxel_cuboid[:, 1], voxel_cuboid[:, 2]]
+        values_new = np.nan_to_num(values_old) + values_update
+        voxel_map.set_voxels(points.T, self.l, values_new)
+
 
 class RewardCounter:
 
-    def __init__(self, voxel_size, map_shape, T_shift):
+    def __init__(self, voxel_size, map_shape, T_shift, cuboid_getter):
         self._ground_truth = None
         self._voxel_size = voxel_size
         self._a_s_size = map_shape/voxel_size
@@ -74,7 +84,7 @@ class RewardCounter:
         # calculate shift matrix
         self._shift_T = T_shift
 
-        self._cuboid_getter = CuboidGetter(voxel_size, map_shape)
+        self._cuboid_getter = cuboid_getter
         self._last_action = None
         self._last_T = None
 
@@ -91,7 +101,7 @@ class RewardCounter:
         :param T: transform matrix 4x4 to local coordinate system
         :return: double reward (-inf, 0), higher is better
         """
-        assert np.array_equal(action_map.shape, self._a_s_size)
+        assert np.array_equal(action_map.shape, self._a_s_size), print(action_map.shape, self._a_s_size)
 
         self._last_action = action_map
         self._last_T = T
@@ -101,7 +111,7 @@ class RewardCounter:
             # suppress warning for NaN / NaN
             warnings.simplefilter("ignore")
             values_g_t = np.asarray(values_g_t // np.abs(values_g_t))
-        values_g_t[np.isnan(values_g_t)] = 0
+        values_g_t = np.nan_to_num(values_g_t)
 
         # obtain action space local map values
         points = points / self._voxel_size
@@ -115,8 +125,11 @@ class RewardCounter:
         weights[values_g_t > 0] = weights_positive
         weights[values_g_t < 0] = weights_negative
 
-        # calculate reward
-        reward = np.sum(-weights * (np.log(1 + np.exp(-values_a_m * values_g_t))))
+        # calculate reward as log loss: np.sum(-weights * (np.log(1 + np.exp(-values_a_m * values_g_t))))
+        a = -values_a_m * values_g_t
+        b = np.maximum(0.0, a)
+        t = b + np.log(np.exp(-b) + np.exp(a - b))
+        reward = np.sum(-weights * t)
         return reward
 
     def get_render_data(self):
