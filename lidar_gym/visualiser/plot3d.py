@@ -1,5 +1,6 @@
 import numpy as np
 from mayavi import mlab
+import math
 
 
 class Plotter:
@@ -8,7 +9,7 @@ class Plotter:
     def __init__(self):
         self.fig = None
 
-    def plot_action(self, ground_truth, action_map, rays, voxel_size, sensor):
+    def plot_action(self, ground_truth, action_map, rays, voxel_size, sensor, dir):
         # TODO: Change mlab.show to mlab.animate!
         self.fig = mlab.figure(size=(1280, 720))
         # plot ground truth
@@ -22,7 +23,6 @@ class Plotter:
                 ground_truth[:, 1],  # y
                 ground_truth[:, 2],  # z
                 ground_truth[:, 2] + 2,  # Height data used for shading
-                # ground_truth[:, 2],  # Height data used for shading
                 mode="cube",  # How to render each point {'point', 'sphere' , 'cube' }
                 # colormap='spectral',  # 'bone', 'copper',
                 # colormap='copper',     # Used a fixed (r,g,b) color instead of colormap
@@ -37,7 +37,6 @@ class Plotter:
             sensor[0, 0],  # x
             sensor[0, 1],  # y
             sensor[0, 2],  # z
-            # ground_truth[:, 2],  # Height data used for shading
             mode="sphere",  # How to render each point {'point', 'sphere' , 'cube' }
             # colormap='spectral',  # 'bone', 'copper',
             color=(1, 0, 0),     # Used a fixed (r,g,b) color instead of colormap
@@ -51,7 +50,7 @@ class Plotter:
                 action_map[:, 0],  # x
                 action_map[:, 1],  # y
                 action_map[:, 2],  # z
-                action_map[:, 2]+2,  # Height data used for shading
+                action_map[:, 2] + 2,  # Height data used for shading
                 mode="cube",  # How to render each point {'point', 'sphere' , 'cube' }
                 colormap='gist_earth',  # 'bone', 'copper',
                 #color=(0, 0, 1),  # Used a fixed (r,g,b) color instead of colormap
@@ -69,12 +68,16 @@ class Plotter:
                 plot_rays[:, 0],  # x
                 plot_rays[:, 1],  # y
                 plot_rays[:, 2],  # z
-                # ground_truth[:, 2],  # Height data used for shading
-                # colormap='spectral',  # 'bone', 'copper',
-                color=(1, 0, 0),     # Used a fixed (r,g,b) color instead of colormap
-                line_width=5.0,  # Scale of the line, if any
+                color=(1, 0, 0),  # Used a fixed (r,g,b) color instead of colormap
+                tube_radius=0.075,
                 figure=self.fig,
             )
-        mlab.view(-60, 60, 75, [sensor[0, 0] + 5, sensor[0, 1], sensor[0, 2] + 5], figure=self.fig)
+
+        azimuth = math.degrees(math.atan(dir[0, 0]/dir[0, 1]))
+        print(azimuth)
+        print(dir)
+        mlab.view(235 + azimuth, 70, distance=100,
+                  focalpoint=(dir[1, 0], dir[1, 1], dir[1, 2]), figure=self.fig)
+        # mlab.savefig('screen.png')
         mlab.show()
 

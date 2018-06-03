@@ -43,6 +43,7 @@ class LidarGym(gym.Env):
         self._map_shape = np.asarray(map_voxel_shape) * voxel_size  # sth like (80, 80, 4)
         self._initial_position = np.zeros((1, 3))
         self._input_map_shape = np.asarray(map_voxel_shape)
+        self._to_render = np.reshape(np.asarray(((1, 0, 0), (20, 0, 0))), (2, 3))
 
         if T_forecast == 0:
             self._T_forecast = sys.maxsize
@@ -113,7 +114,9 @@ class LidarGym(gym.Env):
                     self._render_init = True
                 if self._next_timestamp > 1:
                     g_t, a_m, sensor = self._reward_counter.get_render_data()
-                    self.plotter.plot_action(g_t, a_m, np.transpose(self._rays_endings), self._voxel_size, sensor)
+                    print(self._last_T)
+                    dirs = processing.transform_points(self._to_render, self._last_T)
+                    self.plotter.plot_action(g_t, a_m, np.transpose(self._rays_endings), self._voxel_size, sensor, dirs)
             if mode == 'ASCII':
                 print(ray_string(self._last_rays.T))
 

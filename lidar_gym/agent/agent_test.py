@@ -9,7 +9,6 @@ from lidar_gym.agent.simpleStochAC import ActorCritic
 from lidar_gym.envs.lidar_gym import LidarROCHelper, LidarToyROC
 import tensorflow as tf
 import tensorflow.contrib.keras.api.keras.backend as K
-import matplotlib.pyplot as plt
 
 
 # script which creates data for ROC curve

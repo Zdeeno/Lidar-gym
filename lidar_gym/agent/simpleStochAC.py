@@ -142,7 +142,7 @@ class ActorCritic:
     def predict(self, state):
         state = [np.expand_dims(state[0], axis=0), np.expand_dims(state[1], axis=0)]
         action = self.actor_model.predict(state)
-        print(action)
+        # print(action)
         return self.c2d(action[0], action[1])
 
     def predict_perturbed(self, state):
